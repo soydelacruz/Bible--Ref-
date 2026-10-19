@@ -116,6 +116,9 @@ test.describe('the layout holds at every width', () => {
     }) => {
       const languages = await languagesTheAppOffers(page);
       expect(languages.length).toBeGreaterThan(0);
+      // A page load for every language, and each takes a good part of the usual minute with a
+      // software renderer: the budget grows with the languages rather than running out at two.
+      test.setTimeout(60_000 * (languages.length + 1));
 
       for (const language of languages) {
         await page.setViewportSize({ width, height: 800 });
