@@ -16,10 +16,12 @@ import {
   LuCopy,
   LuDownload,
   LuEllipsisVertical,
+  LuExternalLink,
   LuGithub,
   LuHand,
   LuImageDown,
   LuLanguages,
+  LuLibraryBig,
   LuMonitorDown,
   LuMouse,
   LuMousePointerClick,
@@ -125,6 +127,10 @@ export const SaveImageIcon = decorative(LuImageDown);
 
 // A chain of links from one passage to another.
 export const PathIcon = decorative(LuRoute);
+
+// Study sites elsewhere, and a link that leaves the app for one.
+export const StudyIcon = decorative(LuLibraryBig);
+export const ExternalLinkIcon = decorative(LuExternalLink);
 
 // The source code, which lives on GitHub. Lucide draws the mark in the same stroke as the rest,
 // so the footer's link stays in one family instead of pulling in a second icon set for one glyph.

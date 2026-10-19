@@ -203,6 +203,17 @@ export const en = {
     `more than ${max} verses are left out.`,
   'words.creditLabel': 'Words:',
 
+  'study.title': 'Study elsewhere',
+  'study.note': 'notes, lexicons and commentaries on other sites',
+  'study.net': 'NET Bible notes',
+  'study.blueLetterBible': 'Blue Letter Bible interlinear and lexicon',
+  'study.bibleHubCommentaries': 'BibleHub commentaries',
+  'study.bibleHubParallel': 'BibleHub parallel translations',
+  'study.bibleHubChapter': 'BibleHub study page',
+  'study.stepBible': 'STEPBible word study',
+  // The link's own words, then the passage it opens, e.g. "NET Bible notes on John 3:16".
+  'study.label': (link: string, passage: string) => `${link} on ${passage}`,
+
   'loading.data': (verses: string, links: string) =>
     `Loading ${verses} verses and ${links} cross-references…`,
   // What a reader meets when a dataset will not load: almost always the network, and almost

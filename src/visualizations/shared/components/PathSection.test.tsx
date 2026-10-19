@@ -38,6 +38,15 @@ function panelFor(passage: Passage, onSelect = vi.fn(), filter = EVERY_LINK) {
   );
 }
 
+/** The path's own section: the panel has other lists in it, such as the study links. */
+function pathSection() {
+  const section = screen.getByRole('heading', { name: /^Path/ }).closest('section');
+  if (!section) {
+    throw new Error('The path has no section of its own.');
+  }
+  return within(section);
+}
+
 async function findPathTo(reference: string) {
   await userEvent.type(
     screen.getByRole('textbox', { name: 'Passage to find a path to' }),
@@ -53,7 +62,7 @@ describe('PathSection', () => {
     expect(screen.getByRole('status').textContent).toBe(
       'Genesis 3:15 to Revelation 12:9 in 2 links:',
     );
-    const steps = within(screen.getByRole('list')).getAllByRole('listitem');
+    const steps = within(pathSection().getByRole('list')).getAllByRole('listitem');
     expect(steps.map((step) => step.querySelector('strong')?.textContent)).toEqual([
       'Genesis 3:15',
       'Romans 16:20',
@@ -69,7 +78,7 @@ describe('PathSection', () => {
     const { rerender } = render(panelFor(versePassage(GEN_3_15), onSelect));
     await findPathTo('Rev 12:9');
     await userEvent.click(
-      within(screen.getByRole('list')).getByRole('button', { name: /Romans 16:20/ }),
+      within(pathSection().getByRole('list')).getByRole('button', { name: /Romans 16:20/ }),
     );
     expect(onSelect).toHaveBeenCalledWith(versePassage(ROM_16_20));
 
@@ -85,7 +94,7 @@ describe('PathSection', () => {
     expect(screen.getByRole('status').textContent).toBe(
       'This passage is Genesis 3, or contains it.',
     );
-    expect(screen.queryByRole('list')).toBeNull();
+    expect(pathSection().queryByRole('list')).toBeNull();
   });
 
   it('says so when no chain of links gets there', async () => {
@@ -116,6 +125,6 @@ describe('PathSection', () => {
     await findPathTo('Rev 12:9');
     await userEvent.click(screen.getByRole('button', { name: 'Clear path' }));
     expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.queryByRole('list')).toBeNull();
+    expect(pathSection().queryByRole('list')).toBeNull();
   });
 });

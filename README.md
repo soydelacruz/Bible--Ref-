@@ -56,6 +56,12 @@ fact that they share a word. Acts 5:14 and Luke 5:6, for instance, share πλῆ
 "multitude"), which no cross-reference joins. Words used in more than 100 verses are left out, and
 the text of the verse in its original language is never shown: only the dictionary form.
 
+Last, _Study elsewhere_ links the verse or chapter to study sites that the app cannot carry itself,
+each opening in a new tab: the NET Bible's translators' notes first, then Blue Letter Bible's
+interlinear and lexicon, BibleHub's commentaries and parallel translations, and STEPBible. They are
+links only; nothing of those sites is copied into the app. The NET Bible's notes may not be
+redistributed, which is why they are linked to rather than shown.
+
 ### Search the text
 
 The search box takes words as well as references. Anything that is not a reference, such as

@@ -194,6 +194,16 @@ export const pt: LocaleMessages = {
     `Palavras usadas em mais de ${max} versículos ficam de fora.`,
   'words.creditLabel': 'Palavras:',
 
+  'study.title': 'Estudar em outros sites',
+  'study.note': 'notas, léxicos e comentários em outros sites',
+  'study.net': 'Notas da NET Bible',
+  'study.blueLetterBible': 'Interlinear e léxico da Blue Letter Bible',
+  'study.bibleHubCommentaries': 'Comentários do BibleHub',
+  'study.bibleHubParallel': 'Traduções paralelas do BibleHub',
+  'study.bibleHubChapter': 'Página de estudo do BibleHub',
+  'study.stepBible': 'Estudo de palavras no STEPBible',
+  'study.label': (link, passage) => `${link} sobre ${passage}`,
+
   'loading.data': (verses, links) =>
     `Carregando ${verses} versículos e ${links} referências cruzadas…`,
   'error.datasetUnavailable':
