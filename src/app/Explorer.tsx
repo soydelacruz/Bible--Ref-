@@ -258,8 +258,8 @@ export function Explorer({ core }: { readonly core: VizCore }) {
             data={data}
             active={isActive}
             passage={passage}
-            onNavigate={(target) => {
-              navigate({ ...location, view: view.id, passage: target });
+            onNavigate={(target, options) => {
+              navigate({ ...location, view: view.id, passage: target }, options);
             }}
             filter={filter}
             onFilterChange={(next) => {

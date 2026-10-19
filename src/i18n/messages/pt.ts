@@ -11,6 +11,9 @@ export const pt: LocaleMessages = {
   'view.threads': 'Fios',
   'view.threads.short': 'Fios',
   'view.threads.open': 'Ler no contexto',
+  'view.clusters': 'Aglomerados',
+  'view.clusters.short': 'Aglomerados',
+  'view.clusters.open': 'Ver em Aglomerados',
   'view.switch': 'Visualizações',
 
   'search.label': 'Ir para uma referência bíblica, ou buscar palavras no texto',
@@ -208,6 +211,19 @@ export const pt: LocaleMessages = {
   'threads.stage':
     'Fios que vão dos versículos deste capítulo até onde suas referências cruzadas chegam na ' +
     'Bíblia, exibidos como uma barra vertical com todos os 66 livros.',
+  'clusters.book': 'Livro',
+  'clusters.wholeBible': 'Bíblia inteira',
+  'clusters.openBook': 'clique para abri-lo',
+  'clusters.hint':
+    'Aponte para um versículo para iluminar suas ligações, ou para o nome ou a borda de um ' +
+    'livro para todas elas · clique no nome de um livro para abri-lo',
+  'clusters.tour.start': 'Ver um passeio por versículos conhecidos',
+  'clusters.tour.stop': 'Parar o passeio',
+  'clusters.stage':
+    'Cada versículo com referências cruzadas é um ponto, reunido em um aglomerado por livro: o ' +
+    'Antigo Testamento de um lado, o Novo do outro, com as ligações entre eles em traço leve. ' +
+    'Aponte para um livro ou versículo para iluminar suas ligações, clique em um versículo para ' +
+    'focá-lo e em um livro para abri-lo capítulo por capítulo.',
   'arcs.connections': (count, plural) => (plural === 1 ? `${count} conexão` : `${count} conexões`),
   'arcs.stage':
     'Diagrama em arcos das referências cruzadas. Arraste ou use as setas para mover, role ou ' +

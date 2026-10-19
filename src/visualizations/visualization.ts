@@ -13,8 +13,12 @@ export interface VisualizationProps {
   readonly data: VizData;
   /** The focused passage, or `null` for none. */
   readonly passage: Passage | null;
-  /** Focuses another passage (or none); the host records it in the URL and the history. */
-  readonly onNavigate: (passage: Passage | null) => void;
+  /**
+   * Focuses another passage (or none); the host records it in the URL and the history. With
+   * `replace`, it takes the place of the current history entry instead (e.g. each stop of a tour
+   * after the first, so Back leaves the tour rather than retracing it).
+   */
+  readonly onNavigate: (passage: Passage | null, options?: { readonly replace?: boolean }) => void;
   /** Which links to show. One filter for every visualization, so they agree on the links. */
   readonly filter: LinkFilter;
   readonly onFilterChange: (filter: LinkFilter) => void;

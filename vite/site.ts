@@ -56,6 +56,7 @@ export const SOCIAL_IMAGE = {
 export const PAGES = {
   main: { entry: 'index.html', listed: true, app: true },
   threads: { entry: 'threads/index.html', listed: true, app: true },
+  clusters: { entry: 'clusters/index.html', listed: true, app: true },
   debug: { entry: 'debug/index.html', listed: false, app: false },
 } as const;
 
