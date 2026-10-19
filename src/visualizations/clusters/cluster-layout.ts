@@ -312,20 +312,71 @@ export function computeClusterLayout(
   };
 }
 
-/** The cluster under a point, or −1. */
-export function groupAt(layout: ClusterLayout, px: number, py: number): number {
-  const slack = layout.spacing;
-  return layout.groups.findIndex(
-    (group) => Math.hypot(px - group.x, py - group.y) <= group.r + slack,
+/** What a pointer is over: one verse, or a whole cluster. */
+export type ClusterTarget =
+  | { readonly kind: 'verse'; readonly verse: VerseIndex; readonly group: number }
+  | { readonly kind: 'group'; readonly group: number };
+
+/**
+ * The band around a cluster that points at the whole book. Inside a cluster the dots are a few
+ * pixels apart, so almost any point there is near some verse; the book needs ground of its own,
+ * wide enough to aim at: this rim, and the cluster's name above it.
+ */
+export function rimWidth(layout: ClusterLayout): number {
+  return Math.max(8, layout.spacing * 3);
+}
+
+/** Half the width of a cluster's name, for pointing at it (names are drawn about this wide). */
+const LABEL_HALF_WIDTH = 24;
+
+function onLabel(group: ClusterGroup, px: number, py: number): boolean {
+  const bottom = group.y - group.r;
+  return (
+    py <= bottom &&
+    py >= bottom - LABEL_ROOM &&
+    Math.abs(px - group.x) <= Math.max(group.r, LABEL_HALF_WIDTH)
   );
 }
 
-/** The verse whose dot is nearest a point, within reach of a pointer, or `null`. */
-export function verseAt(layout: ClusterLayout, px: number, py: number): VerseIndex | null {
-  const group = layout.groups[groupAt(layout, px, py)];
-  if (!group) return null;
+/**
+ * What is under a point: a verse inside a cluster's disc, the whole cluster on its rim or its
+ * name, or nothing.
+ */
+export function targetAt(layout: ClusterLayout, px: number, py: number): ClusterTarget | null {
+  const inside = layout.groups.findIndex(
+    (group) => Math.hypot(px - group.x, py - group.y) <= group.r,
+  );
+  const group = layout.groups[inside];
+  if (group) {
+    const verse = nearestVerse(layout, group, px, py);
+    return verse === null
+      ? { kind: 'group', group: inside }
+      : { kind: 'verse', verse, group: inside };
+  }
+  const rim = rimWidth(layout);
+  let best = -1;
+  let bestGap = Infinity;
+  layout.groups.forEach((candidate, index) => {
+    const gap = onLabel(candidate, px, py)
+      ? 0
+      : Math.hypot(px - candidate.x, py - candidate.y) - candidate.r;
+    if (gap <= rim && gap < bestGap) {
+      best = index;
+      bestGap = gap;
+    }
+  });
+  return best < 0 ? null : { kind: 'group', group: best };
+}
+
+/** The verse of a cluster whose dot is nearest a point, within one spacing, or `null`. */
+function nearestVerse(
+  layout: ClusterLayout,
+  group: ClusterGroup,
+  px: number,
+  py: number,
+): VerseIndex | null {
   let best: VerseIndex | null = null;
-  let bestDistance = Math.max(layout.spacing, 6);
+  let bestDistance = Math.max(layout.spacing, layout.dotRadius * 2);
   for (let position = group.first; position < group.first + group.count; position += 1) {
     const distance = Math.hypot(
       px - elementAt(layout.x, position),

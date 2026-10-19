@@ -214,7 +214,8 @@ export const es: LocaleMessages = {
   'clusters.wholeBible': 'Toda la Biblia',
   'clusters.openBook': 'clic para abrirlo',
   'clusters.hint':
-    'Señala un libro o un versículo para iluminar sus enlaces · clic en un libro para abrirlo',
+    'Señala un versículo para iluminar sus enlaces, o el nombre o el borde de un libro para ' +
+    'todos ellos · clic en el nombre de un libro para abrirlo',
   'clusters.tour.start': 'Ver un recorrido por versículos conocidos',
   'clusters.tour.stop': 'Detener el recorrido',
   'clusters.stage':

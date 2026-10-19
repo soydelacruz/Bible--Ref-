@@ -22,9 +22,8 @@ import {
 } from './cluster-highlight.ts';
 import {
   computeClusterLayout,
-  groupAt,
   selectClusterGraph,
-  verseAt,
+  targetAt,
   type ClusterGroup,
 } from './cluster-layout.ts';
 import { drawBase, drawOverlay } from './clusters-drawing.ts';
@@ -200,17 +199,25 @@ export function ClustersStage({
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!layout || event.pointerType === 'touch') return;
     const { x, y } = point(event);
-    const group = groupAt(layout, x, y);
-    setHover(group < 0 ? null : { verse: verseAt(layout, x, y), group, x, y });
+    const target = targetAt(layout, x, y);
+    setHover(
+      target && {
+        verse: target.kind === 'verse' ? target.verse : null,
+        group: target.group,
+        x,
+        y,
+      },
+    );
   };
 
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!layout) return;
     const { x, y } = point(event);
-    const verse = verseAt(layout, x, y);
-    const group = layout.groups[groupAt(layout, x, y)];
+    const target = targetAt(layout, x, y);
+    const group = target && layout.groups[target.group];
     setHover(null);
-    if (verse !== null) {
+    if (target?.kind === 'verse') {
+      const { verse } = target;
       onSelect(focus?.kind === 'verse' && focus.verse === verse ? null : versePassage(verse));
     } else if (group && group.chapter !== null) {
       onSelect({ kind: 'chapter', book: group.book, chapter: group.chapter });

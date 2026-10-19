@@ -227,7 +227,9 @@ export const en = {
   'clusters.book': 'Book',
   'clusters.wholeBible': 'Whole Bible',
   'clusters.openBook': 'click to open it',
-  'clusters.hint': 'Point at a book or a verse to light up its links · click a book to open it',
+  'clusters.hint':
+    'Point at a verse to light up its links, or at a book’s name or edge for all of them · ' +
+    'click a book’s name to open it',
   'clusters.tour.start': 'Play a tour of well-known verses',
   'clusters.tour.stop': 'Stop the tour',
   'clusters.stage':

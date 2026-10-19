@@ -8,10 +8,10 @@ import {
   computeBands,
   computeClusterLayout,
   fitSpacing,
-  groupAt,
   LABEL_ROOM,
+  rimWidth,
   selectClusterGraph,
-  verseAt,
+  targetAt,
   type ClusterLayout,
 } from './cluster-layout.ts';
 
@@ -198,23 +198,77 @@ describe('computeClusterLayout', () => {
   });
 });
 
-describe('hit testing', () => {
+describe('targetAt', () => {
   const layout = computeClusterLayout(graphOf(), versification, null, SIZE);
 
   it('finds the verse under the pointer, and its cluster', () => {
     const { x, y } = positionOf(layout, ISA_53_5);
-    expect(verseAt(layout, x + 0.5, y)).toBe(ISA_53_5);
-    expect(layout.groups[groupAt(layout, x, y)]?.book).toBe('Isa');
+    const isaiah = layout.groups.findIndex((group) => group.book === 'Isa');
+    expect(targetAt(layout, x + 0.5, y)).toEqual({ kind: 'verse', verse: ISA_53_5, group: isaiah });
   });
 
   it('finds nothing in the empty space between clusters', () => {
-    expect(groupAt(layout, 0, 0)).toBe(-1);
-    expect(verseAt(layout, 0, 0)).toBeNull();
+    expect(targetAt(layout, 0, 0)).toBeNull();
   });
 
-  it('finds no verse at the edge of a cluster, away from its dots', () => {
+  it('points at a whole cluster from inside it, away from its dots', () => {
     const genesis = layout.groups[0];
     if (!genesis) throw new Error('no Genesis cluster');
-    expect(verseAt(layout, genesis.x, genesis.y - genesis.r - layout.spacing * 0.9)).toBeNull();
+    expect(targetAt(layout, genesis.x, genesis.y - genesis.r * 0.95)).toEqual({
+      kind: 'group',
+      group: 0,
+    });
+  });
+
+  // Every verse of Psalms linked: 2,461 dots a few pixels apart, as at the default filter.
+  const psalms = versification.bookRange('Ps');
+  const dense = computeClusterLayout(
+    selectClusterGraph(
+      new CrossReferenceIndex(
+        createCrossReferenceColumns(
+          Array.from({ length: psalms.end - psalms.start + 1 }, (_, offset) => ({
+            from: psalms.start + offset,
+            to: JOHN_1_1,
+            votes: 10,
+          })),
+        ),
+        versification.verseCount,
+      ),
+      verseGenres,
+      DEFAULT_LINK_FILTER,
+      versification,
+      null,
+    ),
+    versification,
+    null,
+    { width: 600, height: 400 },
+  );
+  const cluster = dense.groups.findIndex((group) => group.book === 'Ps');
+  const circle = dense.groups[cluster];
+  if (!circle) throw new Error('no Psalms cluster');
+
+  it('keeps verses for the inside of a dense cluster', () => {
+    expect(dense.spacing).toBeLessThan(6);
+    expect(targetAt(dense, circle.x, circle.y)?.kind).toBe('verse');
+    expect(targetAt(dense, circle.x + circle.r * 0.7, circle.y)?.kind).toBe('verse');
+  });
+
+  it('gives a dense cluster a rim to point at the whole book, wider than the dots are apart', () => {
+    const rim = rimWidth(dense);
+    expect(rim).toBeGreaterThanOrEqual(8);
+    for (const out of [1, rim / 2, rim - 0.5]) {
+      expect(targetAt(dense, circle.x + circle.r + out, circle.y)).toEqual({
+        kind: 'group',
+        group: cluster,
+      });
+    }
+    expect(targetAt(dense, circle.x + circle.r + rim + 1, circle.y)).toBeNull();
+  });
+
+  it("points at the whole book from the book's name", () => {
+    expect(targetAt(dense, circle.x, circle.y - circle.r - LABEL_ROOM / 2)).toEqual({
+      kind: 'group',
+      group: cluster,
+    });
   });
 });
