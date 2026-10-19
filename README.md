@@ -4,8 +4,7 @@
 
 See how the Bible is woven together, and read any passage with its connections in view.
 
-**▶ [Open Bible Cross-References](https://bible-ref.vercel.app/)** (private for now: it asks
-you to sign in to Vercel)
+**▶ [Open Bible Cross-References](https://bible-ref.vercel.app/)**
 
 This is a copy of [Bible Cross-References](https://github.com/trekhleb/bible-cross-references) by
 Oleksii Trekhleb, under its MIT license, with three additions: searching the text for words,
@@ -39,7 +38,7 @@ It is free, open source, and built only on openly licensed data (see [Data](#dat
 - Search for any reference ("John 3:16", "Ps 23") or click a passage to see where its links land.
 - Read it in the Berean Standard Bible or the King James Version; the choice is remembered and
   travels in the link you share
-  ([`?t=kjv`](https://trekhleb.dev/bible-cross-references/?ref=John.3.16&t=kjv)).
+  ([`?t=kjv`](https://bible-ref.vercel.app/?ref=John.3.16&t=kjv)).
 
 ### Focus a passage
 
@@ -110,14 +109,14 @@ inside them are a sunflower spiral, so the layout is instant and the same every 
 Both views work on phones. On the arcs, touch and hold, then slide, to preview passages (on the book
 bar, just slide), and pinch to zoom. The details open in a sheet that you drag up to read and pull
 down to close. Every passage has its own link, filters included, e.g.
-[`?ref=John.3.16`](https://trekhleb.dev/bible-cross-references/?ref=John.3.16), so you can share
+[`?ref=John.3.16`](https://bible-ref.vercel.app/?ref=John.3.16), so you can share
 exactly what you are looking at.
 
 ### Install it, and read with no connection
 
 Every footer carries a quiet **Install** link — an arrow alone on phones — which opens the steps
 for the device you are reading on. The same guide opens at
-[`#install`](https://trekhleb.dev/bible-cross-references/#install), so that address can be sent to
+[`#install`](https://bible-ref.vercel.app/#install), so that address can be sent to
 someone who asks for "the app". Inside the installed app the link is gone, since the browser tells
 the page it is already running as one.
 
@@ -362,8 +361,9 @@ self.addEventListener('activate', (event) => {
 One visit then unregisters the worker and deletes every cache it made, and the site goes on as an
 ordinary one. Taking `sw.js` off the server does not do this: the registration survives a 404.
 
-The live site counts visits with Google Analytics. The tag only reports from trekhleb.dev, so local
-previews and forks deployed elsewhere send nothing. To build for another location, set the path and
+The build includes the original site's Google Analytics tag, which only reports from trekhleb.dev:
+this deployment at bible-ref.vercel.app, local previews and other forks send nothing, so no visits
+are counted here. To count them, put a property of your own in `vite/analytics.ts`. To build for another location, set the path and
 the origin:
 
 ```sh
