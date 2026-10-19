@@ -31,8 +31,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
-  // Left to Playwright locally; CI machines have two cores to spare.
-  ...(process.env['CI'] ? { workers: 2 } : {}),
+  // Left to Playwright locally. On CI, half the runner's cores: every worker drives a Chromium that
+  // draws WebGL on the CPU (swiftshader), so each needs a core of its own plus room for the
+  // preview server. A fixed count does not travel: GitHub's runners have four cores for a public
+  // repository and two for a private one, and two workers on two cores starved each other into
+  // timeouts — the same commit took 8 minutes upstream and failed after 26 here.
+  ...(process.env['CI'] ? { workers: '50%' } : {}),
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: BASE_URL,
