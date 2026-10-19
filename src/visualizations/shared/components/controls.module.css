@@ -71,6 +71,94 @@
   font-size: 0.8125rem;
 }
 
+/* Verses that contain the words searched for, under the box like its message, and wide enough to
+   read a verse on a phone where the box itself is narrow. */
+.results {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-start: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  inline-size: max(100%, min(28rem, calc(100vw - 1.5rem)));
+  max-block-size: min(32rem, 70vh);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.5);
+  font-size: 0.875rem;
+}
+
+.resultsHeader {
+  display: flex;
+  gap: var(--space-2);
+  align-items: start;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.resultsCount {
+  flex: 1;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.resultsClose {
+  display: inline-flex;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.resultsClose:hover,
+.resultsClose:focus-visible {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.resultsList {
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.result {
+  display: grid;
+  gap: 1px;
+  inline-size: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  text-align: start;
+}
+
+.result strong {
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.result:hover,
+.result:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+.match {
+  border-radius: 2px;
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
 .button {
   display: inline-flex;
   align-items: center;

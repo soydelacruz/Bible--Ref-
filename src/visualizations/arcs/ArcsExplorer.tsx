@@ -68,7 +68,11 @@ export function ArcsExplorer({
       onPanelClose={closePanel}
       controls={
         <>
-          <ReferenceSearch versification={data.versification} onSelect={onNavigate} />
+          <ReferenceSearch
+            versification={data.versification}
+            translation={data.translation}
+            onSelect={onNavigate}
+          />
           {translationMenu}
           <FiltersMenu
             filter={filter}

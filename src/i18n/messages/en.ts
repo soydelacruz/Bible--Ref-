@@ -21,8 +21,16 @@ export const en = {
   'view.threads.open': 'Read in context',
   'view.switch': 'Visualizations',
 
-  'search.label': 'Go to a Bible reference',
-  'search.placeholder': 'Go to…  John 3:16, Ps 23',
+  'search.label': 'Go to a Bible reference, or search the text for words',
+  'search.placeholder': 'John 3:16, Ps 23 or words…',
+  'search.noResults': (query: string) =>
+    `No verse contains “${query}”. To open a passage, enter a reference like “John 3:16”.`,
+  'search.results': (count: string, plural: number, query: string) =>
+    plural === 1 ? `1 verse contains “${query}”.` : `${count} verses contain “${query}”.`,
+  'search.results.limited': (shown: string) =>
+    `Showing the first ${shown}; add a word to narrow it down.`,
+  'search.results.label': 'Verses that contain the words',
+  'search.results.close': 'Close the results',
 
   'reference.unreadable': 'Enter a reference like “John 3:16” or “Ps 23”.',
   'reference.unknownBook': (query: string) => `Unknown book “${query}”.`,
@@ -129,6 +137,25 @@ export const en = {
   'panel.passages': 'passages',
   'panel.linksCounted': 'links',
   'panel.versesCounted': 'verses',
+
+  'path.title': 'Path',
+  'path.note': 'the chain of links to another passage',
+  'path.label': 'Passage to find a path to',
+  'path.placeholder': 'To…  Rev 12:9',
+  'path.find': 'Find',
+  'path.clear': 'Clear path',
+  'path.summary': (from: string, to: string, count: string, plural: number) =>
+    plural === 1 ? `${from} to ${to} in ${count} link:` : `${from} to ${to} in ${count} links:`,
+  'path.arrived': (to: string) => `This passage is ${to}, or contains it.`,
+  'path.none': (to: string) =>
+    `No chain of links reaches ${to} with the current filters. Showing more links in Filters ` +
+    `may find one.`,
+  // Read between two steps of the path: "Genesis 3:15 references Romans 16:20, which is
+  // referenced by Revelation 12:9".
+  'path.references': 'references',
+  'path.referencedBy': 'is referenced by',
+  'path.votes': (count: string, plural: number) =>
+    plural === 1 ? `${count} vote` : `${count} votes`,
 
   'words.heading': (language: string) => `Same ${language} word`,
   'words.note': 'where else it is used',

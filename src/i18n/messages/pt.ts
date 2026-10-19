@@ -13,8 +13,17 @@ export const pt: LocaleMessages = {
   'view.threads.open': 'Ler no contexto',
   'view.switch': 'Visualizações',
 
-  'search.label': 'Ir para uma referência bíblica',
-  'search.placeholder': 'Ir para…  João 3:16, Sl 23',
+  'search.label': 'Ir para uma referência bíblica, ou buscar palavras no texto',
+  'search.placeholder': 'João 3:16, Sl 23 ou palavras…',
+  'search.noResults': (query) =>
+    `Nenhum versículo contém “${query}”. Para abrir uma passagem, digite uma referência como ` +
+    `“João 3:16”.`,
+  'search.results': (count, plural, query) =>
+    plural === 1 ? `1 versículo contém “${query}”.` : `${count} versículos contêm “${query}”.`,
+  'search.results.limited': (shown) =>
+    `Exibindo os primeiros ${shown}; acrescente uma palavra para refinar a busca.`,
+  'search.results.label': 'Versículos que contêm as palavras',
+  'search.results.close': 'Fechar os resultados',
 
   'reference.unreadable': 'Digite uma referência como “João 3:16” ou “Sl 23”.',
   'reference.unknownBook': (query) => `Livro desconhecido “${query}”.`,
@@ -118,6 +127,24 @@ export const pt: LocaleMessages = {
 
   // The language names are already in the case Portuguese wants them: a message puts its
   // arguments in place, it does not reshape them.
+  'path.title': 'Caminho',
+  'path.note': 'a cadeia de ligações até outra passagem',
+  'path.label': 'Passagem até a qual encontrar um caminho',
+  'path.placeholder': 'Até…  Ap 12:9',
+  'path.find': 'Buscar',
+  'path.clear': 'Limpar caminho',
+  'path.summary': (from, to, count, plural) =>
+    plural === 1
+      ? `De ${from} a ${to} em ${count} ligação:`
+      : `De ${from} a ${to} em ${count} ligações:`,
+  'path.arrived': (to) => `Esta passagem é ${to}, ou a contém.`,
+  'path.none': (to) =>
+    `Nenhuma cadeia de ligações chega a ${to} com os filtros atuais. Mostrar mais ligações em ` +
+    `Filtros pode encontrar uma.`,
+  'path.references': 'faz referência a',
+  'path.referencedBy': 'é referenciado por',
+  'path.votes': (count, plural) => (plural === 1 ? `${count} voto` : `${count} votos`),
+
   'words.heading': (language) => `Mesma palavra ${language}`,
   'words.note': 'onde mais ela aparece',
   'words.counted': 'palavras',

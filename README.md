@@ -1,10 +1,14 @@
 # Bible Cross-References
 
-[![Bible Cross-References: 344,799 connections between 31,102 verses, from Genesis to Revelation](public/social-preview.jpg)](https://trekhleb.dev/bible-cross-references/)
+[![Bible Cross-References: 344,799 connections between 31,102 verses, from Genesis to Revelation](public/social-preview.jpg)](https://soydelacruz.github.io/Bible--Ref-/)
 
 See how the Bible is woven together, and read any passage with its connections in view.
 
-**▶ [Open Bible Cross-References](https://trekhleb.dev/bible-cross-references/)**
+**▶ [Open Bible Cross-References](https://soydelacruz.github.io/Bible--Ref-/)**
+
+This is a copy of [Bible Cross-References](https://github.com/trekhleb/bible-cross-references) by
+Oleksii Trekhleb, under its MIT license, with two additions: searching the text for words, and
+finding the path of cross-references between two passages.
 
 ## Why this exists
 
@@ -51,6 +55,21 @@ cross-reference is somebody's judgement that two passages belong together, while
 fact that they share a word. Acts 5:14 and Luke 5:6, for instance, share πλῆθος (_plēthos_,
 "multitude"), which no cross-reference joins. Words used in more than 100 verses are left out, and
 the text of the verse in its original language is never shown: only the dictionary form.
+
+### Search the text
+
+The search box takes words as well as references. Anything that is not a reference, such as
+`living water`, lists every verse that contains it, in the translation being read, with the words
+marked; choose one to open it. Put a word in quotation marks (`"mark"`) to search for a book's name
+instead of opening the book.
+
+### Find the path between two passages
+
+The details panel has a _Path_ section: name another passage and it shows the shortest chain of
+cross-references that joins the two — Ruth 1:16 to John 3:16, say, in three links. A link counts
+whichever way it points, and among chains of the same length the one readers voted for most is
+chosen. It uses only the links the filters show, so showing more of them can find a path where
+there was none. Choose a step to travel there; the path is then drawn again from where you are.
 
 ### Threads: read with the connections in view
 
@@ -279,9 +298,11 @@ To run any of them locally you need the browser once: `npx playwright install --
 
 The site is static. The CI workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
 publishes every push to `main` with GitHub Pages, once all checks pass, at
-[trekhleb.dev/bible-cross-references](https://trekhleb.dev/bible-cross-references/), so production
-builds use the base path `/bible-cross-references/`, and `npm run preview` serves the build at
-<http://localhost:4173/bible-cross-references/>. Besides the pages, the build writes:
+[soydelacruz.github.io/Bible--Ref-](https://soydelacruz.github.io/Bible--Ref-/), so production
+builds use the base path `/Bible--Ref-/` (`DEPLOY_BASE` in [`vite/site.ts`](vite/site.ts); change it
+if the repository is renamed), and `npm run preview` serves the build at
+<http://localhost:4173/Bible--Ref-/>. GitHub Pages has to be switched on once, in the repository's
+Settings → Pages, with _GitHub Actions_ as the source. Besides the pages, the build writes:
 
 - the page metadata: canonical URLs, Open Graph and Twitter cards, and structured data;
 - `sitemap.xml`;

@@ -22,6 +22,7 @@ import {
   LuRainbow,
   LuRefreshCw,
   LuRotateCcw,
+  LuRoute,
   LuSearch,
   LuShare,
   LuSlidersHorizontal,
@@ -96,6 +97,9 @@ export const GenresIcon = decorative(LuPalette);
 export const OutgoingIcon = decorative(LuArrowRight);
 export const IncomingIcon = decorative(LuArrowLeft);
 export const BothDirectionsIcon = decorative(LuArrowRightLeft);
+
+// A chain of links from one passage to another.
+export const PathIcon = decorative(LuRoute);
 
 // The source code, which lives on GitHub. Lucide draws the mark in the same stroke as the rest,
 // so the footer's link stays in one family instead of pulling in a second icon set for one glyph.

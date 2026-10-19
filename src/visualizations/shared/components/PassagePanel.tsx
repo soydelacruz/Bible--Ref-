@@ -39,6 +39,7 @@ import { canCopy, copyQuote, quotePassage, type PassageQuote } from '../passage-
 import { GENRE_COLORS, GENRE_HEX } from '../palette.ts';
 import { OriginalWordsSection } from './OriginalWordsSection.tsx';
 import { PanelSection } from './PanelSection.tsx';
+import { PathSection } from './PathSection.tsx';
 import type { VizData } from '../viz-data.ts';
 import { useLocalization, type Localization } from '../../../i18n/use-locale.tsx';
 import styles from './PassagePanel.module.css';
@@ -218,6 +219,20 @@ export function PassagePanel({
   const previous = neighbor(passage, -1, versification);
   const next = neighbor(passage, 1, versification);
   const isVerse = passage.kind === 'verse';
+  // Outside the part keyed by passage, so that it outlives a step along the path to it.
+  const [destination, setDestination] = useState<Passage | null>(null);
+  // Near the top, where it is found: one line until it is used, and its answer then appears where
+  // it was asked for rather than below every connection.
+  const path = (
+    <PathSection
+      data={data}
+      passage={passage}
+      filter={filter}
+      destination={destination}
+      onDestinationChange={setDestination}
+      onSelect={onSelect}
+    />
+  );
 
   return (
     <div className={styles.panel}>
@@ -290,10 +305,12 @@ export function PassagePanel({
               />
             </div>
             {actions && <div className={styles.actions}>{actions}</div>}
+            {path}
           </>
         ) : (
           <>
             {actions && <div className={styles.actions}>{actions}</div>}
+            {path}
             <ChapterVerses
               start={range.start}
               end={range.end}
