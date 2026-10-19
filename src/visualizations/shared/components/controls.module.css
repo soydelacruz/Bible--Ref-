@@ -403,3 +403,11 @@
 .languageRow .select {
   inline-size: auto;
 }
+
+/* The narrowest phones have no room for every view's name beside the site's: the current view
+   keeps its name, and the others stand on their icons (each link is still named in full). */
+@media (max-width: 29.99rem) {
+  .segmented a.button:not([aria-current='page']) .shortLabel {
+    display: none;
+  }
+}

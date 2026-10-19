@@ -8,8 +8,8 @@ See how the Bible is woven together, and read any passage with its connections i
 you to sign in to Vercel)
 
 This is a copy of [Bible Cross-References](https://github.com/trekhleb/bible-cross-references) by
-Oleksii Trekhleb, under its MIT license, with two additions: searching the text for words, and
-finding the path of cross-references between two passages.
+Oleksii Trekhleb, under its MIT license, with three additions: searching the text for words,
+finding the path of cross-references between two passages, and a third view, Clusters.
 
 ## Why this exists
 
@@ -81,6 +81,27 @@ there was none. Choose a step to travel there; the path is then drawn again from
 - Switch between what a verse points to, what points to it, or both.
 - Tap a verse for its connections and follow them from passage to passage. "Show in Arcs" leads
   back to the big picture.
+
+### Clusters: every book at a glance
+
+Inspired by Chris Woods's [Bible Fascinator](https://designs.drawingwithdata.com/fascinator).
+
+- Every verse with a cross-reference is a dot, gathered into one cluster per book: the Old
+  Testament on one side, the New on the other (one above the other on a tall screen), with every
+  link drawn as a faint haze between them. A book's verses spiral out from its center in reading
+  order, so a cluster's size is how much of it is connected.
+- Point at a book to light up all of its links, or at a verse to watch its links grow out to where
+  they land; click a verse to focus it and read it in the details panel.
+- Click a book (or pick one from the book menu) to open it chapter by chapter, in the middle, with
+  the rest of the Bible around it showing only what that book connects to.
+- The play button starts a guided tour of well-known verses, from Genesis 1:1 to Revelation 22:13,
+  each shown with its text and links for a few seconds. Anything the reader does — a touch, a key,
+  a scroll or Back — stops it, and Back leaves the tour in one step. Open the page at
+  [`clusters/?tour`](https://bible-ref.vercel.app/clusters/?tour) to start it by itself.
+
+The book clusters are placed by a small force simulation (d3-force) over their 66 circles; the dots
+inside them are a sunflower spiral, so the layout is instant and the same every time even with
+30,000 verses on screen. It uses the same filters as the other views.
 
 ### On your phone
 
@@ -248,7 +269,7 @@ src/translations/        Translation plugins: manifests, registry, loading, text
 src/words/               Original-language words: manifest, registry, per-verse index
 src/cross-references/    Cross-reference plugins: manifests, registry, bidirectional index
 src/app/                 The app: its views, the URL state and the view switch
-src/visualizations/      One folder per visualization (Arcs, Threads), plus shared blocks
+src/visualizations/      One folder per visualization (Arcs, Threads, Clusters), plus shared blocks
 src/features/debug/      The /debug/ page
 src/shared/              Reusable UI (footer, icons, tables), styles, formatting and loading
 tests/                   Repository-level tests, and tests/e2e/ the end-to-end suite

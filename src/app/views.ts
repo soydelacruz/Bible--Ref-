@@ -1,4 +1,5 @@
 import { arcs } from '../visualizations/arcs/index.ts';
+import { clusters } from '../visualizations/clusters/index.ts';
 import { threads } from '../visualizations/threads/index.ts';
 
 /**
@@ -9,6 +10,7 @@ import { threads } from '../visualizations/threads/index.ts';
 export const VIEWS = [
   { ...arcs, path: '' },
   { ...threads, path: 'threads/' },
+  { ...clusters, path: 'clusters/' },
 ] as const;
 
 export type View = (typeof VIEWS)[number];

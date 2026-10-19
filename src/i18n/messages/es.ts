@@ -11,6 +11,9 @@ export const es: LocaleMessages = {
   'view.threads': 'Hilos',
   'view.threads.short': 'Hilos',
   'view.threads.open': 'Leer en contexto',
+  'view.clusters': 'Cúmulos',
+  'view.clusters.short': 'Cúmulos',
+  'view.clusters.open': 'Ver en Cúmulos',
   'view.switch': 'Visualizaciones',
 
   'search.label': 'Ir a una referencia bíblica, o buscar palabras en el texto',
@@ -207,6 +210,18 @@ export const es: LocaleMessages = {
   'threads.stage':
     'Hilos desde los versículos de este capítulo hasta donde llegan sus referencias cruzadas en ' +
     'la Biblia, mostrada como una barra vertical con los 66 libros.',
+  'clusters.book': 'Libro',
+  'clusters.wholeBible': 'Toda la Biblia',
+  'clusters.openBook': 'clic para abrirlo',
+  'clusters.hint':
+    'Señala un libro o un versículo para iluminar sus enlaces · clic en un libro para abrirlo',
+  'clusters.tour.start': 'Ver un recorrido por versículos conocidos',
+  'clusters.tour.stop': 'Detener el recorrido',
+  'clusters.stage':
+    'Cada versículo con referencias cruzadas es un punto, reunido en un cúmulo por libro: el ' +
+    'Antiguo Testamento a un lado, el Nuevo al otro, con los enlaces entre ellos en trazo tenue. ' +
+    'Señala un libro o un versículo para iluminar sus enlaces, haz clic en un versículo para ' +
+    'enfocarlo y en un libro para abrirlo capítulo por capítulo.',
   'arcs.connections': (count, plural) =>
     plural === 1 ? `${count} conexión` : `${count} conexiones`,
   'arcs.stage':

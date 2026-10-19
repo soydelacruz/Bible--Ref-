@@ -19,6 +19,9 @@ export const en = {
   'view.threads': 'Threads',
   'view.threads.short': 'Threads',
   'view.threads.open': 'Read in context',
+  'view.clusters': 'Clusters',
+  'view.clusters.short': 'Clusters',
+  'view.clusters.open': 'Show in Clusters',
   'view.switch': 'Visualizations',
 
   'search.label': 'Go to a Bible reference, or search the text for words',
@@ -221,6 +224,17 @@ export const en = {
   'threads.stage':
     'Threads from the verses of this chapter to where their cross-references land in the Bible, ' +
     'shown as a vertical bar of all 66 books.',
+  'clusters.book': 'Book',
+  'clusters.wholeBible': 'Whole Bible',
+  'clusters.openBook': 'click to open it',
+  'clusters.hint': 'Point at a book or a verse to light up its links · click a book to open it',
+  'clusters.tour.start': 'Play a tour of well-known verses',
+  'clusters.tour.stop': 'Stop the tour',
+  'clusters.stage':
+    'Every verse with cross-references as a dot, gathered into one cluster per book: the Old ' +
+    'Testament on one side, the New on the other, with the links between them drawn faintly. ' +
+    'Point at a book or a verse to light up its links, click a verse to focus it, and click a ' +
+    'book to open it chapter by chapter.',
   'arcs.connections': (count: string, plural: number) =>
     plural === 1 ? `${count} connection` : `${count} connections`,
   'arcs.stage':

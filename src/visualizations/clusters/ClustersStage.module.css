@@ -1,0 +1,88 @@
+/* Two canvases stacked: the picture at rest below, what stands out above. The one below dims
+   while something stands out, so the highlighted links read against a quiet background. */
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: default;
+  touch-action: manipulation;
+}
+
+.stage[data-pointing='true'] {
+  cursor: pointer;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.base {
+  transition: opacity 220ms ease;
+}
+
+.base[data-dimmed='true'] {
+  opacity: 0.38;
+}
+
+.overlay {
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 3;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) - 2px);
+  background: rgb(22 22 21 / 0.94);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+}
+
+.tooltip span {
+  color: var(--color-text-muted);
+}
+
+.back {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-3);
+  z-index: 2;
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.hint {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline: 0;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* The book picker sits among the header's buttons, so it takes its text's width, not a row. */
+.bookSelect {
+  inline-size: auto;
+  max-inline-size: 12rem;
+}
+
+@media (hover: none) {
+  .hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .base {
+    transition: none;
+  }
+}

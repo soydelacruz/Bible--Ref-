@@ -23,7 +23,9 @@ import {
   LuMonitorDown,
   LuMouse,
   LuMousePointerClick,
+  LuOrbit,
   LuPalette,
+  LuPlay,
   LuRainbow,
   LuRefreshCw,
   LuRotateCcw,
@@ -31,6 +33,7 @@ import {
   LuSearch,
   LuShare,
   LuSlidersHorizontal,
+  LuSquare,
   LuSquarePlus,
   LuUpload,
   LuX,
@@ -64,9 +67,15 @@ function decorative(Glyph: IconType): IconComponent {
 // One icon family (Lucide) across the UI, with a single exception below. Names say what an icon
 // means, not what it depicts, so changing a glyph, or the whole family, touches only this file.
 
-// Visualizations: arcs over the whole Bible, and reading a chapter with its threads.
+// Visualizations: arcs over the whole Bible, reading a chapter with its threads, and the books
+// as clusters of verses.
 export const ArcsIcon = decorative(LuRainbow);
 export const ReadingIcon = decorative(LuBookOpenText);
+export const ClustersIcon = decorative(LuOrbit);
+
+// A guided tour that plays by itself, and stopping it.
+export const PlayIcon = decorative(LuPlay);
+export const StopIcon = decorative(LuSquare);
 
 // Navigation
 export const PreviousIcon = decorative(LuChevronLeft);
