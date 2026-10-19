@@ -1,0 +1,176 @@
+/* Soy de la cruz: a cross in a shaft of dawn light. Warm near-black, one warm light from the upper
+   left (the scene's own, echoed in the background), and the words in the site's serif. */
+.cross-page {
+  --ink: oklch(0.93 0.018 80);
+  --ink-muted: oklch(0.72 0.03 70);
+  --ember: oklch(0.78 0.11 68);
+  --night: oklch(0.13 0.01 55);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  min-block-size: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 60% at 14% 2%, oklch(0.34 0.06 62 / 0.55), transparent 62%),
+    radial-gradient(ellipse 90% 70% at 70% 110%, oklch(0.2 0.02 40 / 0.6), transparent 70%),
+    var(--night);
+  color: var(--ink);
+}
+
+.cross-page #root {
+  position: fixed;
+  inset: 0;
+}
+
+.cross-page canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.home {
+  position: fixed;
+  inset-block-start: clamp(1rem, 0.6rem + 1.4vw, 2rem);
+  inset-inline-start: clamp(1rem, 0.4rem + 2.6vw, 3.25rem);
+  z-index: 1;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: color 200ms ease;
+}
+
+.home:hover,
+.home:focus-visible {
+  color: var(--ink);
+}
+
+.home:focus-visible,
+.cite:focus-visible {
+  outline: 1px solid var(--ember);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.verse {
+  position: fixed;
+  inset-block-end: clamp(1.75rem, 0.8rem + 4vw, 5rem);
+  inset-inline-start: clamp(1rem, 0.4rem + 2.6vw, 3.25rem);
+  z-index: 1;
+  max-inline-size: min(30ch, 46vw);
+  margin: 0;
+}
+
+.eyebrow {
+  margin: 0 0 1.1rem;
+  color: var(--ember);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.words {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.2rem, 0.75rem + 1.6vw, 2.5rem);
+  font-weight: 400;
+  line-height: 1.22;
+  text-wrap: pretty;
+  hanging-punctuation: first;
+}
+
+.cite {
+  display: inline-block;
+  margin-block-start: 1.4rem;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+  border-block-end: 1px solid oklch(0.78 0.11 68 / 0.35);
+  padding-block-end: 0.15rem;
+  transition:
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+.cite:hover {
+  color: var(--ink);
+  border-color: var(--ember);
+}
+
+.cite span {
+  color: oklch(0.6 0.03 70);
+}
+
+/* Dawn comes first, then the words, one after another. */
+.home,
+.eyebrow,
+.words,
+.cite {
+  animation: rise 1400ms var(--ease-out-expo) both;
+}
+
+.home {
+  animation-delay: 1500ms;
+}
+
+.eyebrow {
+  animation-delay: 1100ms;
+}
+
+.words {
+  animation-delay: 1300ms;
+}
+
+.cite {
+  animation-delay: 1700ms;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem);
+  }
+}
+
+/* A tall screen: the cross stands high, the words beneath it across the width. */
+@media (orientation: portrait) {
+  .verse {
+    inset-inline-end: clamp(1rem, 0.4rem + 2.6vw, 3.25rem);
+    max-inline-size: 30ch;
+  }
+
+  .words {
+    font-size: clamp(1.3rem, 1rem + 1.8vw, 2rem);
+  }
+}
+
+/* Without WebGL, a quiet cross of two timbers drawn in CSS, so the page still says what it says. */
+html[data-scene='unavailable'] .cross-page #root::before,
+html[data-scene='unavailable'] .cross-page #root::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(90deg, #4a2f1d, #6a4529 45%, #46301f);
+  box-shadow: 0 0 60px oklch(0.6 0.1 60 / 0.25);
+}
+
+html[data-scene='unavailable'] .cross-page #root::before {
+  inset-block: 14vh 14vh;
+  inset-inline-start: calc(62% - 1.6vh);
+  inline-size: 3.2vh;
+}
+
+html[data-scene='unavailable'] .cross-page #root::after {
+  inset-block-start: calc(14vh + 14.5vh);
+  inset-inline-start: calc(62% - 9.6vh);
+  inline-size: 19.2vh;
+  block-size: 2.9vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home,
+  .eyebrow,
+  .words,
+  .cite {
+    animation: none;
+  }
+}

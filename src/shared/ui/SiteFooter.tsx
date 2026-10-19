@@ -9,8 +9,15 @@ const YEAR = new Date().getFullYear();
 /** Where the code lives. The project is open source, so every page points at it. */
 const REPOSITORY_URL = 'https://github.com/soydelacruz/Bible--Ref-';
 
-/** Whose site this is, named in the footer beside the year. */
-const OWNER = { name: 'SoyDeLaCruz.dev', url: 'https://soydelacruz.dev' } as const;
+/**
+ * Whose site this is, named in the footer beside the year. The name leads to a page of its own on
+ * this site, a cross in three.js ("soy de la cruz": I belong to the cross), until the domain of
+ * the same name is live.
+ */
+const OWNER = {
+  name: 'SoyDeLaCruz.dev',
+  url: `${import.meta.env.BASE_URL}soydelacruz/`,
+} as const;
 
 interface SiteFooterProps {
   /** Page-specific credits, such as data attribution. */

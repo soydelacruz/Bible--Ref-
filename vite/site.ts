@@ -58,6 +58,8 @@ export const PAGES = {
   threads: { entry: 'threads/index.html', listed: true, app: true },
   clusters: { entry: 'clusters/index.html', listed: true, app: true },
   debug: { entry: 'debug/index.html', listed: false, app: false },
+  // The page behind the footer's SoyDeLaCruz.dev link: a cross in three.js, unlisted on purpose.
+  cross: { entry: 'soydelacruz/index.html', listed: false, app: false },
 } as const;
 
 export type Page = (typeof PAGES)[keyof typeof PAGES];

@@ -63,6 +63,7 @@ export default defineConfig(({ command, isPreview = false }) => ({
         // Entry points: they run on import, so importing them is running them.
         'src/app/main.tsx',
         'src/features/debug/main.tsx',
+        'src/features/cross/main.ts',
         'scripts/data/build.ts',
         'scripts/data/fetch.ts',
         // Drawing code that needs a GPU: a WebGL context, shaders and canvas painting cannot be
@@ -80,6 +81,7 @@ export default defineConfig(({ command, isPreview = false }) => ({
         'src/visualizations/shared/glow.ts',
         'src/visualizations/shared/instanced-templates.ts',
         'src/visualizations/shared/webgl.ts',
+        'src/features/cross/cross-scene.ts',
         // Touch choreography and the views that host a GPU canvas. A fake DOM can be made to
         // report any pointer path and any transform, so a test here would mostly be checking
         // the fake; these are covered by the end-to-end suite in a real browser instead
