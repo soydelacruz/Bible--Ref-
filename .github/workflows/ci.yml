@@ -70,7 +70,9 @@ jobs:
   # the overhead is under 2% a shard and more of them keep helping for a while. The floor is the
   # `offline` job beside this one at ~3.5 minutes — once a shard is quicker than that, the run
   # is waiting on offline instead and further shards buy nothing. Five lands around six minutes,
-  # comfortably clear of it.
+  # comfortably clear of it — on a public repository's four-core runners. A private repository
+  # gets two cores, so each shard runs one browser at a time (see `workers` in
+  # playwright.config.ts) and takes about twice as long.
   e2e:
     name: End-to-end tests (${{ matrix.shard }}/5)
     needs: build

@@ -12,6 +12,8 @@ public/data/
 # Except this one: 4.4 MB of archive for one translation is not worth keeping in the repository,
 # so the build downloads it on demand and checks it against its pin in data/sources.json.
 data/raw/eng-kjv2006_vpl.zip
+# Likewise the Reina-Valera 1909's archive: its text is what is pinned (see data/sources.json).
+data/raw/spaRV1909_vpl.zip
 # And these: 96 MB of tagged Hebrew and Greek, which STEPBible asks to be fetched from them
 # rather than passed on second-hand. The build downloads them against their pins too.
 data/raw/stepbible-*.txt
