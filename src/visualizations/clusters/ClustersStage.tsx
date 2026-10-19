@@ -86,14 +86,16 @@ export function ClustersStage({
   const size = useElementSize(hostRef);
   const [hover, setHover] = useState<Hover | null>(null);
 
+  // The host keeps every view mounted, and a hidden one keeps its size: nothing is worked out
+  // until the view is on screen, so the other views pay nothing for it.
   const graph = useMemo(
-    () => selectClusterGraph(index, verseGenres, filter, versification, openBook),
-    [index, verseGenres, filter, versification, openBook],
+    () => (active ? selectClusterGraph(index, verseGenres, filter, versification, openBook) : null),
+    [active, index, verseGenres, filter, versification, openBook],
   );
-  const drawn = useMemo(() => drawnLinks(index.linkCount, graph.linkIds), [index, graph]);
+  const drawn = useMemo(() => graph && drawnLinks(index.linkCount, graph.linkIds), [index, graph]);
   const layout = useMemo(
     () =>
-      size.width > 0 && size.height > 0
+      graph && size.width > 0 && size.height > 0
         ? computeClusterLayout(graph, versification, openBook, size)
         : null,
     [graph, versification, openBook, size],
@@ -105,7 +107,7 @@ export function ClustersStage({
   const hoverGroup = hover?.group ?? -1;
 
   const emphasis = useMemo((): Emphasis | null => {
-    if (!layout) return null;
+    if (!layout || !graph || !drawn) return null;
     const range =
       hoverVerse !== null
         ? { start: hoverVerse, end: hoverVerse }
@@ -140,7 +142,7 @@ export function ClustersStage({
 
   // The picture at rest: redrawn only when the layout or the language of its labels changes.
   useEffect(() => {
-    if (!active || !layout) return;
+    if (!active || !layout || !graph) return;
     const context = prepare(baseRef.current, layout.width, layout.height);
     if (!context) return;
     const label = (group: ClusterGroup) =>
