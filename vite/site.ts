@@ -13,14 +13,15 @@ export const ROOT_DIR = resolve(import.meta.dirname, '..');
 export const SITE_NAME = 'Bible Cross-References';
 
 /**
- * Where the built site is served. GitHub Pages serves this repository (bible-cross-references) at
- * trekhleb.dev/bible-cross-references/, under the owner's custom domain. Set `BASE_PATH` and
- * `SITE_ORIGIN` to build for another location, e.g. `BASE_PATH=/` for the root of a domain.
+ * Where the built site is served. GitHub Pages serves a repository at `/<repository name>/` of
+ * its owner's `github.io` domain, so renaming the repository means changing `DEPLOY_BASE` too.
+ * Set `BASE_PATH` and `SITE_ORIGIN` to build for another location, e.g. `BASE_PATH=/` for the root
+ * of a domain.
  */
-export const DEPLOY_BASE = '/bible-cross-references/';
-export const SITE_ORIGIN = process.env['SITE_ORIGIN'] ?? 'https://trekhleb.dev';
+export const DEPLOY_BASE = '/Bible--Ref-/';
+export const SITE_ORIGIN = process.env['SITE_ORIGIN'] ?? 'https://soydelacruz.github.io';
 /**
- * The published site, e.g. `https://trekhleb.dev/bible-cross-references/`. Links meant for others
+ * The published site, e.g. `https://soydelacruz.github.io/Bible--Ref-/`. Links meant for others
  * (copied quotes) point here even from the dev server, which runs at the root.
  */
 export const SITE_URL = new URL(process.env['BASE_PATH'] ?? DEPLOY_BASE, SITE_ORIGIN).href;
@@ -62,7 +63,7 @@ export function pageOf(path: string): Page | undefined {
   return Object.values(PAGES).find(({ entry }) => `/${entry}` === path);
 }
 
-/** The public URL of a page, e.g. `https://trekhleb.dev/bible-cross-references/threads/`. */
+/** The public URL of a page, e.g. `https://soydelacruz.github.io/Bible--Ref-/threads/`. */
 export function pageUrl(page: Page, base: string): string {
   return new URL(`${base}${page.entry.replace(/index\.html$/, '')}`, SITE_ORIGIN).href;
 }

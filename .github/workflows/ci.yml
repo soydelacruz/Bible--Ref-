@@ -162,8 +162,9 @@ jobs:
             test-results
           retention-days: 7
 
-  # Publishes main to trekhleb.dev/bible-cross-references/, once every check has passed. The domain
-  # comes from the owner's user site; builds already use the /bible-cross-references/ base path.
+  # Publishes main to soydelacruz.github.io/Bible--Ref-/, once every check has passed. Builds use
+  # that base path (DEPLOY_BASE in vite/site.ts). Pages must be switched on once, in the
+  # repository's Settings → Pages, with "GitHub Actions" as the source.
   deploy:
     name: Deploy to GitHub Pages
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

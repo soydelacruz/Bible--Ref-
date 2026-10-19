@@ -7,7 +7,7 @@ import styles from './SiteFooter.module.css';
 const YEAR = new Date().getFullYear();
 
 /** Where the code lives. The project is open source, so every page points at it. */
-const REPOSITORY_URL = 'https://github.com/trekhleb/bible-cross-references';
+const REPOSITORY_URL = 'https://github.com/soydelacruz/Bible--Ref-';
 
 interface SiteFooterProps {
   /** Page-specific credits, such as data attribution. */
