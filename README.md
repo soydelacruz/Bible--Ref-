@@ -56,6 +56,12 @@ fact that they share a word. Acts 5:14 and Luke 5:6, for instance, share πλῆ
 "multitude"), which no cross-reference joins. Words used in more than 100 verses are left out, and
 the text of the verse in its original language is never shown: only the dictionary form.
 
+Last, _Study elsewhere_ links the verse or chapter to study sites that the app cannot carry itself,
+each opening in a new tab: the NET Bible's translators' notes first, then Blue Letter Bible's
+interlinear and lexicon, BibleHub's commentaries and parallel translations, and STEPBible. They are
+links only; nothing of those sites is copied into the app. The NET Bible's notes may not be
+redistributed, which is why they are linked to rather than shown.
+
 ### Search the text
 
 The search box takes words as well as references. Anything that is not a reference, such as
@@ -182,14 +188,17 @@ network therefore previews in English, even though the page itself opens in Port
 
 The app is built on openly licensed datasets only:
 
-| Dataset          | Source                                                                                                                                | License                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Bible text       | [Berean Standard Bible](https://berean.bible/) (BSB), the default                                                                     | [Public domain](https://berean.bible/terms.htm)                                                |
-| Bible text       | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (KJV), the 1769 text, from eBible.org                  | [Public domain](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (see the note below) |
-| Bible text       | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (BLIVRE), Brazilian Portuguese, Textus Receptus edition                    | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)                                |
-| Bible text       | [Reina-Valera 1909](https://ebible.org/Scriptures/details.php?id=spaRV1909) (RV1909), Spanish, from eBible.org                        | [Public domain](https://ebible.org/Scriptures/details.php?id=spaRV1909)                        |
-| Cross-references | [OpenBible.info](https://www.openbible.info/labs/cross-references/), largely from the public-domain _Treasury of Scripture Knowledge_ | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                      |
-| Original words   | [STEPBible](https://github.com/STEPBible/STEPBible-Data) (TAHOT, TAGNT and their lexicons), from Tyndale House, Cambridge             | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                      |
+| Dataset          | Source                                                                                                                                         | License                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Bible text       | [Berean Standard Bible](https://berean.bible/) (BSB), the default                                                                              | [Public domain](https://berean.bible/terms.htm)                                                                      |
+| Bible text       | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (KJV), the 1769 text, from eBible.org                           | [Public domain](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (see the note below)                       |
+| Bible text       | [World English Bible](https://ebible.org/find/details.php?id=engwebp) (WEB), a modern translation, Protestant canon, from eBible.org           | [Public domain](https://ebible.org/find/details.php?id=engwebp) ("World English Bible" is a trademark of eBible.org) |
+| Bible text       | [American Standard Version](https://ebible.org/find/details.php?id=eng-asv) (ASV), 1901, a formal translation, from eBible.org                 | [Public domain](https://ebible.org/find/details.php?id=eng-asv)                                                      |
+| Bible text       | [Young's Literal Translation](https://ebible.org/find/details.php?id=engylt) (YLT), Robert Young, 1898, a literal translation, from eBible.org | [Public domain](https://ebible.org/find/details.php?id=engylt)                                                       |
+| Bible text       | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (BLIVRE), Brazilian Portuguese, Textus Receptus edition                             | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)                                                      |
+| Bible text       | [Reina-Valera 1909](https://ebible.org/Scriptures/details.php?id=spaRV1909) (RV1909), Spanish, from eBible.org                                 | [Public domain](https://ebible.org/Scriptures/details.php?id=spaRV1909)                                              |
+| Cross-references | [OpenBible.info](https://www.openbible.info/labs/cross-references/), largely from the public-domain _Treasury of Scripture Knowledge_          | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                            |
+| Original words   | [STEPBible](https://github.com/STEPBible/STEPBible-Data) (TAHOT, TAGNT and their lexicons), from Tyndale House, Cambridge                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                            |
 
 A note on the KJV: it is public domain in the United States and most of the world, but in the
 United Kingdom letters patent that do not expire reserve the right to **print** it, and to import
@@ -197,6 +206,13 @@ printed copies, to the Crown's patentees — Cambridge University Press, Oxford 
 and Collins. That is a restriction on printing rather than on a web page, and it has no effect
 outside the UK. The app says so where the translation is chosen. It is offered alongside the BSB, never instead of it, and
 its text is only downloaded for readers who ask for it.
+
+A note on the WEB, ASV and YLT: three more English texts, a modern, a formal and a literal one, to
+read a verse against. The ASV and YLT number every verse as the KJV does. The WEB follows the
+manuscripts that close Romans 14 with the doxology the KJV prints as Romans 16:25–27, so the
+importer moves those three verses back to the KJV's place. Verses a translation leaves out (four in
+the WEB, sixteen in the ASV, as in the BSB) are kept as empty verses and listed in the dataset's
+notices. All three are only downloaded for readers who choose them.
 
 A note on the Bíblia Livre: it is an independent volunteer translation, updated from João Ferreira
 de Almeida's, and the edition used here follows the Textus Receptus — the same textual basis as the
@@ -212,7 +228,7 @@ every link.
 
 The smaller files are committed to [`data/raw/`](data/raw/) exactly as downloaded;
 [`data/sources.json`](data/sources.json) pins every source by SHA-256, and anything not committed
-(the KJV archive, 4.4 MB) is downloaded by the build and checked against its pin, so a dataset is
+(the eBible.org archives, about 4 MB each) is downloaded by the build and checked against its pin, so a dataset is
 never built from a file nobody vouched for. `npm run dev` and `npm run build` turn them into the app's
 datasets in `public/data/` (generated, git-ignored), validated against the canonical KJV
 versification (31,102 verses).
@@ -382,6 +398,10 @@ The code is released under the [MIT License](LICENSE). The data keeps its own li
 > United States and most of the world; in the United Kingdom, letters patent reserve the right to
 > print it to the Crown's patentees — Cambridge University Press, Oxford University Press and
 > Collins.
+> Scripture text: World English Bible (WEB), in the public domain. "World English Bible" is a
+> trademark of eBible.org.
+> Scripture text: American Standard Version (ASV), 1901, in the public domain.
+> Scripture text: Young's Literal Translation (YLT), Robert Young, 1898, in the public domain.
 > Scripture text: Bíblia Livre (BLIVRE), Copyright © Diego Santos, Mario Sérgio e Marco Teles,
 > fevereiro de 2018, <http://sites.google.com/site/biblialivre/>, licensed under CC BY 3.0 Brasil
 > (<http://creativecommons.org/licenses/by/3.0/br/>). Modified: whitespace is normalized in 271

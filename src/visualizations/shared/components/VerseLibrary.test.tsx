@@ -102,8 +102,9 @@ describe('SavedMenu', () => {
     );
     const onSelect = renderMenu();
     await openMenu();
-    expect(screen.getByText('2 verses saved on this device.')).toBeDefined();
-    const items = screen.getAllByRole('listitem');
+    const count = screen.getByText('2 verses saved on this device.');
+    // The menu's own list: the panels rendered above have lists of their own.
+    const items = within(count.parentElement ?? document.body).getAllByRole('listitem');
     expect(items.map((item) => item.querySelector('strong')?.textContent)).toEqual([
       'Genesis 1:1',
       'John 3:16',

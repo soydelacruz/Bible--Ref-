@@ -59,8 +59,12 @@
   .credits {
     flex: 0 1 auto;
   }
+}
 
-  /* The mark says GitHub on its own. */
+/* Short of a wide desktop the mark says GitHub on its own: the owner's name and the credit leave
+   about a tenth of a 768px line spare on one system's font, and the widest UI fonts take all of
+   it, so the word goes rather than the line breaking. */
+@media (max-width: 63.99rem) {
   .sourceLabel {
     display: none;
   }
@@ -83,10 +87,16 @@
   }
 }
 
-/* The narrowest phones still in use: the last few pixels come off the page's edges too. */
+/* The narrowest phones still in use: the last few pixels come off the page's edges too, and the
+   source link goes with its separator. The owner's name took the room it had; the repository is
+   one tap away on any wider screen, and the licence credit beside it cannot give any back. */
 @media (max-width: 22.49rem) {
   .footer {
     column-gap: var(--space-1);
     padding-inline: var(--space-2);
+  }
+
+  .sourceItem {
+    display: none;
   }
 }

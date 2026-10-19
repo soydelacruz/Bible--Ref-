@@ -396,6 +396,31 @@
 
 /* The credit sits with the data it belongs to rather than in the footer, which has no room for
    it and is not where these words are read. */
+/* Study sites elsewhere: links that leave the app, so they read as links and say so. */
+.studyLinks {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.studyLink {
+  display: block;
+  text-decoration: none;
+}
+
+.studyLink:hover .itemRef,
+.studyLink:focus-visible .itemRef {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.studyLinkIcon {
+  align-self: center;
+  color: var(--color-text-muted);
+}
+
 .credit {
   margin: var(--space-1) 0 var(--space-3);
   color: var(--color-text-muted);

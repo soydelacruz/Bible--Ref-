@@ -113,6 +113,57 @@ describe('importEbibleVerseLines', () => {
     ]);
   });
 
+  /**
+   * The World English Bible ends Romans 14 with the doxology the KJV prints as 16:25–27, and leaves
+   * 16:25 blank where it moved from: eBible's file has 14:24–26 and an empty 16:25, but no 16:26
+   * or 16:27.
+   */
+  describe('the World English Bible’s numbering', () => {
+    const webLines = (line: string): string | null => {
+      if (line.startsWith('ROM 14:23 ')) {
+        return [line, 'ROM 14:24 Now to him', 'ROM 14:25 but now', 'ROM 14:26 to God'].join('\r\n');
+      }
+      if (line.startsWith('ROM 16:25 ')) {
+        return 'ROM 16:25 ';
+      }
+      if (line.startsWith('ROM 16:26 ') || line.startsWith('ROM 16:27 ')) {
+        return null;
+      }
+      return line.startsWith('ACT 8:37 ') ? 'ACT 8:37 ' : line;
+    };
+
+    it('puts the doxology back where the KJV numbers it', () => {
+      const file = importEbibleVerseLines(createVerseLines(webLines), 'web', PROVENANCE);
+      expect(file.verses).toHaveLength(31102);
+      expect(file.verses[verseIndex('Rom', 14, 23)]).toBe('Text of ROM 14:23.');
+      expect(file.verses[verseIndex('Rom', 16, 25)]).toBe('Now to him');
+      expect(file.verses[verseIndex('Rom', 16, 26)]).toBe('but now');
+      expect(file.verses[verseIndex('Rom', 16, 27)]).toBe('to God');
+    });
+
+    it('reports the verses it omits, but not the blank the move left behind', () => {
+      const file = importEbibleVerseLines(createVerseLines(webLines), 'web', PROVENANCE);
+      expect(file.notices).toEqual([
+        expect.objectContaining({ level: 'info', count: 1, examples: ['Acts.8.37'] }),
+      ]);
+    });
+
+    it('moves nothing for a translation that numbers like the KJV', () => {
+      expect(() => importEbibleVerseLines(createVerseLines(webLines), 'asv', PROVENANCE)).toThrow(
+        'Rom.14.24 is not in the KJV versification',
+      );
+    });
+
+    it('still refuses a second text for a verse a move fills', () => {
+      const text = createVerseLines((line) =>
+        line.startsWith('ROM 14:23 ') ? [line, 'ROM 14:24 Now to him'].join('\r\n') : line,
+      );
+      expect(() => importEbibleVerseLines(text, 'web', PROVENANCE)).toThrow(
+        'duplicate verse Rom.16.25',
+      );
+    });
+  });
+
   it.each([
     [
       'an unknown book code',

@@ -60,6 +60,11 @@ export const pt: LocaleMessages = {
     'nos Estados Unidos e na maior parte do mundo; no Reino Unido, uma carta-patente reserva o ' +
     'direito de imprimi-lo aos impressores da Coroa — Cambridge University Press, Oxford ' +
     'University Press e Collins.',
+  'attribution.web':
+    'Texto bíblico: World English Bible (WEB), em domínio público. “World English Bible” é uma marca da eBible.org.',
+  'attribution.asv': 'Texto bíblico: American Standard Version (ASV), 1901, em domínio público.',
+  'attribution.ylt':
+    "Texto bíblico: Young's Literal Translation (YLT), Robert Young, 1898, em domínio público.",
   'attribution.blivre':
     'Texto bíblico: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio e Marco Teles, ' +
     'fevereiro de 2018 (edição Textus Receptus), https://sites.google.com/site/biblialivre/. ' +
@@ -188,6 +193,16 @@ export const pt: LocaleMessages = {
     `, baseado no trabalho da Tyndale House, Cambridge; reduzido às formas de dicionário. ` +
     `Palavras usadas em mais de ${max} versículos ficam de fora.`,
   'words.creditLabel': 'Palavras:',
+
+  'study.title': 'Estudar em outros sites',
+  'study.note': 'notas, léxicos e comentários em outros sites',
+  'study.net': 'Notas da NET Bible',
+  'study.blueLetterBible': 'Interlinear e léxico da Blue Letter Bible',
+  'study.bibleHubCommentaries': 'Comentários do BibleHub',
+  'study.bibleHubParallel': 'Traduções paralelas do BibleHub',
+  'study.bibleHubChapter': 'Página de estudo do BibleHub',
+  'study.stepBible': 'Estudo de palavras no STEPBible',
+  'study.label': (link, passage) => `${link} sobre ${passage}`,
 
   'loading.data': (verses, links) =>
     `Carregando ${verses} versículos e ${links} referências cruzadas…`,

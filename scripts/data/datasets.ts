@@ -68,6 +68,39 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
       });
     },
   },
+  web: {
+    outputPath: translationDatasetPath('web'),
+    build: async (readSource) => {
+      const { source, content } = await readSource('web');
+      const text = extractZipTextEntry(content, expectMember(source));
+      return importEbibleVerseLines(text, 'web', {
+        ...provenanceOf(source),
+        snapshotDate: null,
+      });
+    },
+  },
+  asv: {
+    outputPath: translationDatasetPath('asv'),
+    build: async (readSource) => {
+      const { source, content } = await readSource('asv');
+      const text = extractZipTextEntry(content, expectMember(source));
+      return importEbibleVerseLines(text, 'asv', {
+        ...provenanceOf(source),
+        snapshotDate: null,
+      });
+    },
+  },
+  ylt: {
+    outputPath: translationDatasetPath('ylt'),
+    build: async (readSource) => {
+      const { source, content } = await readSource('ylt');
+      const text = extractZipTextEntry(content, expectMember(source));
+      return importEbibleVerseLines(text, 'ylt', {
+        ...provenanceOf(source),
+        snapshotDate: null,
+      });
+    },
+  },
   blivre: {
     outputPath: translationDatasetPath('blivre'),
     build: async (readSource) => {

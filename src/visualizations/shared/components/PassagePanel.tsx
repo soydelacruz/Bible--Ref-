@@ -40,6 +40,7 @@ import { GENRE_COLORS, GENRE_HEX } from '../palette.ts';
 import { OriginalWordsSection } from './OriginalWordsSection.tsx';
 import { PanelSection } from './PanelSection.tsx';
 import { PathSection } from './PathSection.tsx';
+import { StudySection } from './StudySection.tsx';
 import { VerseLibrary } from './VerseLibrary.tsx';
 import library from './VerseLibrary.module.css';
 import { entryOf } from '../../../library/library.ts';
@@ -366,6 +367,7 @@ export function PassagePanel({
         {passage.kind === 'verse' && (
           <OriginalWordsSection verse={passage.verse} data={data} onSelect={onSelect} />
         )}
+        <StudySection passage={passage} versification={versification} />
       </div>
     </div>
   );

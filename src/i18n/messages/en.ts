@@ -70,6 +70,11 @@ export const en = {
     'the United States and most of the world; in the United Kingdom, letters patent reserve ' +
     'the right to print it to the Crown’s patentees — Cambridge University Press, Oxford ' +
     'University Press and Collins.',
+  'attribution.web':
+    'Scripture text: World English Bible (WEB), in the public domain. “World English Bible” is a trademark of eBible.org.',
+  'attribution.asv': 'Scripture text: American Standard Version (ASV), 1901, in the public domain.',
+  'attribution.ylt':
+    "Scripture text: Young's Literal Translation (YLT), Robert Young, 1898, in the public domain.",
   'attribution.blivre':
     'Scripture text: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio and Marco Teles, ' +
     'February 2018 (Textus Receptus edition), https://sites.google.com/site/biblialivre/. ' +
@@ -197,6 +202,17 @@ export const en = {
     `, based on work at Tyndale House, Cambridge; reduced to dictionary forms. Words used in ` +
     `more than ${max} verses are left out.`,
   'words.creditLabel': 'Words:',
+
+  'study.title': 'Study elsewhere',
+  'study.note': 'notes, lexicons and commentaries on other sites',
+  'study.net': 'NET Bible notes',
+  'study.blueLetterBible': 'Blue Letter Bible interlinear and lexicon',
+  'study.bibleHubCommentaries': 'BibleHub commentaries',
+  'study.bibleHubParallel': 'BibleHub parallel translations',
+  'study.bibleHubChapter': 'BibleHub study page',
+  'study.stepBible': 'STEPBible word study',
+  // The link's own words, then the passage it opens, e.g. "NET Bible notes on John 3:16".
+  'study.label': (link: string, passage: string) => `${link} on ${passage}`,
 
   'loading.data': (verses: string, links: string) =>
     `Loading ${verses} verses and ${links} cross-references…`,

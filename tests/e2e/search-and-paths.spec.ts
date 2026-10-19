@@ -43,7 +43,12 @@ test.describe('the path between two passages', () => {
     await panel.getByRole('button', { name: 'Find', exact: true }).click();
     const summary = panel.getByRole('status').filter({ hasText: / to John 3:16 in / });
     await expect(summary).toHaveText(/^Ruth 1:16 to John 3:16 in \d+ links?:$/);
-    const steps = panel.getByRole('list').last().getByRole('listitem');
+    // The chain's own list, not the panel's other lists (the study links, for one).
+    const steps = panel
+      .getByRole('list')
+      .filter({ hasText: 'Ruth 1:16' })
+      .filter({ hasText: 'John 3:16' })
+      .getByRole('listitem');
     await expect(steps.first()).toContainText('Ruth 1:16');
     await expect(steps.last()).toContainText('John 3:16');
 

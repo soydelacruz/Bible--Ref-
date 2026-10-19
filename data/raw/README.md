@@ -6,13 +6,16 @@ that the site can be rebuilt even if an upstream URL disappears; the KJV archive
 downloads it on demand instead. Either way `../sources.json` pins the file by SHA-256 and the build
 refuses anything that does not match it, before turning them into the datasets in `public/data/`.
 
-| File                                                        | Source                                                                                                                                                                                                    | License                                                         |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `bsb.txt`                                                   | [Berean Standard Bible](https://berean.bible/), from <https://bereanbible.com/bsb.txt>, retrieved 2026-09-25                                                                                              | Public domain ("dedicated to the public domain", per the file)  |
-| `openbible-cross-references.zip`                            | [OpenBible.info cross-references](https://www.openbible.info/labs/cross-references/), from <https://a.openbible.info/data/cross-references.zip>, snapshot 2026-09-21                                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)       |
-| `bliv-tr_vpl.zip`                                           | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (Textus Receptus edition, February 2018), from the project's own [GitHub release](https://github.com/blivre/BibliaLivre/releases/tag/2018.2.0) | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/) |
-| `eng-kjv2006_vpl.zip` (not committed; fetched by the build) | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006), from <https://ebible.org/Scriptures/eng-kjv2006_vpl.zip>, retrieved 2026-10-17                                            | Public domain (in the United Kingdom: Crown copyright)          |
-| `stepbible-*.txt` (not committed; fetched by the build)     | [STEPBible](https://github.com/STEPBible/STEPBible-Data) tagged Hebrew (TAHOT) and Greek (TAGNT) with the TBESH and TBESG lexicons, retrieved 2026-10-16                                                  | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)       |
+| File                                                        | Source                                                                                                                                                                                                    | License                                                            |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `bsb.txt`                                                   | [Berean Standard Bible](https://berean.bible/), from <https://bereanbible.com/bsb.txt>, retrieved 2026-09-25                                                                                              | Public domain ("dedicated to the public domain", per the file)     |
+| `openbible-cross-references.zip`                            | [OpenBible.info cross-references](https://www.openbible.info/labs/cross-references/), from <https://a.openbible.info/data/cross-references.zip>, snapshot 2026-09-21                                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)          |
+| `bliv-tr_vpl.zip`                                           | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (Textus Receptus edition, February 2018), from the project's own [GitHub release](https://github.com/blivre/BibliaLivre/releases/tag/2018.2.0) | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)    |
+| `eng-kjv2006_vpl.zip` (not committed; fetched by the build) | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006), from <https://ebible.org/Scriptures/eng-kjv2006_vpl.zip>, retrieved 2026-10-17                                            | Public domain (in the United Kingdom: Crown copyright)             |
+| `engwebp_vpl.zip` (not committed; fetched by the build)     | [World English Bible](https://ebible.org/find/details.php?id=engwebp), Protestant canon, from <https://ebible.org/Scriptures/engwebp_vpl.zip>, retrieved 2026-10-19                                       | Public domain ("World English Bible" is a trademark of eBible.org) |
+| `eng-asv_vpl.zip` (not committed; fetched by the build)     | [American Standard Version](https://ebible.org/find/details.php?id=eng-asv) (1901), from <https://ebible.org/Scriptures/eng-asv_vpl.zip>, retrieved 2026-10-19                                            | Public domain                                                      |
+| `engylt_vpl.zip` (not committed; fetched by the build)      | [Young's Literal Translation](https://ebible.org/find/details.php?id=engylt), from <https://ebible.org/Scriptures/engylt_vpl.zip>, retrieved 2026-10-19                                                   | Public domain                                                      |
+| `stepbible-*.txt` (not committed; fetched by the build)     | [STEPBible](https://github.com/STEPBible/STEPBible-Data) tagged Hebrew (TAHOT) and Greek (TAGNT) with the TBESH and TBESG lexicons, retrieved 2026-10-16                                                  | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)          |
 
 Attribution for the scripture texts: _Berean Standard Bible (BSB), dedicated to the public
 domain._ and _King James Version (Authorized Version), the 1769 text; public domain in the United
@@ -47,6 +50,14 @@ came with this copy is the one they published with it. Both versions permit redi
 whole text with attribution, but they are not interchangeable: 3.0 terminates automatically on a
 breach with no cure, where 4.0 reinstates if the breach is cured within thirty days. 3.0 BR is the
 stricter of the two and the one the app complies with.
+
+The World English Bible, the American Standard Version and Young's Literal Translation are public
+domain; only their text entry is pinned, as for the KJV. Not one character of the ASV or YLT is
+changed. In the WEB three non-breaking spaces (John 5:11, Acts 20:35 and 22:21) become ordinary
+ones, and the three verses of the doxology it numbers Romans 14:24–26 are filed under Romans
+16:25–27, where the KJV numbering has them; its words are untouched, so it is still the World
+English Bible, which is all its trademark asks. The brackets the ASV and YLT put around supplied
+words are kept, for the reason given above.
 
 Attribution for the original-language words: _STEP Bible (<https://www.STEPBible.org>), based on
 work at Tyndale House, Cambridge, licensed under CC BY 4.0

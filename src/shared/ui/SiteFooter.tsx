@@ -36,18 +36,22 @@ export function SiteFooter({ children, className }: SiteFooterProps) {
     <footer className={className ? `${styles.footer} ${className}` : styles.footer}>
       <span className={styles.owner}>
         <span className={styles.copyright}>© {YEAR} · </span>
-        <a href={OWNER.url}>{OWNER.name}</a> ·{' '}
-        <a
-          className={styles.source}
-          href={REPOSITORY_URL}
-          target="_blank"
-          rel="noreferrer"
-          title={t('footer.source')}
-          aria-label={t('footer.source')}
-        >
-          <SourceCodeIcon />
-          <span className={styles.sourceLabel}>{t('footer.sourceLabel')}</span>
-        </a>{' '}
+        <a href={OWNER.url}>{OWNER.name}</a>
+        {/* With its separator, so that on the narrowest phones the two go together. */}
+        <span className={styles.sourceItem}>
+          {' · '}
+          <a
+            className={styles.source}
+            href={REPOSITORY_URL}
+            target="_blank"
+            rel="noreferrer"
+            title={t('footer.source')}
+            aria-label={t('footer.source')}
+          >
+            <SourceCodeIcon />
+            <span className={styles.sourceLabel}>{t('footer.sourceLabel')}</span>
+          </a>
+        </span>{' '}
         <InstallLink />
       </span>
       {children !== undefined && <span className={styles.credits}>{children}</span>}
