@@ -36,7 +36,7 @@
       "description": "Reina-Valera 1909, eBible.org edition, verse-per-line text in a ZIP archive",
       "url": "https://ebible.org/Scriptures/spaRV1909_vpl.zip",
       "fileName": "spaRV1909_vpl.zip",
-      "sha256": "ba06745a3da35652003f4b33a6d75492172d2a7ba0128138d957476febfbbd40",
+      "sha256": "9d7aff52765d9e67b5d11ff667b6953319af39454ea32c53d6743401720594aa",
       "member": "spaRV1909_vpl.txt",
       "retrievedAt": "2026-10-19",
       "license": "Public domain",
