@@ -22,6 +22,39 @@
       "homepage": "https://ebible.org/Scriptures/details.php?id=eng-kjv2006"
     },
     {
+      "id": "web",
+      "description": "World English Bible (Protestant canon), eBible.org edition, verse-per-line text in a ZIP archive",
+      "url": "https://ebible.org/Scriptures/engwebp_vpl.zip",
+      "fileName": "engwebp_vpl.zip",
+      "sha256": "bd5f4ac05c5742338b3b17086d5731cb2ca005f3ba5025f71494643eb7799833",
+      "member": "engwebp_vpl.txt",
+      "retrievedAt": "2026-10-19",
+      "license": "Public domain",
+      "homepage": "https://ebible.org/find/details.php?id=engwebp"
+    },
+    {
+      "id": "asv",
+      "description": "American Standard Version (1901), eBible.org edition, verse-per-line text in a ZIP archive",
+      "url": "https://ebible.org/Scriptures/eng-asv_vpl.zip",
+      "fileName": "eng-asv_vpl.zip",
+      "sha256": "8924ef74086d572425b1e335f531c7c529a561969e5c851e456b84c2ce6ad858",
+      "member": "eng-asv_vpl.txt",
+      "retrievedAt": "2026-10-19",
+      "license": "Public domain",
+      "homepage": "https://ebible.org/find/details.php?id=eng-asv"
+    },
+    {
+      "id": "ylt",
+      "description": "Young's Literal Translation, eBible.org edition, verse-per-line text in a ZIP archive",
+      "url": "https://ebible.org/Scriptures/engylt_vpl.zip",
+      "fileName": "engylt_vpl.zip",
+      "sha256": "627d7af1a95d267a8f31f45b279b81385edaa646027a865a2939f0878d1b8533",
+      "member": "engylt_vpl.txt",
+      "retrievedAt": "2026-10-19",
+      "license": "Public domain",
+      "homepage": "https://ebible.org/find/details.php?id=engylt"
+    },
+    {
       "id": "blivre",
       "description": "Bíblia Livre (Textus Receptus edition), verse-per-line text in a ZIP archive",
       "url": "https://github.com/blivre/BibliaLivre/releases/download/2018.2.0/bliv-tr_vpl.zip",

@@ -60,6 +60,11 @@ export const pt: LocaleMessages = {
     'nos Estados Unidos e na maior parte do mundo; no Reino Unido, uma carta-patente reserva o ' +
     'direito de imprimi-lo aos impressores da Coroa — Cambridge University Press, Oxford ' +
     'University Press e Collins.',
+  'attribution.web':
+    'Texto bíblico: World English Bible (WEB), em domínio público. “World English Bible” é uma marca da eBible.org.',
+  'attribution.asv': 'Texto bíblico: American Standard Version (ASV), 1901, em domínio público.',
+  'attribution.ylt':
+    "Texto bíblico: Young's Literal Translation (YLT), Robert Young, 1898, em domínio público.",
   'attribution.blivre':
     'Texto bíblico: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio e Marco Teles, ' +
     'fevereiro de 2018 (edição Textus Receptus), https://sites.google.com/site/biblialivre/. ' +

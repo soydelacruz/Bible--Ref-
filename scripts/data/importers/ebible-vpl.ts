@@ -1,5 +1,5 @@
 import { BOOKS, type BookId } from '../../../src/core/bible/books.ts';
-import { toOsisId, type VerseIndex } from '../../../src/core/bible/verse-ref.ts';
+import { parseOsisId, toOsisId, type VerseIndex } from '../../../src/core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../../../src/core/bible/versification.ts';
 import { getTranslationManifest } from '../../../src/translations/registry.ts';
 import {
@@ -100,6 +100,21 @@ const BOOK_IDS_BY_CODE: ReadonlyMap<string, BookId> = new Map(
 const VERSE_LINE_PATTERN = /^(\S+) (\d+):(\d+) ?(.*)$/;
 
 /**
+ * Verses a translation numbers differently from the KJV, from its own reference to the KJV's.
+ *
+ * The World English Bible follows the manuscripts that close Romans 14 with the doxology the KJV
+ * prints as 16:25–27, and leaves 16:25 blank where it moved from. The words are the same verses
+ * either way, so they go back to the KJV's place, where the cross-references expect them.
+ */
+const VERSE_MOVES: Partial<Record<TranslationId, ReadonlyMap<string, string>>> = {
+  web: new Map([
+    ['Rom.14.24', 'Rom.16.25'],
+    ['Rom.14.25', 'Rom.16.26'],
+    ['Rom.14.26', 'Rom.16.27'],
+  ]),
+};
+
+/**
  * Pilcrows start a paragraph in these editions and the app has no place for them, so they go.
  *
  * Square brackets stay. They are not typography: they mark words the translators supplied rather
@@ -132,6 +147,8 @@ export function importEbibleVerseLines(
   const manifest = getTranslationManifest(translationId);
   const versification = CANONICAL_VERSIFICATION;
   const verses = new Array<string | undefined>(versification.verseCount).fill(undefined);
+  const moves = VERSE_MOVES[translationId] ?? new Map<string, string>();
+  const destinations = new Set(moves.values());
 
   stripByteOrderMark(text)
     .split(/\r?\n/)
@@ -151,17 +168,22 @@ export function importEbibleVerseLines(
       if (book === undefined) {
         throw new Error(`${translationId} line ${lineNumber}: unknown book code "${code}".`);
       }
-      const ref = { book, chapter: Number(chapter), verse: Number(verse) };
-      const index = versification.indexOf(ref);
+      const ownId = toOsisId({ book, chapter: Number(chapter), verse: Number(verse) });
+      if (verseText.trim() === '' && destinations.has(ownId)) {
+        // The blank a moved verse left behind: its words arrive from where the translation put them.
+        return;
+      }
+      const kjvId = moves.get(ownId) ?? ownId;
+      const ref = parseOsisId(kjvId);
+      const index = ref && versification.indexOf(ref);
       if (index === undefined) {
-        // Translations that number verses differently (e.g. the World English Bible moves the
-        // doxology of Romans) need a mapping before they can be added.
+        // Translations that number verses differently need an entry in VERSE_MOVES first.
         throw new Error(
-          `${translationId} line ${lineNumber}: ${toOsisId(ref)} is not in the KJV versification.`,
+          `${translationId} line ${lineNumber}: ${kjvId} is not in the KJV versification.`,
         );
       }
       if (verses[index] !== undefined) {
-        throw new Error(`${translationId} line ${lineNumber}: duplicate verse ${toOsisId(ref)}.`);
+        throw new Error(`${translationId} line ${lineNumber}: duplicate verse ${kjvId}.`);
       }
       verses[index] = cleanVerseText(verseText);
     });

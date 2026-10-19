@@ -60,6 +60,11 @@ export const es: LocaleMessages = {
     'en los Estados Unidos y en la mayor parte del mundo; en el Reino Unido, una patente real ' +
     'reserva el derecho a imprimirla a los impresores de la Corona: Cambridge University Press, ' +
     'Oxford University Press y Collins.',
+  'attribution.web':
+    'Texto bíblico: World English Bible (WEB), de dominio público. «World English Bible» es una marca de eBible.org.',
+  'attribution.asv': 'Texto bíblico: American Standard Version (ASV), 1901, de dominio público.',
+  'attribution.ylt':
+    "Texto bíblico: Young's Literal Translation (YLT), Robert Young, 1898, de dominio público.",
   'attribution.blivre':
     'Texto bíblico: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio y Marco Teles, ' +
     'febrero de 2018 (edición Textus Receptus), https://sites.google.com/site/biblialivre/. ' +

@@ -1,5 +1,6 @@
 import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
+import { parseOsisId } from '../../src/core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../../src/core/bible/versification.ts';
 import { DATASET_BUILDERS, type RawSourceContent } from './datasets.ts';
 import { BOOK_CODES as KJV_CODES } from './importers/ebible-vpl.ts';
@@ -8,6 +9,9 @@ import { expectMember, readSources, type RawSource } from './lib/sources.ts';
 /** The archive entry each zipped source pins, mirroring `data/sources.json`. */
 const MEMBERS: Readonly<Record<string, string>> = {
   kjv: 'eng-kjv2006_vpl.txt',
+  web: 'engwebp_vpl.txt',
+  asv: 'eng-asv_vpl.txt',
+  ylt: 'engylt_vpl.txt',
   rv1909: 'spaRV1909_vpl.txt',
 };
 
@@ -45,9 +49,26 @@ const KJV = everyVerse((index) => {
   return `${code} ${String(ref.chapter)}:${String(ref.verse)} Verse ${String(index)}`;
 });
 
+/**
+ * The World English Bible as eBible.org numbers it: the doxology closes Romans 14 as 14:24–26, and
+ * 16:25 is left blank where it was moved from.
+ */
+const WEB = KJV.split('\n')
+  .filter((line) => !/^ROM 16:2[67] /.test(line))
+  .map((line) => (line.startsWith('ROM 16:25 ') ? 'ROM 16:25 ' : line))
+  .flatMap((line) =>
+    line.startsWith('ROM 14:23 ')
+      ? [line, 'ROM 14:24 Now to him', 'ROM 14:25 but now', 'ROM 14:26 to the only wise God']
+      : [line],
+  )
+  .join('\n');
+
 const CONTENT: Readonly<Record<string, string | Uint8Array>> = {
   bsb: `The Holy Bible, Berean Standard Bible\nVerse\tBerean Standard Bible\n${BSB}`,
   kjv: zipSync({ 'eng-kjv2006_vpl.txt': strToU8(KJV) }),
+  web: zipSync({ 'engwebp_vpl.txt': strToU8(WEB) }),
+  asv: zipSync({ 'eng-asv_vpl.txt': strToU8(KJV) }),
+  ylt: zipSync({ 'engylt_vpl.txt': strToU8(KJV) }),
   // Its own text, in its own entry: a builder that reached for the wrong archive, or the wrong
   // name inside one, would otherwise pass by looking like the KJV's.
   blivre: zipSync({
@@ -110,6 +131,9 @@ describe('DATASET_BUILDERS', () => {
     expect(DATASET_BUILDERS.map((builder) => builder.outputPath)).toEqual([
       'data/translations/bsb.json',
       'data/translations/kjv.json',
+      'data/translations/web.json',
+      'data/translations/asv.json',
+      'data/translations/ylt.json',
       'data/translations/blivre.json',
       'data/translations/rv1909.json',
       'data/cross-references/openbible.json',
@@ -135,6 +159,22 @@ describe('DATASET_BUILDERS', () => {
       expect(Array.isArray(dataset.notices)).toBe(true);
     },
   );
+
+  it('reads the World English Bible into the KJV numbering', async () => {
+    const web = DATASET_BUILDERS.find((b) => b.outputPath.endsWith('/web.json'));
+    const dataset = await web?.build(readSource);
+    if (dataset?.format !== 'translation-text') {
+      throw new Error('Expected the WEB dataset.');
+    }
+    const at = (osisId: string) => {
+      const ref = parseOsisId(osisId);
+      const index = ref && CANONICAL_VERSIFICATION.indexOf(ref);
+      return index === undefined ? undefined : dataset.verses[index];
+    };
+    expect(at('Rom.16.25')).toBe('Now to him');
+    expect(at('Rom.16.27')).toBe('to the only wise God');
+    expect(dataset.notices).toEqual([]);
+  });
 
   it('passes the words builder its licence and credit, from one place', async () => {
     const words = DATASET_BUILDERS.find((b) => b.outputPath.includes('words'));

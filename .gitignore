@@ -14,6 +14,10 @@ public/data/
 data/raw/eng-kjv2006_vpl.zip
 # Likewise the Reina-Valera 1909's archive: its text is what is pinned (see data/sources.json).
 data/raw/spaRV1909_vpl.zip
+# And the World English Bible's, the American Standard Version's and Young's Literal Translation's.
+data/raw/engwebp_vpl.zip
+data/raw/eng-asv_vpl.zip
+data/raw/engylt_vpl.zip
 # And these: 96 MB of tagged Hebrew and Greek, which STEPBible asks to be fetched from them
 # rather than passed on second-hand. The build downloads them against their pins too.
 data/raw/stepbible-*.txt

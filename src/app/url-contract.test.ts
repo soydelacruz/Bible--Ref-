@@ -134,6 +134,9 @@ const SAVED: readonly (readonly [string, Partial<UrlState>])[] = [
   // The translation.
   ['/bible-cross-references/?t=kjv', { translation: 'kjv' }],
   ['/bible-cross-references/?t=bsb', { translation: 'bsb' }],
+  ['/bible-cross-references/?t=web', { translation: 'web' }],
+  ['/bible-cross-references/?t=asv', { translation: 'asv' }],
+  ['/bible-cross-references/?t=ylt', { translation: 'ylt' }],
   ['/bible-cross-references/?t=blivre', { translation: 'blivre' }],
   ['/bible-cross-references/?t=rv1909', { translation: 'rv1909' }],
 

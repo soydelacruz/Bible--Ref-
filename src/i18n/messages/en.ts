@@ -70,6 +70,11 @@ export const en = {
     'the United States and most of the world; in the United Kingdom, letters patent reserve ' +
     'the right to print it to the Crown’s patentees — Cambridge University Press, Oxford ' +
     'University Press and Collins.',
+  'attribution.web':
+    'Scripture text: World English Bible (WEB), in the public domain. “World English Bible” is a trademark of eBible.org.',
+  'attribution.asv': 'Scripture text: American Standard Version (ASV), 1901, in the public domain.',
+  'attribution.ylt':
+    "Scripture text: Young's Literal Translation (YLT), Robert Young, 1898, in the public domain.",
   'attribution.blivre':
     'Scripture text: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio and Marco Teles, ' +
     'February 2018 (Textus Receptus edition), https://sites.google.com/site/biblialivre/. ' +
