@@ -1,13 +1,17 @@
 import type { GenreId } from '../core/bible/genres.ts';
 import { enBooks } from './books/en.ts';
+import { esBooks } from './books/es.ts';
 import { ptBooks } from './books/pt.ts';
 import type { BookNames } from './books/types.ts';
 import { enGenres } from './genres/en.ts';
+import { esGenres } from './genres/es.ts';
 import { enInstall } from './install/en.tsx';
+import { esInstall } from './install/es.tsx';
 import { ptInstall } from './install/pt.tsx';
 import type { InstallGuides } from './install/types.ts';
 import { ptGenres } from './genres/pt.ts';
 import { en } from './messages/en.ts';
+import { es } from './messages/es.ts';
 import { pt } from './messages/pt.ts';
 import type { LocaleMessages } from './messages/types.ts';
 import { DEFAULT_LOCALE_ID, type LocaleId } from './locale-id.ts';
@@ -41,6 +45,14 @@ const LOCALES: Readonly<Record<LocaleId, Locale>> = {
     books: ptBooks,
     genres: ptGenres,
     install: ptInstall,
+  },
+  es: {
+    id: 'es',
+    ...LOCALE_TAGS.es,
+    messages: es,
+    books: esBooks,
+    genres: esGenres,
+    install: esInstall,
   },
 };
 

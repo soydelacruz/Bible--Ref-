@@ -81,6 +81,17 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
       });
     },
   },
+  rv1909: {
+    outputPath: translationDatasetPath('rv1909'),
+    build: async (readSource) => {
+      const { source, content } = await readSource('rv1909');
+      const text = extractZipTextEntry(content, expectMember(source));
+      return importEbibleVerseLines(text, 'rv1909', {
+        ...provenanceOf(source),
+        snapshotDate: null,
+      });
+    },
+  },
 };
 
 /** One builder per cross-reference source. */

@@ -116,7 +116,7 @@ that installed the app has already done the work.
 
 ## Languages
 
-The app speaks English and Portuguese. Which it speaks is settled in this order: the address
+The app speaks English, Portuguese and Spanish. Which it speaks is settled in this order: the address
 (`?lang=pt`), then the reader's last choice, then what their browser asks for, then English. On a
 first visit the Bible follows the interface — a browser asking for Portuguese arrives at the
 Bíblia Livre without being asked — and after that the two are independent, so a Portuguese
@@ -167,6 +167,7 @@ The app is built on openly licensed datasets only:
 | Bible text       | [Berean Standard Bible](https://berean.bible/) (BSB), the default                                                                     | [Public domain](https://berean.bible/terms.htm)                                                |
 | Bible text       | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (KJV), the 1769 text, from eBible.org                  | [Public domain](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (see the note below) |
 | Bible text       | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (BLIVRE), Brazilian Portuguese, Textus Receptus edition                    | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)                                |
+| Bible text       | [Reina-Valera 1909](https://ebible.org/Scriptures/details.php?id=spaRV1909) (RV1909), Spanish, from eBible.org                        | [Public domain](https://ebible.org/Scriptures/details.php?id=spaRV1909)                        |
 | Cross-references | [OpenBible.info](https://www.openbible.info/labs/cross-references/), largely from the public-domain _Treasury of Scripture Knowledge_ | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                      |
 | Original words   | [STEPBible](https://github.com/STEPBible/STEPBible-Data) (TAHOT, TAGNT and their lexicons), from Tyndale House, Cambridge             | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                      |
 

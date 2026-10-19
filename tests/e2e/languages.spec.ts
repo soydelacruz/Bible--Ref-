@@ -8,6 +8,28 @@ async function open(page: Page, query: string): Promise<void> {
   await openPanel(page);
 }
 
+test.describe('reading in Spanish', () => {
+  test('a link that names the language opens the app in it, with its Bible', async ({ page }) => {
+    await open(page, '?lang=es');
+    await expect(page.locator(ACTIVE).getByRole('button', { name: /Filtros/ })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+    await expect(page.locator(ACTIVE).getByRole('button', { name: /Traducción/ })).toContainText(
+      'RV1909',
+    );
+  });
+
+  test('a reference can be typed in Spanish, under Spanish book names', async ({ page }) => {
+    await open(page, '?lang=es');
+    const search = page.locator(ACTIVE).getByRole('searchbox');
+    await search.fill('Génesis 1:1');
+    await search.press('Enter');
+    await expect(page.locator(PANEL).getByRole('heading', { name: 'Génesis 1:1' })).toBeVisible();
+    await search.fill('jn 3 16');
+    await search.press('Enter');
+    await expect(page.locator(PANEL).getByRole('heading', { name: 'Juan 3:16' })).toBeVisible();
+  });
+});
+
 test.describe('reading in Portuguese', () => {
   test('a link that names the language opens the app in it', async ({ page }) => {
     await open(page, '?lang=pt');

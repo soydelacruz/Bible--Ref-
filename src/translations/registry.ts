@@ -57,6 +57,22 @@ const TRANSLATIONS: Readonly<Record<TranslationId, TranslationManifest>> = {
     homepage: 'https://sites.google.com/site/biblialivre/',
     access: 'bundled',
   },
+  rv1909: {
+    id: 'rv1909',
+    name: 'Reina-Valera 1909',
+    abbreviation: 'RV1909',
+    language: 'es',
+    direction: 'ltr',
+    versification: 'kjv',
+    license: {
+      name: 'Public domain',
+      url: 'https://ebible.org/Scriptures/details.php?id=spaRV1909',
+      publicDomain: true,
+    },
+    attribution: 'Scripture text: Reina-Valera 1909 (RV1909), in the public domain.',
+    homepage: 'https://ebible.org/Scriptures/details.php?id=spaRV1909',
+    access: 'bundled',
+  },
 };
 
 /** Every translation the app can show, in the order the picker lists them. */

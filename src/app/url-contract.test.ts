@@ -135,10 +135,12 @@ const SAVED: readonly (readonly [string, Partial<UrlState>])[] = [
   ['/bible-cross-references/?t=kjv', { translation: 'kjv' }],
   ['/bible-cross-references/?t=bsb', { translation: 'bsb' }],
   ['/bible-cross-references/?t=blivre', { translation: 'blivre' }],
+  ['/bible-cross-references/?t=rv1909', { translation: 'rv1909' }],
 
   // The language.
   // The Portuguese Bible comes with the Portuguese interface for a reader who chose neither.
   ['/bible-cross-references/?lang=pt', { locale: 'pt', translation: 'blivre' }],
+  ['/bible-cross-references/?lang=es', { locale: 'es', translation: 'rv1909' }],
   ['/bible-cross-references/?lang=en', { locale: 'en' }],
 
   // Everything at once, in both orders a URL can carry them.

@@ -71,6 +71,7 @@ export const en = {
     'Scripture text: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio and Marco Teles, ' +
     'February 2018 (Textus Receptus edition), https://sites.google.com/site/biblialivre/. ' +
     'Changed: whitespace was normalized; no word was altered.',
+  'attribution.rv1909': 'Scripture text: Reina-Valera 1909 (RV1909), in the public domain.',
   'license.publicDomain': 'Public domain',
   'menu.translation': 'Translation',
   'menu.translation.failed': (name: string) => `${name} could not be loaded.`,

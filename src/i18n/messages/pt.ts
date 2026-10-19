@@ -61,6 +61,7 @@ export const pt: LocaleMessages = {
     'Texto bíblico: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio e Marco Teles, ' +
     'fevereiro de 2018 (edição Textus Receptus), https://sites.google.com/site/biblialivre/. ' +
     'Alterações: os espaços foram normalizados; nenhuma palavra foi alterada.',
+  'attribution.rv1909': 'Texto bíblico: Reina-Valera 1909 (RV1909), em domínio público.',
   'license.publicDomain': 'Domínio público',
   'menu.translation': 'Tradução',
   'menu.translation.failed': (name) => `Não foi possível carregar ${name}.`,

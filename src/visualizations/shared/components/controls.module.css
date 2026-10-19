@@ -27,7 +27,8 @@
 }
 
 @media (max-width: 85.99rem) {
-  :global(html[lang|='pt']) .search {
+  :global(html[lang|='pt']) .search,
+  :global(html[lang|='es']) .search {
     flex-basis: 10rem;
   }
 }

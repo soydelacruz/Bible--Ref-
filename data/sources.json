@@ -32,6 +32,17 @@
       "homepage": "https://sites.google.com/site/biblialivre/"
     },
     {
+      "id": "rv1909",
+      "description": "Reina-Valera 1909, eBible.org edition, verse-per-line text in a ZIP archive",
+      "url": "https://ebible.org/Scriptures/spaRV1909_vpl.zip",
+      "fileName": "spaRV1909_vpl.zip",
+      "sha256": "ba06745a3da35652003f4b33a6d75492172d2a7ba0128138d957476febfbbd40",
+      "member": "spaRV1909_vpl.txt",
+      "retrievedAt": "2026-10-19",
+      "license": "Public domain",
+      "homepage": "https://ebible.org/Scriptures/details.php?id=spaRV1909"
+    },
+    {
       "id": "openbible",
       "description": "OpenBible.info cross-references (TSV in a ZIP archive)",
       "url": "https://a.openbible.info/data/cross-references.zip",

@@ -8,6 +8,7 @@ import { expectMember, readSources, type RawSource } from './lib/sources.ts';
 /** The archive entry each zipped source pins, mirroring `data/sources.json`. */
 const MEMBERS: Readonly<Record<string, string>> = {
   kjv: 'eng-kjv2006_vpl.txt',
+  rv1909: 'spaRV1909_vpl.txt',
 };
 
 function source(id: string): RawSource {
@@ -58,6 +59,15 @@ const CONTENT: Readonly<Record<string, string | Uint8Array>> = {
       }),
     ),
   }),
+  rv1909: zipSync({
+    'spaRV1909_vpl.txt': strToU8(
+      everyVerse((index) => {
+        const ref = CANONICAL_VERSIFICATION.refAt(index);
+        const code = KJV_CODES[CANONICAL_VERSIFICATION.bookAt(index).ordinal] ?? 'GEN';
+        return `${code} ${String(ref.chapter)}:${String(ref.verse)} Versículo ${String(index)}.`;
+      }),
+    ),
+  }),
   openbible: zipSync({
     'cross_references.txt': strToU8(
       'From Verse\tTo Verse\tVotes\t# CC-BY 2026-01-01\nGen.1.1\tJohn.1.1\t5',
@@ -101,6 +111,7 @@ describe('DATASET_BUILDERS', () => {
       'data/translations/bsb.json',
       'data/translations/kjv.json',
       'data/translations/blivre.json',
+      'data/translations/rv1909.json',
       'data/cross-references/openbible.json',
       'data/words/stepbible.json',
     ]);

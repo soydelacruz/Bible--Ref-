@@ -43,9 +43,10 @@
   }
 }
 
-/* Portuguese, where the same controls are about 45px wider. */
+/* Portuguese and Spanish, where the same controls are about 45px wider. */
 @media (max-width: 85.99rem) {
-  :global(html[lang|='pt']) .masthead {
+  :global(html[lang|='pt']) .masthead,
+  :global(html[lang|='es']) .masthead {
     flex: 1 1 100%;
     justify-content: space-between;
   }
