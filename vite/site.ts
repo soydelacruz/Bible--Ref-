@@ -13,16 +13,19 @@ export const ROOT_DIR = resolve(import.meta.dirname, '..');
 export const SITE_NAME = 'Bible Cross-References';
 
 /**
- * Where the built site is served. GitHub Pages serves a repository at `/<repository name>/` of
- * its owner's `github.io` domain, so renaming the repository means changing `DEPLOY_BASE` too.
- * Set `BASE_PATH` and `SITE_ORIGIN` to build for another location, e.g. `BASE_PATH=/` for the root
- * of a domain.
+ * Where the built site is served: the root of the project's Vercel domain. A Vercel build names
+ * that domain in `VERCEL_PROJECT_PRODUCTION_URL`, so it follows a rename or a custom domain without
+ * a change here. Set `BASE_PATH` and `SITE_ORIGIN` to build for another location, e.g.
+ * `BASE_PATH=/bible/` for a path of a shared domain.
  */
-export const DEPLOY_BASE = '/Bible--Ref-/';
-export const SITE_ORIGIN = process.env['SITE_ORIGIN'] ?? 'https://soydelacruz.github.io';
+export const DEPLOY_BASE = '/';
+const VERCEL_DOMAIN = process.env['VERCEL_PROJECT_PRODUCTION_URL'];
+export const SITE_ORIGIN =
+  process.env['SITE_ORIGIN'] ??
+  (VERCEL_DOMAIN ? `https://${VERCEL_DOMAIN}` : 'https://bible-ref.vercel.app');
 /**
- * The published site, e.g. `https://soydelacruz.github.io/Bible--Ref-/`. Links meant for others
- * (copied quotes) point here even from the dev server, which runs at the root.
+ * The published site, e.g. `https://bible-ref.vercel.app/`. Links meant for others (copied
+ * quotes) point here even from the dev server.
  */
 export const SITE_URL = new URL(process.env['BASE_PATH'] ?? DEPLOY_BASE, SITE_ORIGIN).href;
 
@@ -63,7 +66,7 @@ export function pageOf(path: string): Page | undefined {
   return Object.values(PAGES).find(({ entry }) => `/${entry}` === path);
 }
 
-/** The public URL of a page, e.g. `https://soydelacruz.github.io/Bible--Ref-/threads/`. */
+/** The public URL of a page, e.g. `https://bible-ref.vercel.app/threads/`. */
 export function pageUrl(page: Page, base: string): string {
   return new URL(`${base}${page.entry.replace(/index\.html$/, '')}`, SITE_ORIGIN).href;
 }

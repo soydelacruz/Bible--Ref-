@@ -12,8 +12,8 @@ import {
 } from './site.ts';
 
 describe('the site', () => {
-  it('is published under its own path of a shared domain', () => {
-    expect(DEPLOY_BASE).toBe('/Bible--Ref-/');
+  it('is published at the root of its own domain', () => {
+    expect(DEPLOY_BASE).toBe('/');
     expect(SITE_URL.endsWith(DEPLOY_BASE)).toBe(true);
     expect(SITE_URL.startsWith('https://')).toBe(true);
   });

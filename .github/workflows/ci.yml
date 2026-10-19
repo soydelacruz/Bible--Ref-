@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Redeploy by hand, e.g. after changing the Pages settings.
+  # Run the checks by hand.
   workflow_dispatch:
 
 permissions:
@@ -44,7 +44,7 @@ jobs:
       # is the whole pin file, so any re-pin fetches all of them again — which is the safe way
       # round, since the build refuses a local file that does not match its pin rather than
       # replacing it. Between re-pins nothing is downloaded, so a day when an upstream host is
-      # down does not stop a deployment.
+      # down does not stop a run.
       - name: Cache the downloaded sources
         uses: actions/cache@v6
         with:
@@ -57,11 +57,6 @@ jobs:
           name: site
           path: dist
           retention-days: 1
-      - name: Keep the built site for deployment
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: dist
 
   # The flows a reader actually goes through, in a real browser against the built site: reading a
   # chapter, following a cross-reference, the original-language words, switching translation, the
@@ -73,7 +68,7 @@ jobs:
   # Five, from measurement rather than instinct: the suite is about 30 minutes of machine time
   # on a runner, and each shard pays only ~30s of checkout, install and artifact download, so
   # the overhead is under 2% a shard and more of them keep helping for a while. The floor is the
-  # `offline` job beside this one at ~3.5 minutes — once a shard is quicker than that, `deploy`
+  # `offline` job beside this one at ~3.5 minutes — once a shard is quicker than that, the run
   # is waiting on offline instead and further shards buy nothing. Five lands around six minutes,
   # comfortably clear of it.
   e2e:
@@ -161,25 +156,3 @@ jobs:
             playwright-report
             test-results
           retention-days: 7
-
-  # Publishes main to soydelacruz.github.io/Bible--Ref-/, once every check has passed. Builds use
-  # that base path (DEPLOY_BASE in vite/site.ts). Pages must be switched on once, in the
-  # repository's Settings → Pages, with "GitHub Actions" as the source.
-  deploy:
-    name: Deploy to GitHub Pages
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [check, build, e2e, offline]
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    # One deployment at a time; a running one always finishes.
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5

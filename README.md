@@ -1,10 +1,11 @@
 # Bible Cross-References
 
-[![Bible Cross-References: 344,799 connections between 31,102 verses, from Genesis to Revelation](public/social-preview.jpg)](https://soydelacruz.github.io/Bible--Ref-/)
+[![Bible Cross-References: 344,799 connections between 31,102 verses, from Genesis to Revelation](public/social-preview.jpg)](https://bible-ref.vercel.app/)
 
 See how the Bible is woven together, and read any passage with its connections in view.
 
-**▶ [Open Bible Cross-References](https://soydelacruz.github.io/Bible--Ref-/)**
+**▶ [Open Bible Cross-References](https://bible-ref.vercel.app/)** (private for now: it asks
+you to sign in to Vercel)
 
 This is a copy of [Bible Cross-References](https://github.com/trekhleb/bible-cross-references) by
 Oleksii Trekhleb, under its MIT license, with two additions: searching the text for words, and
@@ -296,13 +297,14 @@ To run any of them locally you need the browser once: `npx playwright install --
 
 ### Deployment
 
-The site is static. The CI workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
-publishes every push to `main` with GitHub Pages, once all checks pass, at
-[soydelacruz.github.io/Bible--Ref-](https://soydelacruz.github.io/Bible--Ref-/), so production
-builds use the base path `/Bible--Ref-/` (`DEPLOY_BASE` in [`vite/site.ts`](vite/site.ts); change it
-if the repository is renamed), and `npm run preview` serves the build at
-<http://localhost:4173/Bible--Ref-/>. GitHub Pages has to be switched on once, in the repository's
-Settings → Pages, with _GitHub Actions_ as the source. Besides the pages, the build writes:
+The site is static, hosted on Vercel, which builds and publishes every push to `main` (the
+settings are in [`vercel.json`](vercel.json)). Vercel Authentication keeps it private: only people
+signed in to Vercel with access to the project can open it. The CI workflow
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the checks and the end-to-end tests
+on every push and pull request. Builds are served at the root of the domain (`DEPLOY_BASE` in
+[`vite/site.ts`](vite/site.ts)), whose name a Vercel build reads from
+`VERCEL_PROJECT_PRODUCTION_URL`, and `npm run preview` serves the build at
+<http://localhost:4173/>. Besides the pages, the build writes:
 
 - the page metadata: canonical URLs, Open Graph and Twitter cards, and structured data;
 - `sitemap.xml`;
