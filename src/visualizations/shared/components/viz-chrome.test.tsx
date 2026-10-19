@@ -248,7 +248,7 @@ describe('SiteFooter', () => {
   it('points at the author’s site and the source code', () => {
     render(<SiteFooter />);
     expect(screen.getByRole('link', { name: 'SoyDeLaCruz.dev' }).getAttribute('href')).toBe(
-      'https://soydelacruz.dev',
+      '/soydelacruz/',
     );
     expect(screen.getByRole('link', { name: /Source code on GitHub/ }).getAttribute('href')).toBe(
       'https://github.com/soydelacruz/Bible--Ref-',
