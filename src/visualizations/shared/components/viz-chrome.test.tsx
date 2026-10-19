@@ -247,8 +247,12 @@ describe('Credits', () => {
 describe('SiteFooter', () => {
   it('points at the author’s site and the source code', () => {
     render(<SiteFooter />);
-    expect(screen.getByRole('link', { name: 'trekhleb.dev' })).toBeDefined();
-    expect(screen.getByRole('link', { name: /Source code on GitHub/ })).toBeDefined();
+    expect(screen.getByRole('link', { name: 'SoyDeLaCruz.dev' }).getAttribute('href')).toBe(
+      'https://soydelacruz.dev',
+    );
+    expect(screen.getByRole('link', { name: /Source code on GitHub/ }).getAttribute('href')).toBe(
+      'https://github.com/soydelacruz/Bible--Ref-',
+    );
   });
 
   it('carries the year, so the notice does not go stale', () => {
