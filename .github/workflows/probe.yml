@@ -1,0 +1,22 @@
+name: Probe RV1909
+on:
+  push:
+    branches: [probe-rv1909]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for id in spaRV1909 spa-rv1909 spaRV1909eb; do
+            url="https://ebible.org/Scriptures/${id}_vpl.zip"
+            code=$(curl -sL -o f.zip -w '%{http_code}' "$url")
+            echo "== $url $code"
+            if [ "$code" = 200 ]; then
+              sha256sum f.zip; ls -l f.zip; unzip -l f.zip
+              unzip -o -q f.zip
+              t=$(ls *_vpl.txt | head -1); wc -l "$t"; head -3 "$t" | cut -c1-80
+              grep -c . "$t"
+              grep -E '^(PSA 3:|MAL 4:|3JN 1:15|REV 12:18|ROM 16:2[5-7]|ACT 19:41)' "$t" | cut -c1-40 | head -12
+            fi
+          done
+          curl -sL https://ebible.org/Scriptures/details.php?id=spaRV1909 | grep -io 'public domain\|copyright[^<]*' | head -3
