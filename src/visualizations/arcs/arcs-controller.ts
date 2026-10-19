@@ -258,6 +258,15 @@ export class ArcsController {
     }
   }
 
+  /**
+   * The diagram as it is, the axis over the arcs, handed to `compose` for a picture. It draws and
+   * hands over in one go: a WebGL canvas keeps its pixels only until the frame it was drawn in ends.
+   */
+  snapshot<T>(compose: (layers: readonly HTMLCanvasElement[]) => T): T {
+    this.#draw();
+    return compose([this.#options.glCanvas, this.#options.overlayCanvas]);
+  }
+
   #draw(): void {
     if (!this.#active || this.#layout.width === 0 || this.#layout.height === 0) {
       return;

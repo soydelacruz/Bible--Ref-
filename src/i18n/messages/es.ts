@@ -125,6 +125,35 @@ export const es: LocaleMessages = {
   'panel.linksCounted': 'enlaces',
   'panel.versesCounted': 'versículos',
 
+  'library.save': 'Guardar versículo',
+  'library.saved': 'Guardado',
+  'library.highlights': 'Resaltado',
+  'library.highlight.yellow': 'Amarillo',
+  'library.highlight.green': 'Verde',
+  'library.highlight.blue': 'Azul',
+  'library.highlight.pink': 'Rosa',
+  'library.highlight.none': 'Sin resaltar',
+  'library.note': 'Nota',
+  'library.note.placeholder': 'Escribe una nota sobre este versículo…',
+  'saved.menu': 'Versículos guardados',
+  'saved.empty':
+    'Aún no hay nada guardado. Abre un versículo para guardarlo, resaltarlo o escribir una nota.',
+  'saved.count': (count, plural) =>
+    plural === 1
+      ? '1 versículo guardado en este dispositivo.'
+      : `${count} versículos guardados en este dispositivo.`,
+  'saved.export': 'Exportar',
+  'saved.import': 'Importar',
+  'saved.imported': (count, plural) =>
+    plural === 1 ? '1 versículo importado.' : `${count} versículos importados.`,
+  'saved.importFailed': 'Ese archivo no contiene versículos guardados de esta aplicación.',
+  'saved.note':
+    'Se guarda solo en este dispositivo. Exporta una copia para conservarla o llevarla a otro ' +
+    'dispositivo.',
+
+  'image.save': 'Guardar como imagen',
+  'image.failed': 'No se pudo guardar la imagen.',
+
   'path.title': 'Camino',
   'path.note': 'la cadena de enlaces hasta otro pasaje',
   'path.label': 'Pasaje hasta el que buscar un camino',

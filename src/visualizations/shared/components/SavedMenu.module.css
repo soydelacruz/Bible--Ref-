@@ -1,0 +1,65 @@
+.list {
+  display: grid;
+  max-block-size: min(22rem, 50vh);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.item {
+  display: grid;
+  gap: 1px;
+  inline-size: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+.item strong {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  font-weight: 600;
+}
+
+.dot {
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+  border-radius: 50%;
+  background: var(--highlight);
+}
+
+.mark {
+  color: var(--color-text-muted);
+}
+
+/* Clipped to two lines: the list is for finding a verse, and the verse itself is one click away. */
+.note,
+.item > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.note {
+  color: var(--color-text);
+  font-size: 0.8125rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

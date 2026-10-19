@@ -128,6 +128,35 @@ export const pt: LocaleMessages = {
 
   // The language names are already in the case Portuguese wants them: a message puts its
   // arguments in place, it does not reshape them.
+  'library.save': 'Salvar versículo',
+  'library.saved': 'Salvo',
+  'library.highlights': 'Destaque',
+  'library.highlight.yellow': 'Amarelo',
+  'library.highlight.green': 'Verde',
+  'library.highlight.blue': 'Azul',
+  'library.highlight.pink': 'Rosa',
+  'library.highlight.none': 'Sem destaque',
+  'library.note': 'Nota',
+  'library.note.placeholder': 'Escreva uma nota sobre este versículo…',
+  'saved.menu': 'Versículos salvos',
+  'saved.empty':
+    'Nada salvo ainda. Abra um versículo para salvá-lo, destacá-lo ou escrever uma nota.',
+  'saved.count': (count, plural) =>
+    plural === 1
+      ? '1 versículo salvo neste dispositivo.'
+      : `${count} versículos salvos neste dispositivo.`,
+  'saved.export': 'Exportar',
+  'saved.import': 'Importar',
+  'saved.imported': (count, plural) =>
+    plural === 1 ? '1 versículo importado.' : `${count} versículos importados.`,
+  'saved.importFailed': 'Esse arquivo não contém versículos salvos deste aplicativo.',
+  'saved.note':
+    'Guardado só neste dispositivo. Exporte uma cópia para mantê-la segura ou levá-la a outro ' +
+    'dispositivo.',
+
+  'image.save': 'Salvar como imagem',
+  'image.failed': 'Não foi possível salvar a imagem.',
+
   'path.title': 'Caminho',
   'path.note': 'a cadeia de ligações até outra passagem',
   'path.label': 'Passagem até a qual encontrar um caminho',

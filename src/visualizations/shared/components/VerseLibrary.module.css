@@ -1,0 +1,95 @@
+.library {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.swatches {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.swatch[data-color] {
+  background: var(--highlight);
+}
+
+.swatch[aria-pressed='true'] {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* The highlight colours: translucent, so the text keeps its own colour in either theme. */
+[data-color='yellow'] {
+  --highlight: rgb(250 204 21 / 0.35);
+}
+
+[data-color='green'] {
+  --highlight: rgb(74 222 128 / 0.3);
+}
+
+[data-color='blue'] {
+  --highlight: rgb(96 165 250 / 0.35);
+}
+
+[data-color='pink'] {
+  --highlight: rgb(244 114 182 / 0.35);
+}
+
+.noteLabel {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.note {
+  inline-size: 100%;
+  min-block-size: 2.25rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.note:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* A highlighted verse, wherever its text is shown. */
+.highlighted {
+  border-radius: 3px;
+  background: var(--highlight);
+  box-decoration-break: clone;
+}

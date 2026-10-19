@@ -1,4 +1,12 @@
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { formatPassage, passageRange, type Passage } from '../../core/bible/passage.ts';
 import { ClickIcon, PinchIcon, TapIcon } from '../../shared/ui/icons.tsx';
 import { useLocalization } from '../../i18n/use-locale.tsx';
@@ -21,6 +29,8 @@ interface ArcsStageProps {
   /** A connection pointed at in the details panel: its arc and its whole passage stand out. */
   readonly preview: Connection | null;
   readonly onSelect: (passage: Passage | null) => void;
+  /** Filled with a way to take a picture of the diagram as it is, once it can be drawn. */
+  readonly snapshotRef?: RefObject<ArcsController['snapshot'] | null>;
 }
 
 /** The arc diagram: a WebGL layer for arcs, a 2D overlay for the axis, and a hover tooltip. */
@@ -32,6 +42,7 @@ export function ArcsStage({
   focus,
   preview,
   onSelect,
+  snapshotRef,
 }: ArcsStageProps) {
   const { t, books, locale } = useLocalization();
   const genres = locale.genres;
@@ -71,11 +82,17 @@ export function ArcsStage({
       },
     });
     controllerRef.current = controller;
+    if (snapshotRef) {
+      snapshotRef.current = (compose) => controller.snapshot(compose);
+    }
     return () => {
       controller.dispose();
       controllerRef.current = null;
+      if (snapshotRef) {
+        snapshotRef.current = null;
+      }
     };
-  }, [data.versification]);
+  }, [data.versification, snapshotRef]);
 
   useEffect(() => {
     namesRef.current = { books, genres };

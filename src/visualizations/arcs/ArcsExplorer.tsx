@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ClickIcon,
   DragIcon,
   HoldAndSlideIcon,
   PinchIcon,
+  SaveImageIcon,
   ScrollIcon,
   TapIcon,
 } from '../../shared/ui/icons.tsx';
@@ -14,13 +15,18 @@ import { GenreLegend } from '../shared/components/GenreLegend.tsx';
 import { toggleGenre } from '../shared/components/GenreToggles.tsx';
 import { LinkStats } from '../shared/components/LinkStats.tsx';
 import { PassagePanel } from '../shared/components/PassagePanel.tsx';
+import { SavedMenu } from '../shared/components/SavedMenu.tsx';
 import { ReferenceSearch } from '../shared/components/ReferenceSearch.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
 import { DEFAULT_LINK_FILTER, selectLinks } from '../shared/link-filter.ts';
 import { summarizeLinks } from '../shared/link-summary.ts';
-import type { Passage } from '../../core/bible/passage.ts';
+import { formatPassage, type Passage } from '../../core/bible/passage.ts';
+import controls from '../shared/components/controls.module.css';
+import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
+import { composeImage, downloadImage, imageFileName } from '../shared/image-export.ts';
 import type { Connection } from '../shared/connections.ts';
 import type { VisualizationProps } from '../visualization.ts';
+import type { ArcsController } from './arcs-controller.ts';
 import { ArcsStage } from './ArcsStage.tsx';
 
 const INSPIRATION = {
@@ -41,7 +47,7 @@ export function ArcsExplorer({
   passageLinks,
   shareUrl,
 }: VisualizationProps) {
-  const { t } = useLocalization();
+  const { t, books } = useLocalization();
   const { index } = data.crossReferences;
   const linkIds = useMemo(
     () => selectLinks(index, data.verseGenres, filter),
@@ -60,6 +66,34 @@ export function ArcsExplorer({
     readonly connection: Connection;
   } | null>(null);
   const previewed = preview?.passage === passage ? preview.connection : null;
+  const snapshotRef = useRef<ArcsController['snapshot'] | null>(null);
+  const saveImage = () => {
+    const snapshot = snapshotRef.current;
+    if (!snapshot) {
+      return;
+    }
+    const title = [passage && formatPassage(passage, data.versification, books), t('app.name')]
+      .filter((part) => part !== null)
+      .join(' · ');
+    const ratio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+    const canvas = snapshot((layers) =>
+      composeImage(
+        layers,
+        {
+          title,
+          url: passage ? shareUrl(passage) : import.meta.env.SITE_URL,
+          credit: data.crossReferences.manifest.attribution,
+        },
+        ratio,
+        () => document.createElement('canvas'),
+      ),
+    );
+    if (canvas instanceof HTMLCanvasElement) {
+      downloadImage(canvas, imageFileName(title)).catch(() => {
+        window.alert(t('image.failed'));
+      });
+    }
+  };
 
   return (
     <VizPage
@@ -74,6 +108,11 @@ export function ArcsExplorer({
             onSelect={onNavigate}
           />
           {translationMenu}
+          <SavedMenu
+            versification={data.versification}
+            translation={data.translation}
+            onSelect={onNavigate}
+          />
           <FiltersMenu
             filter={filter}
             defaults={DEFAULT_LINK_FILTER}
@@ -81,6 +120,15 @@ export function ArcsExplorer({
             shownLinks={linkIds.length}
             totalLinks={index.linkCount}
           />
+          <button
+            type="button"
+            className={controls.button}
+            aria-label={t('image.save')}
+            title={t('image.save')}
+            onClick={saveImage}
+          >
+            <SaveImageIcon />
+          </button>
         </>
       }
       panel={
@@ -108,6 +156,7 @@ export function ArcsExplorer({
         focus={passage}
         preview={previewed}
         onSelect={onNavigate}
+        snapshotRef={snapshotRef}
       />
       <LinkStats
         summary={summary}

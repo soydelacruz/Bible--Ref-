@@ -5,15 +5,20 @@ import {
   LuArrowLeft,
   LuArrowRight,
   LuArrowRightLeft,
+  LuBan,
   LuBookOpenText,
+  LuBookmark,
+  LuBookmarkCheck,
   LuCheck,
   LuChevronDown,
   LuChevronLeft,
   LuChevronRight,
   LuCopy,
+  LuDownload,
   LuEllipsisVertical,
   LuGithub,
   LuHand,
+  LuImageDown,
   LuLanguages,
   LuMonitorDown,
   LuMouse,
@@ -27,6 +32,7 @@ import {
   LuShare,
   LuSlidersHorizontal,
   LuSquarePlus,
+  LuUpload,
   LuX,
 } from 'react-icons/lu';
 import { MdOutlinePinch, MdOutlineSwipeVertical, MdOutlineTouchApp } from 'react-icons/md';
@@ -97,6 +103,16 @@ export const GenresIcon = decorative(LuPalette);
 export const OutgoingIcon = decorative(LuArrowRight);
 export const IncomingIcon = decorative(LuArrowLeft);
 export const BothDirectionsIcon = decorative(LuArrowRightLeft);
+
+// A reader's own verses: saved, and the file they travel in.
+export const SaveIcon = decorative(LuBookmark);
+export const SavedIcon = decorative(LuBookmarkCheck);
+export const NoHighlightIcon = decorative(LuBan);
+export const ExportIcon = decorative(LuDownload);
+export const ImportIcon = decorative(LuUpload);
+
+// A picture of the view, to keep or share.
+export const SaveImageIcon = decorative(LuImageDown);
 
 // A chain of links from one passage to another.
 export const PathIcon = decorative(LuRoute);

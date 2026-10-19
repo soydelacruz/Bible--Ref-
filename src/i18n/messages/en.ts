@@ -139,6 +139,32 @@ export const en = {
   'panel.linksCounted': 'links',
   'panel.versesCounted': 'verses',
 
+  'library.save': 'Save verse',
+  'library.saved': 'Saved',
+  'library.highlights': 'Highlight',
+  'library.highlight.yellow': 'Yellow',
+  'library.highlight.green': 'Green',
+  'library.highlight.blue': 'Blue',
+  'library.highlight.pink': 'Pink',
+  'library.highlight.none': 'No highlight',
+  'library.note': 'Note',
+  'library.note.placeholder': 'Write a note about this verse…',
+  'saved.menu': 'Saved verses',
+  'saved.empty':
+    'Nothing saved yet. Open a verse to save it, highlight it or write a note about it.',
+  'saved.count': (count: string, plural: number) =>
+    plural === 1 ? '1 verse saved on this device.' : `${count} verses saved on this device.`,
+  'saved.export': 'Export',
+  'saved.import': 'Import',
+  'saved.imported': (count: string, plural: number) =>
+    plural === 1 ? 'Imported 1 verse.' : `Imported ${count} verses.`,
+  'saved.importFailed': 'That file holds no saved verses from this app.',
+  'saved.note':
+    'Kept on this device only. Export a copy to keep it safe or to bring it to another device.',
+
+  'image.save': 'Save as image',
+  'image.failed': 'The picture could not be saved.',
+
   'path.title': 'Path',
   'path.note': 'the chain of links to another passage',
   'path.label': 'Passage to find a path to',

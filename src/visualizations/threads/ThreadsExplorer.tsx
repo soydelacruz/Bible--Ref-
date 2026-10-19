@@ -7,6 +7,7 @@ import { FiltersMenu } from '../shared/components/FiltersMenu.tsx';
 import { GenreMenu } from '../shared/components/GenreMenu.tsx';
 import { toggleGenre } from '../shared/components/GenreToggles.tsx';
 import { PassagePanel } from '../shared/components/PassagePanel.tsx';
+import { SavedMenu } from '../shared/components/SavedMenu.tsx';
 import { ReferenceSearch } from '../shared/components/ReferenceSearch.tsx';
 import { SegmentedControl } from '../shared/components/SegmentedControl.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
@@ -97,6 +98,11 @@ export function ThreadsExplorer({
             onSelect={onNavigate}
           />
           {translationMenu}
+          <SavedMenu
+            versification={data.versification}
+            translation={data.translation}
+            onSelect={onNavigate}
+          />
           <SegmentedControl
             label={t('threads.direction')}
             options={directions}
