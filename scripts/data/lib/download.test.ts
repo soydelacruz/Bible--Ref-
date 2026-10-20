@@ -94,4 +94,14 @@ describe('downloadPinnedSource', () => {
     // Nothing unverified is left on disk.
     await expect(readFile(join(dir, 'thing.txt'), 'utf8')).rejects.toThrow();
   });
+
+  it('never downloads a file the pipeline makes, and names the script that makes it', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(BODY)));
+    vi.stubGlobal('fetch', fetchMock);
+    const { module } = await loadWithRawDir();
+    await expect(
+      module.downloadPinnedSource(source({ extractedBy: 'scripts/data/extract-thing.ts' })),
+    ).rejects.toThrow(/not downloaded: make it with `node scripts\/data\/extract-thing.ts`/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

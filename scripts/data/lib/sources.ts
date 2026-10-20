@@ -30,6 +30,13 @@ export interface RawSource {
    * bytes that matter, and nothing else can drift past it.
    */
   readonly member?: string;
+  /**
+   * The script that makes the file, for a source no URL serves as it is: an extract from a local
+   * copy of the upstream material. Its `url` then says where that material lives, not where the
+   * file can be downloaded, so the pipeline never downloads it: it checks the file, and re-pins
+   * it from disk after the script makes it again.
+   */
+  readonly extractedBy?: string;
   /** Date (YYYY-MM-DD) on which the pinned file was retrieved. */
   readonly retrievedAt: string;
   readonly license: string;
@@ -39,6 +46,8 @@ export interface RawSource {
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const FILE_NAME_PATTERN = /^[\w.-]+$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+/** A script of the data pipeline, by its path from the repository root. */
+const SCRIPT_PATTERN = /^scripts\/data\/[\w-]+\.ts$/;
 
 function expectMatch(value: unknown, pattern: RegExp, path: string): string {
   const text = expectString(value, path);
@@ -59,6 +68,11 @@ function parseRawSource(value: unknown, path: string): RawSource {
     ...(record['member'] === undefined
       ? {}
       : { member: expectMatch(record['member'], FILE_NAME_PATTERN, `${path}.member`) }),
+    ...(record['extractedBy'] === undefined
+      ? {}
+      : {
+          extractedBy: expectMatch(record['extractedBy'], SCRIPT_PATTERN, `${path}.extractedBy`),
+        }),
     retrievedAt: expectMatch(record['retrievedAt'], DATE_PATTERN, `${path}.retrievedAt`),
     license: expectString(record['license'], `${path}.license`),
     homepage: expectString(record['homepage'], `${path}.homepage`),

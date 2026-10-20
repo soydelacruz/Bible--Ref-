@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { netBookId, netVerseLines, netVersesFromHtml } from './netbible-html.ts';
+import { toOsisId } from '../../../src/core/bible/verse-ref.ts';
+import { CANONICAL_VERSIFICATION } from '../../../src/core/bible/versification.ts';
+import {
+  NET_OMITTED_VERSES,
+  netBookId,
+  netVerseLines,
+  netVersesFromHtml,
+} from './netbible-html.ts';
 
 /** A verse marker as netbible.org writes it. */
 function verse(book: string, chapter: number, number: number): string {
@@ -83,19 +90,35 @@ describe('netBookId', () => {
 });
 
 describe('netVerseLines', () => {
-  const lines = netVerseLines(new Map([['Gen.1.1', 'In the beginning God created.']])).split('\n');
+  /** Text for every verse of the KJV versification but those the NET leaves out. */
+  const whole = new Map(
+    Array.from({ length: CANONICAL_VERSIFICATION.verseCount }, (_, index) =>
+      toOsisId(CANONICAL_VERSIFICATION.refAt(index)),
+    )
+      .filter((id) => !NET_OMITTED_VERSES.has(id))
+      .map((id) => [id, `Text of ${id}.`]),
+  );
+  const lines = netVerseLines(whole).split('\n');
 
   it('writes every verse of the KJV versification, in eBible verse-per-line form', () => {
     expect(lines).toHaveLength(31_102 + 1);
-    expect(lines[0]).toBe('GEN 1:1 In the beginning God created.');
+    expect(lines[0]).toBe('GEN 1:1 Text of Gen.1.1.');
     expect(lines.at(-1)).toBe('');
   });
 
   it('writes a verse the NET leaves out with no text', () => {
-    expect(lines[1]).toBe('GEN 1:2');
+    expect(lines).toContain('ACT 24:7');
+    expect(lines.filter((line) => /^\S+ \d+:\d+$/.test(line))).toHaveLength(17);
+  });
+
+  it('refuses a verse with no text that the NET does not leave out', () => {
+    const lost = new Map(whole);
+    lost.delete('Gen.1.2');
+    lost.set('Gen.1.3', '');
+    expect(() => netVerseLines(lost)).toThrow(/no text for 2 verses .* Gen\.1\.2, Gen\.1\.3/);
   });
 
   it('refuses a verse outside the KJV versification', () => {
-    expect(() => netVerseLines(new Map([['Gen.1.99', 'x']]))).toThrow(/outside the KJV/);
+    expect(() => netVerseLines(new Map([...whole, ['Gen.1.99', 'x']]))).toThrow(/outside the KJV/);
   });
 });

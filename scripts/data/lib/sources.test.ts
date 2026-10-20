@@ -134,6 +134,16 @@ describe('pinning an entry inside an archive', () => {
     );
   });
 
+  it('reads the script that makes an extracted file, and refuses anything else there', async () => {
+    const extracted = { ...VALID, extractedBy: 'scripts/data/extract-thing.ts' };
+    await withSourcesFile({ sources: [extracted] });
+    await expect((await import('./sources.ts')).readSources()).resolves.toEqual([extracted]);
+    await withSourcesFile({ sources: [{ ...VALID, extractedBy: 'rm -rf /' }] });
+    await expect((await import('./sources.ts')).readSources()).rejects.toThrow(
+      /sources\[0\]\.extractedBy/,
+    );
+  });
+
   it('refuses a member name that is not a plain file name', async () => {
     await withSourcesFile({ sources: [{ ...VALID, member: '../escape.txt' }] });
     const { readSources: read } = await import('./sources.ts');

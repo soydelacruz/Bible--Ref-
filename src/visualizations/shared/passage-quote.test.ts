@@ -54,6 +54,8 @@ describe('quotePassage', () => {
     });
     expect(quoted.text).toMatch(/— Genesis 1:31 \(NET\) .*\nScripture quoted by permission\./);
     expect(quoted.html).toContain('<p><small>Scripture quoted by permission.');
+    // Its designation links to its site, as the NET's terms ask.
+    expect(quoted.html).toContain('(<a href="https://netbible.org/">NET</a>)');
     // A public-domain text needs no credit after its quotations.
     expect(quote(GEN_1_31, GEN_1_31).text).not.toContain('permission');
   });

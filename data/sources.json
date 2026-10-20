@@ -60,6 +60,7 @@
       "url": "https://netbible.org/bible/Genesis+1",
       "fileName": "net2_vpl.txt",
       "sha256": "6590bc8a945b5e536d6063e3a82c6f77c944fd59affed3921ce2418a8c4ac83a",
+      "extractedBy": "scripts/data/extract-netbible.ts",
       "retrievedAt": "2026-10-19",
       "license": "Used by permission: free for non-commercial use with the (NET) designation and acknowledgment (netbible.com/copyright)",
       "homepage": "https://netbible.org/"

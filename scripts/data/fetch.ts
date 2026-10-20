@@ -15,6 +15,37 @@ const { values: options } = parseArgs({
   options: { update: { type: 'boolean', default: false } },
 });
 
+/**
+ * Checks a file the pipeline makes rather than downloads. Its URL is where the upstream material
+ * lives, not the file, so nothing is fetched: a file made again on purpose is re-pinned from disk
+ * with `--update`. Its `retrievedAt` stays the date of the copy it was made from.
+ */
+function repinExtractedSource(
+  source: RawSource,
+  extractedBy: string,
+  existing: Buffer | undefined,
+): RawSource {
+  if (!existing) {
+    throw new Error(
+      `${source.id}: data/raw/${source.fileName} is missing. It is not downloaded: make it with ` +
+        `\`node ${extractedBy}\`.`,
+    );
+  }
+  const sha256 = pinnedDigest(source, existing);
+  if (!options.update) {
+    throw new Error(
+      `${source.id}: data/raw/${source.fileName} does not match its pin (expected SHA-256 ` +
+        `${source.sha256}, got ${sha256}).\n` +
+        `  If ${extractedBy} made it again on purpose, review it, then pin it with ` +
+        '`npm run data:fetch -- --update`.',
+    );
+  }
+  console.log(
+    `↻ ${source.id}: pinned the file ${extractedBy} made (${formatBytes(existing.byteLength)})`,
+  );
+  return { ...source, sha256 };
+}
+
 /** Makes sure the source's raw file is present and matches its pin; returns the updated pin. */
 async function fetchSource(source: RawSource): Promise<RawSource> {
   const path = rawFilePath(source.fileName);
@@ -22,6 +53,9 @@ async function fetchSource(source: RawSource): Promise<RawSource> {
   if (existing && pinnedDigest(source, existing) === source.sha256) {
     console.log(`✓ ${source.id}: up to date (${formatBytes(existing.byteLength)})`);
     return source;
+  }
+  if (source.extractedBy !== undefined) {
+    return repinExtractedSource(source, source.extractedBy, existing);
   }
 
   console.log(`↓ ${source.id}: downloading ${source.url}`);

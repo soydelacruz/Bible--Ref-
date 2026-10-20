@@ -160,26 +160,62 @@ export function netVersesFromHtml(html: string): Map<string, string> {
 }
 
 /**
+ * The verses of the KJV versification the NET's text leaves out: the sixteen the BSB also leaves
+ * out, and Acts 24:7, which the NET keeps in a note. Any other verse without text means the
+ * archive or its markup changed, not the translation.
+ */
+export const NET_OMITTED_VERSES: ReadonlySet<string> = new Set([
+  'Matt.17.21',
+  'Matt.18.11',
+  'Matt.23.14',
+  'Mark.7.16',
+  'Mark.9.44',
+  'Mark.9.46',
+  'Mark.11.26',
+  'Mark.15.28',
+  'Luke.17.36',
+  'Luke.23.17',
+  'John.5.4',
+  'Acts.8.37',
+  'Acts.15.34',
+  'Acts.24.7',
+  'Acts.28.29',
+  'Rom.16.24',
+  '2Cor.13.14',
+]);
+
+/**
  * The whole Bible as eBible verse-per-line text, `<BOOK> <chapter>:<verse> <text>`, one line for
  * every verse of the KJV versification. A verse the NET leaves out is written with no text, which
- * the importer records as omitted.
+ * the importer records as omitted; a verse missing for any other reason is refused, so a parsing
+ * failure cannot pass for an omission.
  */
 export function netVerseLines(verses: ReadonlyMap<string, string>): string {
   const versification = CANONICAL_VERSIFICATION;
   const lines: string[] = [];
   const seen = new Set<string>();
+  const missing: string[] = [];
   for (let index = 0; index < versification.verseCount; index += 1) {
     const ref = versification.refAt(index);
     const id = toOsisId(ref);
     seen.add(id);
     const code = elementAt(BOOK_CODES, versification.bookAt(index).ordinal);
     const text = verses.get(id) ?? '';
+    if (text === '' && !NET_OMITTED_VERSES.has(id)) {
+      missing.push(id);
+    }
     lines.push(`${code} ${String(ref.chapter)}:${String(ref.verse)}${text ? ` ${text}` : ''}`);
   }
   const outside = [...verses.keys()].filter((id) => !seen.has(id));
   if (outside.length > 0) {
     throw new Error(
       `NET: verses outside the KJV versification: ${outside.slice(0, 5).join(', ')}.`,
+    );
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `NET: no text for ${String(missing.length)} verses the NET does not leave out, e.g. ` +
+        `${missing.slice(0, 5).join(', ')}. Has the archive's markup changed?`,
     );
   }
   return `${lines.join('\n')}\n`;

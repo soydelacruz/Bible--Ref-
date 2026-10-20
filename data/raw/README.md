@@ -67,7 +67,9 @@ translation whose licence keeps it out of this repository, so the archive stays 
 in eBible's verse-per-line form. Left out, as eBible leaves them out of its own text editions: verse
 numbers, note markers, section headings, the acrostic letters of Lamentations and the speakers named
 in the Song of Songs. The divine name the NET sets in small capitals is written LORD. The file is
-committed and pinned like a download; re-extract and re-pin only from a newer archive.
+committed and pinned like a download, but never downloaded (its `extractedBy` in `sources.json`
+names the script that makes it): re-extract only from a newer archive, then re-pin the new file
+from disk with `npm run data:fetch -- --update`.
 
 Attribution for the original-language words: _STEP Bible (<https://www.STEPBible.org>), based on
 work at Tyndale House, Cambridge, licensed under CC BY 4.0
