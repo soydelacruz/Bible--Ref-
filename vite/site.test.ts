@@ -19,7 +19,7 @@ describe('the site', () => {
   });
 
   it('names itself and its author', () => {
-    expect(SITE_NAME).toBe('Bible Cross-References');
+    expect(SITE_NAME).toBe('Bible SoyDeLaCruz-Reference');
     expect(AUTHOR.name).toBeTruthy();
     expect(AUTHOR.url.startsWith('https://')).toBe(true);
     expect(SOCIAL_IMAGE.file).toMatch(/\.(png|jpe?g)$/);

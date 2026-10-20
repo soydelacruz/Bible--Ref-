@@ -25,7 +25,7 @@ const MANIFEST_FILE_NAME = 'manifest.webmanifest';
 const WEB_APP_MANIFEST = {
   id: './',
   name: SITE_NAME,
-  short_name: 'Cross-Refs',
+  short_name: 'SoyDeLaCruz',
   description:
     'Every cross-reference in the Bible, drawn as arcs, and every chapter with its threads.',
   start_url: './',

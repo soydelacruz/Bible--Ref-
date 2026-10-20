@@ -10,7 +10,7 @@ import type { HtmlTagDescriptor } from 'vite';
 export const ROOT_DIR = resolve(import.meta.dirname, '..');
 
 /** The site's name: `import.meta.env.SITE_NAME` in code, `%SITE_NAME%` in the HTML entries. */
-export const SITE_NAME = 'Bible Cross-References';
+export const SITE_NAME = 'Bible SoyDeLaCruz-Reference';
 
 /**
  * Where the built site is served: the root of the project's Vercel domain. A Vercel build names

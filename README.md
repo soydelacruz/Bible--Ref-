@@ -1,10 +1,10 @@
-# Bible Cross-References
+# Bible SoyDeLaCruz-Reference
 
-[![Bible Cross-References: 344,799 connections between 31,102 verses, from Genesis to Revelation](public/social-preview.jpg)](https://bible-ref.vercel.app/)
+[![Bible SoyDeLaCruz-Reference: 344,799 connections between 31,102 verses, from Genesis to Revelation](public/social-preview.jpg)](https://bible-ref.vercel.app/)
 
 See how the Bible is woven together, and read any passage with its connections in view.
 
-**▶ [Open Bible Cross-References](https://bible-ref.vercel.app/)**
+**▶ [Open Bible SoyDeLaCruz-Reference](https://bible-ref.vercel.app/)**
 
 This is a copy of [Bible Cross-References](https://github.com/trekhleb/bible-cross-references) by
 Oleksii Trekhleb, under its MIT license, with three additions: searching the text for words,
