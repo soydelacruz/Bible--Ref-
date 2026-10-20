@@ -208,6 +208,23 @@ export const pt: LocaleMessages = {
   'study.stepBible': 'Estudo de palavras no STEPBible',
   'study.label': (link, passage) => `${link} sobre ${passage}`,
 
+  'notes.title': 'Notas da NET',
+  'notes.note': 'os tradutores, sobre as palavras (em inglês)',
+  'notes.counted': 'notas',
+  'notes.kind.translation': 'Redação',
+  'notes.kind.study': 'Estudo',
+  'notes.kind.text-critical': 'Crítica textual',
+  'notes.kind.map': 'Mapa',
+  'notes.filter': 'Mostrar as notas de um tipo',
+  'notes.all': 'Todas',
+  'notes.otherTranslation': (abbreviation) =>
+    `As notas comentam a redação da NET; o texto acima é da ${abbreviation}.`,
+  'notes.readAll': 'Ler a nota inteira',
+  'notes.readLess': 'Mostrar menos',
+  'notes.cite': (passage) => `Ir para ${passage}`,
+  'notes.marker': (kind, words) => (words ? `${kind}: nota sobre “${words}”` : `${kind}: nota`),
+  'notes.close': 'Fechar a nota',
+
   'loading.data': (verses, links) =>
     `Carregando ${verses} versículos e ${links} referências cruzadas…`,
   'error.datasetUnavailable':

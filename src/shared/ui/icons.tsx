@@ -25,6 +25,7 @@ import {
   LuMonitorDown,
   LuMouse,
   LuMousePointerClick,
+  LuNotebookText,
   LuOrbit,
   LuPalette,
   LuPlay,
@@ -104,6 +105,9 @@ export const PinchIcon = decorative(MdOutlinePinch);
 
 // The words of the original languages, shown beside a verse.
 export const WordsIcon = decorative(LuLanguages);
+
+// The translators' notes on a verse's words.
+export const NotesIcon = decorative(LuNotebookText);
 
 // Settings
 export const FiltersIcon = decorative(LuSlidersHorizontal);

@@ -11,6 +11,7 @@ const NOTE_SOURCES: Readonly<Record<NoteSourceId, NoteSourceManifest>> = {
       'The translators’ notes of the NET Bible: on the wording, on the manuscripts behind it, ' +
       'and on the history and meaning of the text, each marked at its word in the NET.',
     translationId: 'net',
+    language: 'en',
     license: {
       name: 'Used by permission',
       url: 'https://netbible.com/copyright/',

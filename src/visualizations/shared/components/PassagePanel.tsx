@@ -37,6 +37,7 @@ import {
 import type { LinkFilter } from '../link-filter.ts';
 import { canCopy, copyQuote, quotePassage, type PassageQuote } from '../passage-quote.ts';
 import { GENRE_COLORS, GENRE_HEX } from '../palette.ts';
+import { NotesSection } from './NotesSection.tsx';
 import { OriginalWordsSection } from './OriginalWordsSection.tsx';
 import { PanelSection } from './PanelSection.tsx';
 import { PathSection } from './PathSection.tsx';
@@ -319,6 +320,8 @@ export function PassagePanel({
             {actions && <div className={styles.actions}>{actions}</div>}
             <VerseLibrary verse={passage.verse} versification={versification} />
             {path}
+            {/* Beside the text they explain, before where it leads. */}
+            <NotesSection verse={passage.verse} data={data} onSelect={onSelect} />
           </>
         ) : (
           <>
