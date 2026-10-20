@@ -9,6 +9,8 @@ export interface NoteSourceManifest {
   readonly description: string;
   /** The translation whose wording the notes discuss, and in whose text they are marked. */
   readonly translationId: TranslationId;
+  /** The language the notes are written in (BCP 47), whatever the interface's. */
+  readonly language: string;
   readonly license: LicenseInfo;
   /** Credit line to display wherever the notes are shown. */
   readonly attribution: string;

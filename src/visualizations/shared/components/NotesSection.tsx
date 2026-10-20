@@ -11,6 +11,7 @@ import {
 import { noteTextToString } from '../../../core/datasets/note-text.ts';
 import { useLocalization } from '../../../i18n/use-locale.tsx';
 import { citedPassage, notePhrases } from '../../../notes/note-anchors.ts';
+import type { NoteSourceManifest } from '../../../notes/note-source-manifest.ts';
 import { NotesIcon } from '../../../shared/ui/icons.tsx';
 import { useBookNotes } from '../use-study-notes.ts';
 import type { VizData } from '../viz-data.ts';
@@ -27,10 +28,13 @@ type KindFilter = 'all' | NoteKind;
 function NoteItem({
   phrase,
   parts,
+  lang,
   handlers,
 }: {
   readonly phrase: string | null;
   readonly parts: readonly StudyNotePart[];
+  /** The language of the notes, and of the translation whose words they quote. */
+  readonly lang: string;
   readonly handlers: CitationHandlers;
 }) {
   const { t } = useLocalization();
@@ -39,9 +43,13 @@ function NoteItem({
   const long = parts.reduce((sum, part) => sum + noteTextToString(part.text).length, 0) > LONG_NOTE;
   return (
     <li className={styles.note}>
-      {phrase !== null && <p className={styles.notePhrase}>{phrase}</p>}
+      {phrase !== null && (
+        <p className={styles.notePhrase} lang={lang}>
+          {phrase}
+        </p>
+      )}
       <div id={bodyId} className={styles.noteBody} data-folded={long && !expanded}>
-        <NoteParts parts={parts} {...handlers} />
+        <NoteParts parts={parts} lang={lang} {...handlers} />
       </div>
       {long && (
         <button
@@ -134,7 +142,7 @@ export function NotesSection({
             />
           </div>
         )}
-        <ol className={styles.notes} lang="en">
+        <ol className={styles.notes}>
           {notes.map((note) => {
             const parts =
               shown === 'all' ? note.parts : note.parts.filter((part) => part.kind === shown);
@@ -143,6 +151,7 @@ export function NotesSection({
                 key={note.number}
                 phrase={phrases?.get(note.number) ?? null}
                 parts={parts}
+                lang={bookNotes.manifest.language}
                 handlers={handlers}
               />
             );
@@ -150,12 +159,25 @@ export function NotesSection({
         </ol>
       </PanelSection>
       {/* Outside the section's body, as the credit is a condition of using the notes. */}
-      <p className={styles.credit}>
-        {bookNotes.manifest.attribution}{' '}
-        <a href={bookNotes.manifest.homepage} target="_blank" rel="noreferrer">
-          netbible.org
-        </a>
-      </p>
+      <NotesCredit source={bookNotes.manifest} className={styles.credit} />
     </>
+  );
+}
+
+/** The notes' credit, in the publisher's own words, with a link to them. */
+export function NotesCredit({
+  source,
+  className,
+}: {
+  readonly source: NoteSourceManifest;
+  readonly className: string | undefined;
+}) {
+  return (
+    <p className={className}>
+      <span lang={source.language}>{source.attribution}</span>{' '}
+      <a href={source.homepage} target="_blank" rel="noreferrer">
+        {new URL(source.homepage).hostname}
+      </a>
+    </p>
   );
 }

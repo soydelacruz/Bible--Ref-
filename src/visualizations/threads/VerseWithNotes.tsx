@@ -2,7 +2,9 @@ import type { StudyNote } from '../../core/datasets/formats.ts';
 import { useLocalization } from '../../i18n/use-locale.tsx';
 import { splitAtNotes } from '../../notes/note-anchors.ts';
 import { CloseIcon } from '../../shared/ui/icons.tsx';
+import type { NoteSourceManifest } from '../../notes/note-source-manifest.ts';
 import { NoteParts, type CitationHandlers } from '../shared/components/NoteText.tsx';
+import { NotesCredit } from '../shared/components/NotesSection.tsx';
 import styles from './ThreadsStage.module.css';
 
 /**
@@ -62,12 +64,15 @@ export function InlineNote({
   id,
   note,
   phrase,
+  source,
   handlers,
   onClose,
 }: {
   readonly id: string;
   readonly note: StudyNote;
   readonly phrase: string | null;
+  /** Whose note it is: its language, and the credit that goes wherever its text is shown. */
+  readonly source: NoteSourceManifest;
   readonly handlers: CitationHandlers;
   readonly onClose: () => void;
 }) {
@@ -76,14 +81,17 @@ export function InlineNote({
     <div
       id={id}
       className={styles.inlineNote}
-      lang="en"
       // A click inside the note is about the note: it must not select or unselect the verse.
       onClick={(event) => {
         event.stopPropagation();
       }}
     >
       <div className={styles.inlineNoteHeader}>
-        {phrase !== null && <p className={styles.inlineNotePhrase}>{phrase}</p>}
+        {phrase !== null && (
+          <p className={styles.inlineNotePhrase} lang={source.language}>
+            {phrase}
+          </p>
+        )}
         <button
           type="button"
           className={styles.inlineNoteClose}
@@ -93,7 +101,8 @@ export function InlineNote({
           <CloseIcon />
         </button>
       </div>
-      <NoteParts parts={note.parts} {...handlers} />
+      <NoteParts parts={note.parts} lang={source.language} {...handlers} />
+      <NotesCredit source={source} className={styles.inlineNoteCredit} />
     </div>
   );
 }

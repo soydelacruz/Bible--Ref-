@@ -50,6 +50,8 @@ describe('NoteTextView', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Go to verse 1' }));
     expect(onCite).toHaveBeenCalledWith([1, 1]);
+    // Named in the interface's language, whatever the note's.
+    expect(screen.getByRole('button', { name: 'Go to verse 1' }).getAttribute('lang')).toBe('en');
     expect(onOuterClick).not.toHaveBeenCalled();
   });
 });
@@ -62,10 +64,12 @@ describe('NoteParts', () => {
           { kind: 'translation', text: ['Or “sky.”'] },
           { kind: 'text-critical', text: ['MT reads.'] },
         ]}
+        lang="en"
         describe={describePassage}
       />,
     );
-    expect(screen.getByText('Translation')).toBeDefined();
+    expect(screen.getByText('Translation').closest('[lang]')).toBeNull();
+    expect(screen.getByText('Or “sky.”').closest('[lang]')?.getAttribute('lang')).toBe('en');
     expect(screen.getByText('Text-critical')).toBeDefined();
     expect(screen.getByText('Or “sky.”')).toBeDefined();
   });

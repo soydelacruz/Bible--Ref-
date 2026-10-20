@@ -383,6 +383,7 @@ export function ThreadsStage({
                       id={noteId}
                       note={opened}
                       phrase={phrases?.get(opened.number) ?? null}
+                      source={getNoteSourceManifest('net')}
                       handlers={noteHandlers}
                       onClose={() => {
                         setOpenNote(null);

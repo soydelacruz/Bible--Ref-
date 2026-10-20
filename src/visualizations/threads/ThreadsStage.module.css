@@ -334,6 +334,14 @@
   outline-offset: 1px;
 }
 
+/* The notes' credit goes wherever their text does: quiet, under the note. */
+.inlineNoteCredit {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .noteMarker {
     transition: none;

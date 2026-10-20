@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { StudyNote } from '../../core/datasets/formats.ts';
+import { getNoteSourceManifest } from '../../notes/registry.ts';
 import { InlineNote, VerseWithNotes } from './VerseWithNotes.tsx';
 
 const TEXT = 'In the beginning God created the heavens and the earth.';
@@ -77,6 +78,7 @@ describe('InlineNote', () => {
           id="note"
           note={GOD}
           phrase="God"
+          source={getNoteSourceManifest('net')}
           handlers={{ onCite, describe: () => 'Go to Genesis 1:2' }}
           onClose={onClose}
         />
@@ -84,6 +86,11 @@ describe('InlineNote', () => {
     );
     expect(screen.getByText('God')).toBeDefined();
     expect(screen.getByText('Study')).toBeDefined();
+    // The note and its words are in English; the interface around them keeps its own language.
+    expect(screen.getByText('God').getAttribute('lang')).toBe('en');
+    expect(screen.getByText('Study').closest('[lang]')).toBeNull();
+    // The credit goes wherever the note's text does.
+    expect(screen.getByText(/Biblical Studies Press/)).toBeDefined();
     await userEvent.click(screen.getByText(/See/));
     expect(onVerseClick).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Go to Genesis 1:2' }));
@@ -98,10 +105,12 @@ describe('InlineNote', () => {
         id="note"
         note={BEGINNING}
         phrase={null}
+        source={getNoteSourceManifest('net')}
         handlers={{ describe: () => '' }}
         onClose={vi.fn()}
       />,
     );
-    expect(container.querySelectorAll('p')).toHaveLength(1);
+    // The note's one part, and its credit: no line for words it does not have.
+    expect(container.querySelectorAll('p')).toHaveLength(2);
   });
 });

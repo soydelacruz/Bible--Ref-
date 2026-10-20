@@ -65,13 +65,18 @@ function styled(style: NoteStyle, children: ReactNode, key: string): ReactNode {
   }
 }
 
-function runs(text: NoteText, handlers: CitationHandlers, key: string): ReactNode[] {
+function runs(
+  text: NoteText,
+  handlers: CitationHandlers,
+  interfaceLanguage: string,
+  key: string,
+): ReactNode[] {
   return text.map((run, index) => {
     const runKey = `${key}.${String(index)}`;
     if (typeof run === 'string') {
       return lines(run, runKey);
     }
-    const children = runs(run.text, handlers, runKey);
+    const children = runs(run.text, handlers, interfaceLanguage, runKey);
     if ('passage' in run) {
       const { onCite } = handlers;
       return onCite ? (
@@ -79,6 +84,9 @@ function runs(text: NoteText, handlers: CitationHandlers, key: string): ReactNod
           key={runKey}
           type="button"
           className={styles.citation}
+          // Named in the interface's language ("Ir para Gênesis 1:2"), though it sits in the
+          // note's: a screen reader then says the name in the voice it is written in.
+          lang={interfaceLanguage}
           aria-label={handlers.describe(run.passage)}
           onClick={(event) => {
             event.stopPropagation();
@@ -100,21 +108,29 @@ export function NoteTextView({
   text,
   ...handlers
 }: { readonly text: NoteText } & CitationHandlers) {
-  return <>{runs(text, handlers, 'run')}</>;
+  const { locale } = useLocalization();
+  return <>{runs(text, handlers, locale.tag, 'run')}</>;
 }
 
-/** A note's parts, each under the name of its kind: a translator's note, a study note… */
+/**
+ * A note's parts, each under the name of its kind: a translator's note, a study note… The kind is
+ * the interface's word; the note itself is in the language it was written in (`lang`), and only
+ * the note is marked so, for a screen reader to read each in its own voice.
+ */
 export function NoteParts({
   parts,
+  lang,
   ...handlers
-}: { readonly parts: readonly StudyNotePart[] } & CitationHandlers) {
+}: { readonly parts: readonly StudyNotePart[]; readonly lang: string } & CitationHandlers) {
   const { t } = useLocalization();
   return (
     <>
       {parts.map((part, index) => (
         <p key={index} className={styles.part}>
           <span className={styles.kind}>{t(`notes.kind.${part.kind}`)}</span>{' '}
-          <NoteTextView text={part.text} {...handlers} />
+          <span lang={lang}>
+            <NoteTextView text={part.text} {...handlers} />
+          </span>
         </p>
       ))}
     </>
