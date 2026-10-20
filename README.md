@@ -59,8 +59,9 @@ the text of the verse in its original language is never shown: only the dictiona
 Last, _Study elsewhere_ links the verse or chapter to study sites that the app cannot carry itself,
 each opening in a new tab: the NET Bible's translators' notes first, then Blue Letter Bible's
 interlinear and lexicon, BibleHub's commentaries and parallel translations, and STEPBible. They are
-links only; nothing of those sites is copied into the app. The NET Bible's notes may not be
-redistributed, which is why they are linked to rather than shown.
+links only; nothing of those sites is copied into the app. The NET Bible's notes are outside the
+free licence of its text; they are coming into the app by the publisher's permission (see
+[Data](#data)), and until the app shows them they are linked to.
 
 ### Search the text
 
@@ -188,18 +189,19 @@ network therefore previews in English, even though the page itself opens in Port
 
 The app is built on openly licensed datasets only:
 
-| Dataset          | Source                                                                                                                                         | License                                                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Bible text       | [Berean Standard Bible](https://berean.bible/) (BSB), the default                                                                              | [Public domain](https://berean.bible/terms.htm)                                                                             |
-| Bible text       | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (KJV), the 1769 text, from eBible.org                           | [Public domain](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (see the note below)                              |
-| Bible text       | [World English Bible](https://ebible.org/find/details.php?id=engwebp) (WEB), a modern translation, Protestant canon, from eBible.org           | [Public domain](https://ebible.org/find/details.php?id=engwebp) ("World English Bible" is a trademark of eBible.org)        |
-| Bible text       | [American Standard Version](https://ebible.org/find/details.php?id=eng-asv) (ASV), 1901, a formal translation, from eBible.org                 | [Public domain](https://ebible.org/find/details.php?id=eng-asv)                                                             |
-| Bible text       | [Young's Literal Translation](https://ebible.org/find/details.php?id=engylt) (YLT), Robert Young, 1898, a literal translation, from eBible.org | [Public domain](https://ebible.org/find/details.php?id=engylt)                                                              |
-| Bible text       | [NET Bible](https://netbible.org/) (NET), the text without its notes, from the NET Bible study archive (netbible.org, 2026-10-19)              | [Used by permission](https://netbible.com/copyright/): free for non-commercial use, with its designation and acknowledgment |
-| Bible text       | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (BLIVRE), Brazilian Portuguese, Textus Receptus edition                             | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)                                                             |
-| Bible text       | [Reina-Valera 1909](https://ebible.org/Scriptures/details.php?id=spaRV1909) (RV1909), Spanish, from eBible.org                                 | [Public domain](https://ebible.org/Scriptures/details.php?id=spaRV1909)                                                     |
-| Cross-references | [OpenBible.info](https://www.openbible.info/labs/cross-references/), largely from the public-domain _Treasury of Scripture Knowledge_          | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                   |
-| Original words   | [STEPBible](https://github.com/STEPBible/STEPBible-Data) (TAHOT, TAGNT and their lexicons), from Tyndale House, Cambridge                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                   |
+| Dataset          | Source                                                                                                                                                  | License                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Bible text       | [Berean Standard Bible](https://berean.bible/) (BSB), the default                                                                                       | [Public domain](https://berean.bible/terms.htm)                                                                             |
+| Bible text       | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (KJV), the 1769 text, from eBible.org                                    | [Public domain](https://ebible.org/Scriptures/details.php?id=eng-kjv2006) (see the note below)                              |
+| Bible text       | [World English Bible](https://ebible.org/find/details.php?id=engwebp) (WEB), a modern translation, Protestant canon, from eBible.org                    | [Public domain](https://ebible.org/find/details.php?id=engwebp) ("World English Bible" is a trademark of eBible.org)        |
+| Bible text       | [American Standard Version](https://ebible.org/find/details.php?id=eng-asv) (ASV), 1901, a formal translation, from eBible.org                          | [Public domain](https://ebible.org/find/details.php?id=eng-asv)                                                             |
+| Bible text       | [Young's Literal Translation](https://ebible.org/find/details.php?id=engylt) (YLT), Robert Young, 1898, a literal translation, from eBible.org          | [Public domain](https://ebible.org/find/details.php?id=engylt)                                                              |
+| Bible text       | [NET Bible](https://netbible.org/) (NET), the text without its notes, from the NET Bible study archive (netbible.org, 2026-10-19)                       | [Used by permission](https://netbible.com/copyright/): free for non-commercial use, with its designation and acknowledgment |
+| Bible text       | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (BLIVRE), Brazilian Portuguese, Textus Receptus edition                                      | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)                                                             |
+| Bible text       | [Reina-Valera 1909](https://ebible.org/Scriptures/details.php?id=spaRV1909) (RV1909), Spanish, from eBible.org                                          | [Public domain](https://ebible.org/Scriptures/details.php?id=spaRV1909)                                                     |
+| Study notes      | [NET Bible](https://netbible.org/) notes: translators', study, text-critical and map notes, from the NET Bible study archive (netbible.org, 2026-10-19) | Used by permission of Biblical Studies Press (see the note below)                                                           |
+| Cross-references | [OpenBible.info](https://www.openbible.info/labs/cross-references/), largely from the public-domain _Treasury of Scripture Knowledge_                   | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                   |
+| Original words   | [STEPBible](https://github.com/STEPBible/STEPBible-Data) (TAHOT, TAGNT and their lexicons), from Tyndale House, Cambridge                               | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                   |
 
 A note on the KJV: it is public domain in the United States and most of the world, but in the
 United Kingdom letters patent that do not expire reserve the right to **print** it, and to import
@@ -224,6 +226,16 @@ the NET Bible study archive, the responses netbible.org served on 2026-10-19, fr
 repository. It numbers verses as the KJV does. Seventeen verses have no text: the sixteen the BSB
 also leaves out, and Acts 24:7, which the NET keeps in a note. It is only downloaded for readers who
 choose it.
+
+A note on the NET's notes: the 58,422 notes of its translators (on the wording, the manuscripts,
+and the history and meaning of the text, with its map notes) are not part of that licence, and are
+used by a permission of their own, whose terms are recorded in [PRODUCT.md](PRODUCT.md) before
+they are released. The same extract keeps each note with the verse and the place in the NET's text
+where its marker stands. The build turns each note's HTML into a small structure of its own (plain
+text, a few styles, and citations of passages) and refuses any markup it has not been taught, so no
+HTML from the source ever reaches the page. Citations by the Hebrew or Greek verse numbering, or of
+books outside the 66, are kept as text rather than linked to the wrong verse. The notes come one
+book to a file, fetched the first time a reader opens that book.
 
 A note on the Bíblia Livre: it is an independent volunteer translation, updated from João Ferreira
 de Almeida's, and the edition used here follows the Textus Receptus — the same textual basis as the

@@ -1,5 +1,9 @@
+import type { BookId } from '../../core/bible/books.ts';
 import { CANONICAL_VERSIFICATION, type Versification } from '../../core/bible/versification.ts';
 import type { TranslationId } from '../../core/datasets/ids.ts';
+import { loadStudyNotes } from '../../notes/load-study-notes.ts';
+import { getNoteSourceManifest } from '../../notes/registry.ts';
+import type { BookStudyNotes } from '../../notes/study-notes.ts';
 import {
   loadCrossReferences,
   type CrossReferenceDataset,
@@ -94,4 +98,28 @@ export function originalWordsIfLoaded(): OriginalWordsDataset | null {
 /** Forgets a failed download, so the next verse opened tries again instead of giving up. */
 export function resetOriginalWords(): void {
   originalWordsLoader.reset();
+}
+
+const studyNotesLoaders = new Map<BookId, CachedLoader<BookStudyNotes>>();
+
+/**
+ * The NET's notes on one book. A book's notes are a file of their own, fetched the first time a
+ * verse of it is opened and then kept; the offline cache keeps the books a reader has visited.
+ */
+export function studyNotesLoader(book: BookId): CachedLoader<BookStudyNotes> {
+  const existing = studyNotesLoaders.get(book);
+  if (existing) {
+    return existing;
+  }
+  const loader = createCachedLoader(async () => {
+    const { notes } = await loadStudyNotes(getNoteSourceManifest('net'), book);
+    return notes;
+  });
+  studyNotesLoaders.set(book, loader);
+  return loader;
+}
+
+/** Forgets every book's notes, so a failed download is tried again. */
+export function resetStudyNotes(): void {
+  studyNotesLoaders.clear();
 }

@@ -16,6 +16,7 @@ refuses anything that does not match it, before turning them into the datasets i
 | `eng-asv_vpl.zip` (not committed; fetched by the build)     | [American Standard Version](https://ebible.org/find/details.php?id=eng-asv) (1901), from <https://ebible.org/Scriptures/eng-asv_vpl.zip>, retrieved 2026-10-19                                            | Public domain                                                                                               |
 | `engylt_vpl.zip` (not committed; fetched by the build)      | [Young's Literal Translation](https://ebible.org/find/details.php?id=engylt), from <https://ebible.org/Scriptures/engylt_vpl.zip>, retrieved 2026-10-19                                                   | Public domain                                                                                               |
 | `net2_vpl.txt`                                              | [NET Bible](https://netbible.org/) text (NET2), extracted from the NET Bible study archive (netbible.org responses, 2026-10-19) by `scripts/data/extract-netbible.ts`                                     | [Used by permission](https://netbible.com/copyright/) (non-commercial, with designation and acknowledgment) |
+| `net2-notes.zip`                                            | [NET Bible](https://netbible.org/) notes (NET2), extracted from the same archive by `scripts/data/extract-netbible.ts`: each note's HTML with the place of its marker                                     | Used by permission of Biblical Studies Press (terms in [PRODUCT.md](../../PRODUCT.md))                      |
 | `stepbible-*.txt` (not committed; fetched by the build)     | [STEPBible](https://github.com/STEPBible/STEPBible-Data) tagged Hebrew (TAHOT) and Greek (TAGNT) with the TBESH and TBESG lexicons, retrieved 2026-10-16                                                  | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                   |
 
 Attribution for the scripture texts: _Berean Standard Bible (BSB), dedicated to the public
@@ -70,6 +71,13 @@ in the Song of Songs. The divine name the NET sets in small capitals is written 
 committed and pinned like a download, but never downloaded (its `extractedBy` in `sources.json`
 names the script that makes it): re-extract only from a newer archive, then re-pin the new file
 from disk with `npm run data:fetch -- --update`.
+
+`net2-notes.zip` comes from the same run. It holds `net2-notes.jsonl`, one line for each of the
+NET's 58,422 notes: its book and number, the verse its marker stands in and how many characters of
+that verse's NET text come before the marker, and the note's HTML exactly as netbible.org served
+it. Turning that HTML into the app's own structure is the build's job, so the pinned file stays
+the source's own words. The pin covers the entry, not the archive; the archive is written with a
+fixed date, so extracting the same archive again writes the same file.
 
 Attribution for the original-language words: _STEP Bible (<https://www.STEPBible.org>), based on
 work at Tyndale House, Cambridge, licensed under CC BY 4.0

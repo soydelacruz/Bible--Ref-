@@ -1,4 +1,5 @@
-import type { CrossReferenceSourceId, TranslationId, WordSourceId } from './ids.ts';
+import type { BookId } from '../bible/books.ts';
+import type { CrossReferenceSourceId, NoteSourceId, TranslationId, WordSourceId } from './ids.ts';
 
 /**
  * Location of generated dataset files, relative to the site root. The data pipeline writes them
@@ -16,4 +17,9 @@ export function crossReferencesDatasetPath(id: CrossReferenceSourceId): string {
 
 export function originalWordsDatasetPath(id: WordSourceId): string {
   return `${DATASETS_DIRECTORY}/words/${id}.json`;
+}
+
+/** Study notes come one book to a file, so a reader downloads only the books they open. */
+export function studyNotesDatasetPath(id: NoteSourceId, book: BookId): string {
+  return `${DATASETS_DIRECTORY}/notes/${id}/${book}.json`;
 }

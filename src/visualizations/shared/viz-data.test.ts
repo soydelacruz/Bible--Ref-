@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { crossReferencesDatasetPath, translationDatasetPath } from '../../core/datasets/paths.ts';
 import {
   createCrossReferenceColumns,
+  createStudyNotesFile,
   createTranslationFile,
   PROVENANCE,
   verseIndex,
@@ -10,8 +11,10 @@ import {
   originalWordsIfLoaded,
   originalWordsLoader,
   resetOriginalWords,
+  resetStudyNotes,
   resetTranslation,
   resetTranslations,
+  studyNotesLoader,
   translationLoader,
   vizCoreLoader,
 } from './viz-data.ts';
@@ -74,6 +77,7 @@ beforeEach(() => {
   vizCoreLoader.reset();
   resetTranslations();
   resetOriginalWords();
+  resetStudyNotes();
 });
 
 afterEach(() => {
@@ -129,6 +133,24 @@ describe('translationLoader', () => {
     const bsb = translationLoader('bsb');
     resetTranslations();
     expect(translationLoader('bsb')).not.toBe(bsb);
+  });
+});
+
+describe('studyNotesLoader', () => {
+  it('fetches a book’s notes once, and keeps one loader a book', async () => {
+    const fetch = serveDatasets({ 'notes/net/Gen.json': createStudyNotesFile('Gen') });
+    expect(studyNotesLoader('Gen')).toBe(studyNotesLoader('Gen'));
+    expect(studyNotesLoader('Gen')).not.toBe(studyNotesLoader('Exod'));
+    const notes = await studyNotesLoader('Gen').load();
+    await studyNotesLoader('Gen').load();
+    expect(notes.book).toBe('Gen');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('forgets every book after a failure, so the next one opened tries again', () => {
+    const genesis = studyNotesLoader('Gen');
+    resetStudyNotes();
+    expect(studyNotesLoader('Gen')).not.toBe(genesis);
   });
 });
 

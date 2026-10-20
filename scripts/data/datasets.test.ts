@@ -1,5 +1,6 @@
 import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
+import { BOOKS } from '../../src/core/bible/books.ts';
 import { parseOsisId } from '../../src/core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../../src/core/bible/versification.ts';
 import { DATASET_BUILDERS, type RawSourceContent } from './datasets.ts';
@@ -13,6 +14,7 @@ const MEMBERS: Readonly<Record<string, string>> = {
   asv: 'eng-asv_vpl.txt',
   ylt: 'engylt_vpl.txt',
   rv1909: 'spaRV1909_vpl.txt',
+  'net-notes': 'net2-notes.jsonl',
 };
 
 function source(id: string): RawSource {
@@ -71,6 +73,21 @@ const CONTENT: Readonly<Record<string, string | Uint8Array>> = {
   ylt: zipSync({ 'engylt_vpl.txt': strToU8(KJV) }),
   // Committed as plain text, extracted from the NET Bible study archive: no archive around it.
   net: KJV,
+  // One note, on Genesis 1:1, marked after "Verse" in the NET's text above.
+  'net-notes': zipSync({
+    'net2-notes.jsonl': strToU8(
+      `${JSON.stringify({
+        book: 'Gen',
+        number: 1,
+        verse: 'Gen.1.1',
+        at: 5,
+        html:
+          '<div class="note"><sup><span class="noteNoteSuper" id="note_1">1</span>&nbsp;</sup>' +
+          '<span class="notetype">tn</span> Or <i>first</i>; see ' +
+          '<data ref="Bible:Jn 1:1">John 1:1</data>.</div>',
+      })}\n`,
+    ),
+  }),
   // Its own text, in its own entry: a builder that reached for the wrong archive, or the wrong
   // name inside one, would otherwise pass by looking like the KJV's.
   blivre: zipSync({
@@ -141,6 +158,7 @@ describe('DATASET_BUILDERS', () => {
       'data/translations/rv1909.json',
       'data/cross-references/openbible.json',
       'data/words/stepbible.json',
+      ...BOOKS.map(({ id }) => `data/notes/net/${id}.json`),
     ]);
   });
 
@@ -190,6 +208,39 @@ describe('DATASET_BUILDERS', () => {
       url: 'https://creativecommons.org/licenses/by/4.0/',
     });
     expect(dataset.attribution).toContain('STEP Bible');
+  });
+});
+
+describe('the NET notes builders', () => {
+  it('build every book from one reading of the extract, each note at its place', async () => {
+    const notesFor = (book: string) =>
+      DATASET_BUILDERS.find((b) => b.outputPath === `data/notes/net/${book}.json`);
+    const genesis = await notesFor('Gen')?.build(readSource);
+    if (genesis?.format !== 'study-notes') {
+      throw new Error('Expected the Genesis notes.');
+    }
+    expect(genesis.notes).toEqual([
+      {
+        number: 1,
+        verse: 0,
+        at: 5,
+        parts: [
+          {
+            kind: 'translation',
+            text: [
+              'Or ',
+              { style: 'italic', text: ['first'] },
+              '; see ',
+              { passage: [26045, 26045], text: ['John 1:1'] },
+              '.',
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(genesis.license.publicDomain).toBe(false);
+    const revelation = await notesFor('Rev')?.build(readSource);
+    expect(revelation?.format === 'study-notes' && revelation.notes).toEqual([]);
   });
 });
 

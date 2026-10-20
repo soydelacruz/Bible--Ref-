@@ -10,8 +10,17 @@ import {
   ValidationError,
   expectStringArray,
 } from '../lib/validation.ts';
-import type { CrossReferenceSourceId, TranslationId, WordSourceId } from './ids.ts';
+import type { BookId } from '../bible/books.ts';
+import type { VerseIndex } from '../bible/verse-ref.ts';
+import {
+  TRANSLATION_IDS,
+  type CrossReferenceSourceId,
+  type NoteSourceId,
+  type TranslationId,
+  type WordSourceId,
+} from './ids.ts';
 import type { LicenseInfo } from './metadata.ts';
+import { parseNoteText, type NoteText } from './note-text.ts';
 
 /**
  * File formats of the generated datasets, shared by the data pipeline (which writes them) and the
@@ -118,6 +127,45 @@ export interface OriginalWordsFile extends DatasetFileBase<'original-words'> {
    */
   readonly maxVerses: number;
   readonly words: OriginalWordColumns;
+}
+
+/** What a part of a study note is: why the translators wrote it. */
+export const NOTE_KINDS = [
+  /** A translator's note: the wording, and what else it could have been. */
+  'translation',
+  /** A study note: background, history, the argument of a passage. */
+  'study',
+  /** A text-critical note: what the manuscripts read, and why this reading. */
+  'text-critical',
+  /** A map note: places, with the map coordinates the source gives. */
+  'map',
+] as const;
+export type NoteKind = (typeof NOTE_KINDS)[number];
+
+/** One part of a note: a note often adds a study note to a translator's, under one marker. */
+export interface StudyNotePart {
+  readonly kind: NoteKind;
+  readonly text: NoteText;
+}
+
+export interface StudyNote {
+  /** The source's own number for the note within its book. */
+  readonly number: number;
+  readonly verse: VerseIndex;
+  /** How many characters of the verse's text, in the notes' translation, come before the marker. */
+  readonly at: number;
+  readonly parts: readonly StudyNotePart[];
+}
+
+/** The study notes on one book, from one source, in the order they are marked in the text. */
+export interface StudyNotesFile extends DatasetFileBase<'study-notes'> {
+  readonly sourceId: NoteSourceId;
+  readonly book: BookId;
+  /** The translation whose wording the notes discuss, and whose text `at` counts characters in. */
+  readonly translationId: TranslationId;
+  readonly license: LicenseInfo;
+  readonly attribution: string;
+  readonly notes: readonly StudyNote[];
 }
 
 function parseProvenance(value: unknown, path: string): DatasetProvenance {
@@ -250,5 +298,41 @@ export function parseOriginalWordsFile(
       offsets: expectIntegerArray(words['offsets'], 'words.offsets'),
       verses: expectIntegerArray(words['verses'], 'words.verses'),
     },
+  };
+}
+
+function parseStudyNote(value: unknown, path: string): StudyNote {
+  const note = expectRecord(value, path);
+  return {
+    number: expectInteger(note['number'], `${path}.number`),
+    verse: expectInteger(note['verse'], `${path}.verse`),
+    at: expectInteger(note['at'], `${path}.at`),
+    parts: expectArrayOf(note['parts'], `${path}.parts`, (partValue, partPath) => {
+      const part = expectRecord(partValue, partPath);
+      return {
+        kind: expectOneOf(part['kind'], NOTE_KINDS, `${partPath}.kind`),
+        text: parseNoteText(part['text'], `${partPath}.text`),
+      };
+    }),
+  };
+}
+
+/**
+ * Validates the shape of a book's study notes. That each verse is in the book, and each marker
+ * within its verse, is checked where the notes meet the text they annotate.
+ */
+export function parseStudyNotesFile(
+  json: unknown,
+  expected: ExpectedDataset<NoteSourceId> & { readonly book: BookId },
+): StudyNotesFile {
+  const { record, base } = parseFileBase(json, 'study-notes', expected.versification);
+  return {
+    ...base,
+    sourceId: expectOneOf(record['sourceId'], [expected.id], 'sourceId'),
+    book: expectOneOf(record['book'], [expected.book], 'book'),
+    translationId: expectOneOf(record['translationId'], TRANSLATION_IDS, 'translationId'),
+    license: expectLicense(record['license']),
+    attribution: expectString(record['attribution'], 'attribution'),
+    notes: expectArrayOf(record['notes'], 'notes', parseStudyNote),
   };
 }
