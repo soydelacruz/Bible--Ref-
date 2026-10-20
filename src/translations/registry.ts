@@ -86,6 +86,29 @@ const TRANSLATIONS: Readonly<Record<TranslationId, TranslationManifest>> = {
     homepage: 'https://ebible.org/find/details.php?id=engylt',
     access: 'bundled',
   },
+  // Free for non-commercial use, on three conditions the app keeps everywhere the text appears:
+  // the designation (NET) after a quotation, this acknowledgment, and "NET" linked to
+  // netbible.org (the credits link the abbreviation to the homepage). The NET's notes are a
+  // separate permission and are not part of this text.
+  net: {
+    id: 'net',
+    name: 'NET Bible',
+    abbreviation: 'NET',
+    language: 'en',
+    direction: 'ltr',
+    versification: 'kjv',
+    license: {
+      name: 'Used by permission',
+      url: 'https://netbible.com/copyright/',
+      publicDomain: false,
+    },
+    attribution:
+      'Scripture quoted by permission. Quotations designated (NET) are from the NET Bible® ' +
+      'copyright ©1996, 2019 by Biblical Studies Press, L.L.C. http://netbible.com All rights ' +
+      'reserved.',
+    homepage: 'https://netbible.org/',
+    access: 'bundled',
+  },
   blivre: {
     id: 'blivre',
     name: 'Bíblia Livre',

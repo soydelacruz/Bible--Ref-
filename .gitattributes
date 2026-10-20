@@ -1,0 +1,3 @@
+# The upstream text files are pinned by SHA-256 (data/sources.json), so Git keeps their bytes exactly
+# as committed: no line-ending conversion on checkout, whatever core.autocrlf says.
+data/raw/*.txt -text

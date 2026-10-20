@@ -55,6 +55,16 @@
       "homepage": "https://ebible.org/find/details.php?id=engylt"
     },
     {
+      "id": "net",
+      "description": "NET Bible (NET2) text, extracted from the netTexts responses of netbible.org (NET Bible study archive, 2026-10-19) into eBible verse-per-line text by scripts/data/extract-netbible.ts",
+      "url": "https://netbible.org/bible/Genesis+1",
+      "fileName": "net2_vpl.txt",
+      "sha256": "6590bc8a945b5e536d6063e3a82c6f77c944fd59affed3921ce2418a8c4ac83a",
+      "retrievedAt": "2026-10-19",
+      "license": "Used by permission: free for non-commercial use with the (NET) designation and acknowledgment (netbible.com/copyright)",
+      "homepage": "https://netbible.org/"
+    },
+    {
       "id": "blivre",
       "description": "Bíblia Livre (Textus Receptus edition), verse-per-line text in a ZIP archive",
       "url": "https://github.com/blivre/BibliaLivre/releases/download/2018.2.0/bliv-tr_vpl.zip",

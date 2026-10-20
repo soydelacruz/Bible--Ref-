@@ -65,6 +65,10 @@ export const pt: LocaleMessages = {
   'attribution.asv': 'Texto bíblico: American Standard Version (ASV), 1901, em domínio público.',
   'attribution.ylt':
     "Texto bíblico: Young's Literal Translation (YLT), Robert Young, 1898, em domínio público.",
+  'attribution.net':
+    'Escrituras citadas com permissão. As citações marcadas (NET) são da NET Bible®, ' +
+    'copyright ©1996, 2019 by Biblical Studies Press, L.L.C. http://netbible.com Todos os ' +
+    'direitos reservados.',
   'attribution.blivre':
     'Texto bíblico: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio e Marco Teles, ' +
     'fevereiro de 2018 (edição Textus Receptus), https://sites.google.com/site/biblialivre/. ' +

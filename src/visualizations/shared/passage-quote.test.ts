@@ -42,6 +42,22 @@ describe('quotePassage', () => {
     );
   });
 
+  it('carries the acknowledgment of a text that is not in the public domain', () => {
+    const net = getTranslationManifest('net');
+    const quoted = quotePassage({
+      translation: new Translation(net, CANONICAL_VERSIFICATION, createTranslationFile()),
+      versification: CANONICAL_VERSIFICATION,
+      names: enBooks,
+      start: GEN_1_31,
+      end: GEN_1_31,
+      url: URL,
+    });
+    expect(quoted.text).toMatch(/— Genesis 1:31 \(NET\) .*\nScripture quoted by permission\./);
+    expect(quoted.html).toContain('<p><small>Scripture quoted by permission.');
+    // A public-domain text needs no credit after its quotations.
+    expect(quote(GEN_1_31, GEN_1_31).text).not.toContain('permission');
+  });
+
   it('numbers the verses of a passage, with the chapter where it changes', () => {
     const { text } = quote(GEN_1_31, GEN_2_2);
     expect(text).toMatch(/^³¹And God looked .* ²:¹Thus the heavens .* ²:²And by the seventh day/);

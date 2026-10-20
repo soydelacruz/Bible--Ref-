@@ -69,6 +69,8 @@ const CONTENT: Readonly<Record<string, string | Uint8Array>> = {
   web: zipSync({ 'engwebp_vpl.txt': strToU8(WEB) }),
   asv: zipSync({ 'eng-asv_vpl.txt': strToU8(KJV) }),
   ylt: zipSync({ 'engylt_vpl.txt': strToU8(KJV) }),
+  // Committed as plain text, extracted from the NET Bible study archive: no archive around it.
+  net: KJV,
   // Its own text, in its own entry: a builder that reached for the wrong archive, or the wrong
   // name inside one, would otherwise pass by looking like the KJV's.
   blivre: zipSync({
@@ -134,6 +136,7 @@ describe('DATASET_BUILDERS', () => {
       'data/translations/web.json',
       'data/translations/asv.json',
       'data/translations/ylt.json',
+      'data/translations/net.json',
       'data/translations/blivre.json',
       'data/translations/rv1909.json',
       'data/cross-references/openbible.json',

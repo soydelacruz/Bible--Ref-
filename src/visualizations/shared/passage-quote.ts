@@ -65,16 +65,20 @@ export function quotePassage({
     verses.push({ mark, text });
   }
   const reference = formatVerseIndexRange(versification, names, start, end);
-  const { abbreviation } = translation.manifest;
+  const { abbreviation, attribution, license } = translation.manifest;
   const text = verses.map(({ mark, text }) => (mark ? superscript(mark) : '') + text).join(' ');
   const html = verses
     .map(({ mark, text }) => (mark ? `<sup>${mark}</sup>` : '') + escapeHtml(text))
     .join(' ');
+  // A text that is not in the public domain is quoted on its own terms, which travel with the
+  // quotation: the NET's, for one, ask for its acknowledgment after every quotation.
+  const credit = license.publicDomain === true ? null : attribution;
   return {
-    text: `${text}\n— ${reference} (${abbreviation}) ${url}`,
+    text: `${text}\n— ${reference} (${abbreviation}) ${url}${credit ? `\n${credit}` : ''}`,
     html:
       `<blockquote><p>${html}</p></blockquote>` +
-      `<p>— <a href="${escapeHtml(url)}">${escapeHtml(reference)}</a> (${escapeHtml(abbreviation)})</p>`,
+      `<p>— <a href="${escapeHtml(url)}">${escapeHtml(reference)}</a> (${escapeHtml(abbreviation)})</p>` +
+      (credit ? `<p><small>${escapeHtml(credit)}</small></p>` : ''),
   };
 }
 

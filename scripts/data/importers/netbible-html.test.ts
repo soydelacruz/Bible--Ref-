@@ -1,0 +1,101 @@
+import { describe, expect, it } from 'vitest';
+import { netBookId, netVerseLines, netVersesFromHtml } from './netbible-html.ts';
+
+/** A verse marker as netbible.org writes it. */
+function verse(book: string, chapter: number, number: number): string {
+  const id = `${book.replace(/ /g, '_')}_${String(chapter)}_${String(number)}`;
+  return (
+    `<span id="netText_${id}" alt="${id}" class="netVerse ">` +
+    `<span class="vref"><span class="verseNumber">${String(number)}</span></span> `
+  );
+}
+
+const NOTE = '<sup> <a href="#" class="netNoteSuper" pos="1">219</a>&nbsp;</sup>';
+
+describe('netVersesFromHtml', () => {
+  it('reads a verse without its number, note markers or word tags', () => {
+    const html =
+      `<p class="bodytext"> ${verse('John', 3, 16)}<st data-num="1063">For</st> ` +
+      `<st data-num="3779">this is the way</st>${NOTE} God loved the world.</span></p>`;
+    expect(netVersesFromHtml(html).get('John.3.16')).toBe(
+      'For this is the way God loved the world.',
+    );
+  });
+
+  it('writes the divine name in small capitals as capitals', () => {
+    const html = `${verse('Genesis', 2, 4)}when the <span class="smcaps"><st>Lord</st></span> God`;
+    expect(netVersesFromHtml(html).get('Gen.2.4')).toBe('when the LORD God');
+  });
+
+  it('reads the escaped small-capitals class some spans carry', () => {
+    const html = `${verse('Psalms', 23, 1)}The <span class=&quot;smcaps&quot;>Lord</span> is`;
+    expect(netVersesFromHtml(html).get('Ps.23.1')).toBe('The LORD is');
+  });
+
+  it('joins a verse set over several poetic lines, even when its spans are left open', () => {
+    const html =
+      `<p class="poetry"> ${verse('Genesis', 1, 27)}God created humankind${NOTE} in his image, ` +
+      `<p class="poetry"> <span id="netText_Genesis_1_27" class="netVerse ">male and female ` +
+      'he created them.</span></p>';
+    expect(netVersesFromHtml(html).get('Gen.1.27')).toBe(
+      'God created humankind in his image, male and female he created them.',
+    );
+  });
+
+  it('leaves out section headings, acrostic letters and the speakers of the Song of Songs', () => {
+    const html =
+      `<div class="paragraphtitle"><h3>The Prophet Speaks${NOTE}</h3></div>` +
+      `<p class="lamhebrew"> ${verse('Lamentations', 1, 1)}<b><span class="hebrew">א</span></b> ` +
+      '(<i>Alef</i>)</p><p class="poetry">Alas! The city sits alone!</p>' +
+      `<p class="sosspeaker"> ${verse('Song of Songs', 1, 2)}<b><i>The Beloved:</i></b></p>` +
+      '<p class="poetry">Oh, how I wish you would kiss me!</p>';
+    const verses = netVersesFromHtml(html);
+    expect(verses.get('Lam.1.1')).toBe('Alas! The city sits alone!');
+    expect(verses.get('Song.1.2')).toBe('Oh, how I wish you would kiss me!');
+  });
+
+  it('keeps bold quotations inside a verse, and sets punctuation against its words', () => {
+    const html = `${verse('1 Corinthians', 1, 19)}it is written, “<i><b>I will destroy</b></i>” wisely ,<br>truly.`;
+    expect(netVersesFromHtml(html).get('1Cor.1.19')).toBe(
+      'it is written, “I will destroy” wisely, truly.',
+    );
+  });
+
+  it('decodes character references', () => {
+    const html = `${verse('Mark', 1, 1)}&quot;a&quot; &amp; &#8220;b&#x201D; &copy;`;
+    expect(netVersesFromHtml(html).get('Mark.1.1')).toBe('"a" & “b” &copy;');
+  });
+
+  it('ignores text before the first verse', () => {
+    expect(netVersesFromHtml('<h3>Psalm 3</h3> nothing yet').size).toBe(0);
+  });
+});
+
+describe('netBookId', () => {
+  it('maps netbible.org book names, the Song of Songs included', () => {
+    expect(netBookId('1 Corinthians')).toBe('1Cor');
+    expect(netBookId('Song of Songs')).toBe('Song');
+  });
+
+  it('refuses a name it does not know', () => {
+    expect(() => netBookId('Hezekiah')).toThrow(/unknown book/);
+  });
+});
+
+describe('netVerseLines', () => {
+  const lines = netVerseLines(new Map([['Gen.1.1', 'In the beginning God created.']])).split('\n');
+
+  it('writes every verse of the KJV versification, in eBible verse-per-line form', () => {
+    expect(lines).toHaveLength(31_102 + 1);
+    expect(lines[0]).toBe('GEN 1:1 In the beginning God created.');
+    expect(lines.at(-1)).toBe('');
+  });
+
+  it('writes a verse the NET leaves out with no text', () => {
+    expect(lines[1]).toBe('GEN 1:2');
+  });
+
+  it('refuses a verse outside the KJV versification', () => {
+    expect(() => netVerseLines(new Map([['Gen.1.99', 'x']]))).toThrow(/outside the KJV/);
+  });
+});

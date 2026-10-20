@@ -101,6 +101,18 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
       });
     },
   },
+  // Extracted from the NET Bible study archive into eBible's verse-per-line form by
+  // scripts/data/extract-netbible.ts, and committed as data/raw/net2_vpl.txt.
+  net: {
+    outputPath: translationDatasetPath('net'),
+    build: async (readSource) => {
+      const { source, content } = await readSource('net');
+      return importEbibleVerseLines(content.toString('utf8'), 'net', {
+        ...provenanceOf(source),
+        snapshotDate: null,
+      });
+    },
+  },
   blivre: {
     outputPath: translationDatasetPath('blivre'),
     build: async (readSource) => {
