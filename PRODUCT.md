@@ -59,7 +59,7 @@ same connected reading.
 
 ## Brand Commitments
 
-- Name: Bible Cross-References. A copy of Oleksii Trekhleb's MIT-licensed project, credited in the
+- Name: Bible SoyDeLaCruz-Reference (until 2026-10-20, Bible Cross-References). A copy of Oleksii Trekhleb's MIT-licensed project, credited in the
   README and LICENSE.
 - The footer names SoyDeLaCruz.dev, which leads to the "Soy de la cruz" page (/soydelacruz/).
 
