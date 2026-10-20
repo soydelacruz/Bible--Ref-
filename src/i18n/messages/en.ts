@@ -221,7 +221,7 @@ export const en = {
   'notes.title': 'NET notes',
   'notes.note': 'the translators on its words',
   'notes.counted': 'notes',
-  'notes.kind.translation': 'Translation',
+  'notes.kind.translation': 'Wording',
   'notes.kind.study': 'Study',
   'notes.kind.text-critical': 'Text-critical',
   'notes.kind.map': 'Map',

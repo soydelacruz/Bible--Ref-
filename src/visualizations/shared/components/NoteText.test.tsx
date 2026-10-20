@@ -68,7 +68,7 @@ describe('NoteParts', () => {
         describe={describePassage}
       />,
     );
-    expect(screen.getByText('Translation').closest('[lang]')).toBeNull();
+    expect(screen.getByText('Wording').closest('[lang]')).toBeNull();
     expect(screen.getByText('Or “sky.”').closest('[lang]')?.getAttribute('lang')).toBe('en');
     expect(screen.getByText('Text-critical')).toBeDefined();
     expect(screen.getByText('Or “sky.”')).toBeDefined();

@@ -78,7 +78,7 @@ describe('NotesSection', () => {
   it('narrows the notes to one kind, and back', async () => {
     serve(createStudyNotesFile('Gen', NOTES));
     render(<NotesSection verse={GEN_1_1} data={inTheNet()} onSelect={vi.fn()} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Translation 1' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Wording 1' }));
     expect(screen.getByText('Or “when God began”.')).toBeDefined();
     expect(screen.queryByText(/A long study note/)).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'All 2' }));

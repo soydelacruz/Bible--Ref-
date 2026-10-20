@@ -211,7 +211,7 @@ export const pt: LocaleMessages = {
   'notes.title': 'Notas da NET',
   'notes.note': 'os tradutores, sobre as palavras (em inglês)',
   'notes.counted': 'notas',
-  'notes.kind.translation': 'Tradução',
+  'notes.kind.translation': 'Redação',
   'notes.kind.study': 'Estudo',
   'notes.kind.text-critical': 'Crítica textual',
   'notes.kind.map': 'Mapa',

@@ -37,7 +37,7 @@ describe('VerseWithNotes', () => {
     );
     expect(container.textContent).toBe(TEXT);
     const beginning = screen.getByRole('button', {
-      name: 'Translation note on “In the beginning”',
+      name: 'Wording note on “In the beginning”',
     });
     expect(beginning.dataset['kind']).toBe('translation');
     expect(beginning.getAttribute('aria-expanded')).toBe('false');
@@ -61,7 +61,7 @@ describe('VerseWithNotes', () => {
         />
       </div>,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Translation note' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Wording note' }));
     expect(onToggle).toHaveBeenCalledWith(BEGINNING);
     expect(onVerseClick).not.toHaveBeenCalled();
   });

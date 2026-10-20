@@ -208,7 +208,7 @@ export const es: LocaleMessages = {
   'notes.title': 'Notas de la NET',
   'notes.note': 'los traductores, sobre sus palabras (en inglés)',
   'notes.counted': 'notas',
-  'notes.kind.translation': 'Traducción',
+  'notes.kind.translation': 'Redacción',
   'notes.kind.study': 'Estudio',
   'notes.kind.text-critical': 'Crítica textual',
   'notes.kind.map': 'Mapa',
