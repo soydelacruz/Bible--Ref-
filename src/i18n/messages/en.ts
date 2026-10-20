@@ -218,6 +218,24 @@ export const en = {
   // The link's own words, then the passage it opens, e.g. "NET Bible notes on John 3:16".
   'study.label': (link: string, passage: string) => `${link} on ${passage}`,
 
+  'notes.title': 'NET notes',
+  'notes.note': 'the translators on its words',
+  'notes.counted': 'notes',
+  'notes.kind.translation': 'Translation',
+  'notes.kind.study': 'Study',
+  'notes.kind.text-critical': 'Text-critical',
+  'notes.kind.map': 'Map',
+  'notes.filter': 'Show the notes of one kind',
+  'notes.all': 'All',
+  'notes.otherTranslation': (abbreviation: string) =>
+    `The notes discuss the NET's wording; the text above is the ${abbreviation}.`,
+  'notes.readAll': 'Read the whole note',
+  'notes.readLess': 'Show less',
+  'notes.cite': (passage: string) => `Go to ${passage}`,
+  'notes.marker': (kind: string, words: string) =>
+    words ? `${kind} note on “${words}”` : `${kind} note`,
+  'notes.close': 'Close the note',
+
   'loading.data': (verses: string, links: string) =>
     `Loading ${verses} verses and ${links} cross-references…`,
   // What a reader meets when a dataset will not load: almost always the network, and almost

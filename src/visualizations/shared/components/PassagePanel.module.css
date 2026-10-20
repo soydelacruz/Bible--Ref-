@@ -537,3 +537,85 @@
     display: none;
   }
 }
+
+/* The NET's notes on a verse, read top to bottom as they stand in it. Hairlines rather than boxes
+   between them: they are one reading, not a stack of separate things. */
+.notes {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-2);
+  list-style: none;
+}
+
+.note {
+  display: grid;
+  gap: var(--space-1);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.note:first-child {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+
+/* The words a note is about, in the reading serif: they are the NET's own words. */
+.notePhrase {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* A long note shows its first lines, fading out, until the reader asks for the rest. */
+.noteBody[data-folded='true'] {
+  max-block-size: calc(0.875rem * 1.6 * 6);
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+
+.noteMore {
+  justify-self: start;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 150ms ease-out;
+}
+
+.noteMore:hover {
+  text-decoration-color: currentColor;
+}
+
+.noteMore:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* The kinds of note, when a verse has more than one: a row that scrolls rather than wraps, so on
+   a phone it never pushes the notes below the fold. */
+.noteKinds {
+  margin: 0 var(--space-2) var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.notesCaveat {
+  margin: 0 var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noteMore {
+    transition: none;
+  }
+}

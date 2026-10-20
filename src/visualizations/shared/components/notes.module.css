@@ -1,0 +1,78 @@
+/* A note's text, wherever it is shown: the details panel, or under a verse in Threads. Notes are
+   prose about the text rather than the text itself, so they are set in the interface's face and the
+   scripture they discuss stays the only thing in the reading serif. */
+
+.part {
+  margin: 0 0 var(--space-2);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.part:last-child {
+  margin-block-end: 0;
+}
+
+/* Whose note it is, in the band of small capitals a printed study Bible uses for the same job. */
+.kind {
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* "LORD" for the divine name, as the NET prints it. */
+.smallCaps {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.02em;
+}
+
+/* The original languages, larger than the English around them so their points stay legible, and
+   isolated so a right-to-left word does not reorder the sentence it sits in. */
+.hebrew {
+  font-family: 'SBL Hebrew', 'Ezra SIL', 'Noto Serif Hebrew', 'Times New Roman', serif;
+  font-size: 1.15em;
+  unicode-bidi: isolate;
+}
+
+.greek {
+  font-family: 'SBL Greek', 'Gentium Plus', 'Noto Serif', var(--font-serif);
+  font-size: 1.05em;
+}
+
+.transliteration {
+  color: inherit;
+}
+
+/* Manuscript sigla and readings: set apart as names, not as emphasis. */
+.manuscript {
+  font-family: var(--font-serif);
+  letter-spacing: 0.03em;
+}
+
+/* A passage a note cites: it opens in the app, so it reads as a link without leaving the line. */
+.citation {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-text-muted);
+  text-underline-offset: 0.2em;
+}
+
+.citation:hover {
+  color: var(--color-accent);
+  text-decoration-style: solid;
+  text-decoration-color: currentColor;
+}
+
+.citation:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}

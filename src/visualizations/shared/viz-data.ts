@@ -113,13 +113,25 @@ export function studyNotesLoader(book: BookId): CachedLoader<BookStudyNotes> {
   }
   const loader = createCachedLoader(async () => {
     const { notes } = await loadStudyNotes(getNoteSourceManifest('net'), book);
+    loadedStudyNotes.set(book, notes);
     return notes;
   });
   studyNotesLoaders.set(book, loader);
   return loader;
 }
 
+/**
+ * A book's notes once they are here, readable without waiting: the panel is rebuilt for every
+ * verse, and asking the loader again would blank the notes for a frame each time.
+ */
+const loadedStudyNotes = new Map<BookId, BookStudyNotes>();
+
+export function studyNotesIfLoaded(book: BookId): BookStudyNotes | null {
+  return loadedStudyNotes.get(book) ?? null;
+}
+
 /** Forgets every book's notes, so a failed download is tried again. */
 export function resetStudyNotes(): void {
   studyNotesLoaders.clear();
+  loadedStudyNotes.clear();
 }

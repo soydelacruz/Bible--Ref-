@@ -14,6 +14,12 @@ import { computeSpineLayout } from './spine-layout.ts';
 import { drawThreads, spineBar, type VerseAnchor } from './threads-drawing.ts';
 import styles from './ThreadsStage.module.css';
 import { useLocalization } from '../../i18n/use-locale.tsx';
+import { formatVerseIndexRange } from '../../core/bible/reference-format.ts';
+import { citedPassage, notePhrases } from '../../notes/note-anchors.ts';
+import { getNoteSourceManifest } from '../../notes/registry.ts';
+import type { CitationHandlers } from '../shared/components/NoteText.tsx';
+import { useBookNotes } from '../shared/use-study-notes.ts';
+import { InlineNote, VerseWithNotes } from './VerseWithNotes.tsx';
 
 export type ThreadDirection = 'outgoing' | 'incoming' | 'both';
 
@@ -65,6 +71,23 @@ export function ThreadsStage({
   const verseElements = useRef(new Map<VerseIndex, HTMLElement>());
   const canvasSize = useElementSize(canvasHostRef);
   const chapterHeaderRef = useRef<HTMLElement>(null);
+  // The NET's notes are marked in the NET's own words, so they show only while it is the text.
+  const netNotes = useBookNotes(
+    translation.manifest.id === getNoteSourceManifest('net').translationId ? book : null,
+  );
+  const chapterKey = `${book}.${String(chapter)}`;
+  const [openNote, setOpenNote] = useState<{
+    readonly chapterKey: string;
+    readonly verse: VerseIndex;
+    readonly number: number;
+  } | null>(null);
+  const noteHandlers: CitationHandlers = {
+    onCite: (passage) => {
+      onSelect(citedPassage(passage, versification));
+    },
+    describe: ([first, last]) =>
+      t('notes.cite')(formatVerseIndexRange(versification, books, first, last)),
+  };
   const [hoverVerse, setHoverVerse] = useState<VerseIndex | null>(null);
   const [condensed, setCondensed] = useState(false);
   const [topVerse, setTopVerse] = useState<VerseIndex | null>(null);
@@ -290,6 +313,13 @@ export function ThreadsStage({
             {verses.map((verse, offset) => {
               const text = translation.verseText(verse);
               const count = connectionsByVerse.get(verse)?.length ?? 0;
+              const verseNotes = text ? (netNotes?.notesOn(verse) ?? []) : [];
+              const phrases = verseNotes.length > 0 ? notePhrases(text, verseNotes) : null;
+              const opened =
+                openNote?.chapterKey === chapterKey && openNote.verse === verse
+                  ? verseNotes.find((note) => note.number === openNote.number)
+                  : undefined;
+              const noteId = `net-note-${String(verse)}`;
               return (
                 <li
                   key={verse}
@@ -326,11 +356,39 @@ export function ThreadsStage({
                     {offset + 1}
                   </button>
                   <span className={text ? styles.text : `${styles.text} ${styles.omitted}`}>
-                    {text || t('threads.omitted')(translation.manifest.abbreviation)}
+                    {phrases ? (
+                      <VerseWithNotes
+                        text={text}
+                        notes={verseNotes}
+                        phrases={phrases}
+                        openNumber={opened?.number ?? null}
+                        noteId={noteId}
+                        onToggle={(note) => {
+                          setOpenNote(
+                            opened?.number === note.number
+                              ? null
+                              : { chapterKey, verse, number: note.number },
+                          );
+                        }}
+                      />
+                    ) : (
+                      text || t('threads.omitted')(translation.manifest.abbreviation)
+                    )}
                   </span>
                   <span className={styles.count} title={t('arcs.connections')(n(count), count)}>
                     {count > 0 ? n(count) : ''}
                   </span>
+                  {opened && (
+                    <InlineNote
+                      id={noteId}
+                      note={opened}
+                      phrase={phrases?.get(opened.number) ?? null}
+                      handlers={noteHandlers}
+                      onClose={() => {
+                        setOpenNote(null);
+                      }}
+                    />
+                  )}
                 </li>
               );
             })}
