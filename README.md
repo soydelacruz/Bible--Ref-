@@ -229,8 +229,7 @@ choose it.
 
 A note on the NET's notes: the 58,422 notes of its translators (on the wording, the manuscripts,
 and the history and meaning of the text, with its map notes) are not part of that licence, and are
-used by a permission of their own, whose terms are recorded in [PRODUCT.md](PRODUCT.md) before
-they are released. The same extract keeps each note with the verse and the place in the NET's text
+used by a permission of their own, recorded in [PRODUCT.md](PRODUCT.md). The same extract keeps each note with the verse and the place in the NET's text
 where its marker stands. The build turns each note's HTML into a small structure of its own (plain
 text, a few styles, and citations of passages) and refuses any markup it has not been taught, so no
 HTML from the source ever reaches the page. Citations by the Hebrew or Greek verse numbering, or of

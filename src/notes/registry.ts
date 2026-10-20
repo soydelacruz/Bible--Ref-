@@ -3,7 +3,7 @@ import type { NoteSourceManifest } from './note-source-manifest.ts';
 
 const NOTE_SOURCES: Readonly<Record<NoteSourceId, NoteSourceManifest>> = {
   // Not part of the NET's free licence for its text: the notes are used by a permission of their
-  // own (see PRODUCT.md), whose exact terms and wording are still to be recorded before release.
+  // own, which the owner confirmed covers publishing them here (see PRODUCT.md).
   net: {
     id: 'net',
     name: 'NET Bible notes',
