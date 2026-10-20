@@ -19,6 +19,12 @@ export async function download(url: string): Promise<Buffer> {
  * served. A changed upstream file fails here rather than quietly becoming part of a build.
  */
 export async function downloadPinnedSource(source: RawSource): Promise<Buffer> {
+  if (source.extractedBy !== undefined) {
+    throw new Error(
+      `${source.id}: data/raw/${source.fileName} is missing. It is not downloaded: make it with ` +
+        `\`node ${source.extractedBy}\`.`,
+    );
+  }
   const content = await download(source.url);
   const sha256 = pinnedDigest(source, content);
   if (sha256 !== source.sha256) {

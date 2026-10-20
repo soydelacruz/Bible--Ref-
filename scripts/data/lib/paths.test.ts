@@ -1,3 +1,4 @@
+import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   PUBLIC_DIR,
@@ -15,19 +16,20 @@ describe("the pipeline's paths", () => {
     }
   });
 
+  // Paths are compared in the platform's own form (`\` on Windows), as `resolve` returns them.
   it('point at the places the README documents', () => {
-    expect(SOURCES_FILE.endsWith('/data/sources.json')).toBe(true);
-    expect(RAW_DATA_DIR.endsWith('/data/raw')).toBe(true);
-    expect(PUBLIC_DIR.endsWith('/public')).toBe(true);
+    expect(SOURCES_FILE.endsWith(join(sep, 'data', 'sources.json'))).toBe(true);
+    expect(RAW_DATA_DIR.endsWith(join(sep, 'data', 'raw'))).toBe(true);
+    expect(PUBLIC_DIR.endsWith(join(sep, 'public'))).toBe(true);
   });
 
   it('resolve a raw file under data/raw', () => {
-    expect(rawFilePath('bsb.txt')).toBe(`${RAW_DATA_DIR}/bsb.txt`);
+    expect(rawFilePath('bsb.txt')).toBe(join(RAW_DATA_DIR, 'bsb.txt'));
   });
 
   it('resolve a generated dataset under public', () => {
     expect(publicFilePath('data/translations/bsb.json')).toBe(
-      `${PUBLIC_DIR}/data/translations/bsb.json`,
+      join(PUBLIC_DIR, 'data', 'translations', 'bsb.json'),
     );
   });
 });

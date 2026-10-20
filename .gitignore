@@ -1,6 +1,11 @@
 # Dependencies
 node_modules/
 
+# Claude Code's per-machine settings and worktrees, and the design skill's local state
+.claude/settings.local.json
+.claude/worktrees/
+.impeccable/
+
 # Build output
 dist/
 coverage/

@@ -75,6 +75,10 @@ export const en = {
   'attribution.asv': 'Scripture text: American Standard Version (ASV), 1901, in the public domain.',
   'attribution.ylt':
     "Scripture text: Young's Literal Translation (YLT), Robert Young, 1898, in the public domain.",
+  'attribution.net':
+    'Scripture quoted by permission. Quotations designated (NET) are from the NET Bible® ' +
+    'copyright ©1996, 2019 by Biblical Studies Press, L.L.C. http://netbible.com All rights ' +
+    'reserved.',
   'attribution.blivre':
     'Scripture text: Bíblia Livre (BLIVRE), © Diego Santos, Mario Sérgio and Marco Teles, ' +
     'February 2018 (Textus Receptus edition), https://sites.google.com/site/biblialivre/. ' +

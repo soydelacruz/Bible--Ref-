@@ -1,0 +1,7 @@
+# Text files are LF everywhere, as Prettier writes them, so a Windows checkout (core.autocrlf)
+# neither fails `npm run format:check` nor shows files as changed that are not.
+* text=auto eol=lf
+
+# The upstream text files are pinned by SHA-256 (data/sources.json), so Git keeps their bytes exactly
+# as committed: no line-ending conversion on checkout, whatever core.autocrlf says.
+data/raw/*.txt -text
