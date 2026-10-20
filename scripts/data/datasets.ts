@@ -1,20 +1,27 @@
+import { BOOKS, type BookId } from '../../src/core/bible/books.ts';
+import { CANONICAL_VERSIFICATION } from '../../src/core/bible/versification.ts';
 import type {
   CrossReferencesFile,
   OriginalWordsFile,
+  StudyNotesFile,
   TranslationTextFile,
 } from '../../src/core/datasets/formats.ts';
 import type {
   CrossReferenceSourceId,
+  NoteSourceId,
   TranslationId,
   WordSourceId,
 } from '../../src/core/datasets/ids.ts';
 import {
   crossReferencesDatasetPath,
   originalWordsDatasetPath,
+  studyNotesDatasetPath,
   translationDatasetPath,
 } from '../../src/core/datasets/paths.ts';
+import { getNoteSourceManifest } from '../../src/notes/registry.ts';
 import { importBsbText } from './importers/bsb.ts';
 import { importEbibleVerseLines } from './importers/ebible-vpl.ts';
+import { importNetNotes, readNetNoteRecords } from './importers/netbible-notes.ts';
 import { importOpenBibleCrossReferences } from './importers/openbible.ts';
 import { getWordSourceManifest } from '../../src/words/registry.ts';
 import { importStepBibleWords, type TaggedLanguage } from './importers/stepbible.ts';
@@ -35,7 +42,7 @@ export interface DatasetBuilder {
   readonly outputPath: string;
   readonly build: (
     readSource: RawSourceReader,
-  ) => Promise<TranslationTextFile | CrossReferencesFile | OriginalWordsFile>;
+  ) => Promise<TranslationTextFile | CrossReferencesFile | OriginalWordsFile | StudyNotesFile>;
 }
 
 function provenanceOf({ url, sha256, retrievedAt }: RawSource) {
@@ -203,8 +210,55 @@ const WORD_BUILDERS: Readonly<Record<WordSourceId, DatasetBuilder>> = {
   },
 };
 
+/**
+ * The NET's notes, all 66 books' files from the one extract, read and parsed once for every
+ * builder that asks with the same reader. Each marker's place is checked against the NET's text.
+ */
+const netNotesByReader = new WeakMap<RawSourceReader, Promise<Map<BookId, StudyNotesFile>>>();
+
+function readNetNotes(readSource: RawSourceReader): Promise<Map<BookId, StudyNotesFile>> {
+  const cached = netNotesByReader.get(readSource);
+  if (cached) {
+    return cached;
+  }
+  const notes = (async () => {
+    const [notesSource, textSource] = await Promise.all([
+      readSource('net-notes'),
+      readSource('net'),
+    ]);
+    const text = importEbibleVerseLines(textSource.content.toString('utf8'), 'net', {
+      ...provenanceOf(textSource.source),
+      snapshotDate: null,
+    });
+    const jsonl = extractZipTextEntry(notesSource.content, expectMember(notesSource.source));
+    return importNetNotes(readNetNoteRecords(jsonl), {
+      manifest: getNoteSourceManifest('net'),
+      provenance: { ...provenanceOf(notesSource.source), snapshotDate: null },
+      verses: text.verses,
+      versification: CANONICAL_VERSIFICATION,
+    });
+  })();
+  netNotesByReader.set(readSource, notes);
+  return notes;
+}
+
+/** One builder per book, per source of notes: a reader downloads only the books they open. */
+const NOTE_BUILDERS: Readonly<Record<NoteSourceId, readonly DatasetBuilder[]>> = {
+  net: BOOKS.map(({ id }) => ({
+    outputPath: studyNotesDatasetPath('net', id),
+    build: async (readSource) => {
+      const file = (await readNetNotes(readSource)).get(id);
+      if (!file) {
+        throw new Error(`The NET notes have no file for ${id}.`);
+      }
+      return file;
+    },
+  })),
+};
+
 export const DATASET_BUILDERS: readonly DatasetBuilder[] = [
   ...Object.values(TRANSLATION_BUILDERS),
   ...Object.values(CROSS_REFERENCE_BUILDERS),
   ...Object.values(WORD_BUILDERS),
+  ...Object.values(NOTE_BUILDERS).flat(),
 ];

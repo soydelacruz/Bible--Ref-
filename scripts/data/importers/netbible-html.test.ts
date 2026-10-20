@@ -3,6 +3,7 @@ import { toOsisId } from '../../../src/core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../../../src/core/bible/versification.ts';
 import {
   NET_OMITTED_VERSES,
+  netBookFromHtml,
   netBookId,
   netVerseLines,
   netVersesFromHtml,
@@ -75,6 +76,53 @@ describe('netVersesFromHtml', () => {
 
   it('ignores text before the first verse', () => {
     expect(netVersesFromHtml('<h3>Psalm 3</h3> nothing yet').size).toBe(0);
+  });
+});
+
+/** A note marker as netbible.org writes it into the text. */
+const marker = (number: number) =>
+  `<sup> <a href="#" class="netNoteSuper" pos="1">${String(number)}</a>&nbsp;</sup>`;
+
+describe('netBookFromHtml', () => {
+  it('places each note after the words its marker follows', () => {
+    const { verses, notes } = netBookFromHtml(
+      `${verse('Genesis', 1, 1)}In the beginning${marker(1)} God${marker(2)} created.${marker(3)}`,
+    );
+    expect(verses.get('Gen.1.1')).toBe('In the beginning God created.');
+    expect(notes.get(1)).toEqual({ verse: 'Gen.1.1', at: 16 });
+    expect(notes.get(2)).toEqual({ verse: 'Gen.1.1', at: 20 });
+    expect(notes.get(3)).toEqual({ verse: 'Gen.1.1', at: 29 });
+  });
+
+  it('keeps a marker in its place where the text around it is tidied', () => {
+    const { verses, notes } = netBookFromHtml(
+      `${verse('Mark', 1, 1)}word ${marker(1)}, then ( ${marker(2)}aside)`,
+    );
+    expect(verses.get('Mark.1.1')).toBe('word, then (aside)');
+    expect(notes.get(1)?.at).toBe(4);
+    expect(notes.get(2)?.at).toBe(12);
+  });
+
+  it('puts a marker in a heading, or before the text, at the start of the verse that follows', () => {
+    const { notes } = netBookFromHtml(
+      `<h3>Psalm 3${marker(1)}</h3>${verse('Psalms', 3, 1)}Text.` +
+        `<div class="paragraphtitle">A heading${marker(2)}</div>${verse('Psalms', 3, 2)}Next.`,
+    );
+    expect(notes.get(1)).toEqual({ verse: 'Ps.3.1', at: 0 });
+    expect(notes.get(2)).toEqual({ verse: 'Ps.3.2', at: 0 });
+  });
+
+  it('refuses a note marked twice, a marker with no number, and one after the last verse', () => {
+    const start = verse('Mark', 1, 1);
+    expect(() => netBookFromHtml(`${start}a${marker(1)} b${marker(1)}`)).toThrow(
+      /marked more than once/,
+    );
+    expect(() => netBookFromHtml(`${start}a<sup><a class="netNoteSuper"> </a></sup>`)).toThrow(
+      /has no number/,
+    );
+    expect(() =>
+      netBookFromHtml(`${start}a<div class="paragraphtitle">End${marker(9)}</div>`),
+    ).toThrow(/after the last verse/);
   });
 });
 

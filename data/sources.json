@@ -66,6 +66,18 @@
       "homepage": "https://netbible.org/"
     },
     {
+      "id": "net-notes",
+      "description": "NET Bible (NET2) notes, extracted from the notes and netTexts responses of netbible.org (NET Bible study archive, 2026-10-19) by scripts/data/extract-netbible.ts: each note's HTML as served, with the verse and place of its marker in the NET text, one JSON line each in a ZIP archive",
+      "url": "https://netbible.org/bible/Genesis+1",
+      "fileName": "net2-notes.zip",
+      "sha256": "e22b410088703daf44337ca8a70eadd7cb868d81186ba81b6728c4d48d5634e7",
+      "member": "net2-notes.jsonl",
+      "extractedBy": "scripts/data/extract-netbible.ts",
+      "retrievedAt": "2026-10-19",
+      "license": "Used by permission of Biblical Studies Press: the notes are outside the NET text's free licence (netbible.com/copyright); the permission's terms are recorded in PRODUCT.md",
+      "homepage": "https://netbible.org/"
+    },
+    {
       "id": "blivre",
       "description": "Bíblia Livre (Textus Receptus edition), verse-per-line text in a ZIP archive",
       "url": "https://github.com/blivre/BibliaLivre/releases/download/2018.2.0/bliv-tr_vpl.zip",

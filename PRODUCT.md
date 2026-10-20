@@ -48,9 +48,11 @@ same connected reading.
   and lists what it omits or moves.
 - NET Bible text: free for non-commercial electronic use with the (NET) designation, the copyright
   acknowledgment, and "NET" hyperlinked to netbible.org.
-- NET Bible notes and Dr. Thomas L. Constable's Notes: the owner reports permission received
-  (2026-10-19). Open: record the permission's exact terms (scope, offline storage on readers'
-  devices, attribution wording) in the repository before publishing.
+- NET Bible notes and Dr. Thomas L. Constable's Notes: used by a permission the owner received
+  (2026-10-19). The owner confirmed on 2026-10-19 that it covers publishing the NET notes on this
+  site, and they were released then. Still to record when the permission's text is at hand: its
+  exact wording, whether it covers keeping the notes on readers' devices for offline reading, and
+  the credit it asks for; until then the notes carry the NET's own copyright line.
 - Matthew Henry's Commentary and Alexander Maclaren's Expositions: public domain.
 - Out of scope: NASB, ESV, HCSB, ISV and MSG text (commercial licences); the archive's map imagery.
 - No server: everything is built at build time and served as static files.

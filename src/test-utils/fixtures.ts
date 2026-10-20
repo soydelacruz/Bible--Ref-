@@ -4,6 +4,8 @@ import { CANONICAL_VERSIFICATION } from '../core/bible/versification.ts';
 import type {
   CrossReferenceColumns,
   DatasetProvenance,
+  StudyNote,
+  StudyNotesFile,
   TranslationTextFile,
 } from '../core/datasets/formats.ts';
 
@@ -40,6 +42,30 @@ export function createTranslationFile(
       { length: CANONICAL_VERSIFICATION.verseCount },
       (_, index) => overrides.get(index) ?? `Verse number ${index}.`,
     ),
+  };
+}
+
+/** A book's NET notes file holding the notes given. */
+export function createStudyNotesFile(
+  book: BookId = 'Gen',
+  notes: readonly StudyNote[] = [],
+): StudyNotesFile {
+  return {
+    format: 'study-notes',
+    schemaVersion: 1,
+    versification: 'kjv',
+    provenance: PROVENANCE,
+    notices: [],
+    sourceId: 'net',
+    book,
+    translationId: 'net',
+    license: {
+      name: 'Used by permission',
+      url: 'https://netbible.com/copyright/',
+      publicDomain: false,
+    },
+    attribution: 'Notes from the NET Bible®. Used by permission.',
+    notes,
   };
 }
 

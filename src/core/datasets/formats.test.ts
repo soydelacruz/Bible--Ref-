@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { createCrossReferenceColumns, createTranslationFile } from '../../test-utils/fixtures.ts';
-import { parseCrossReferencesFile, parseTranslationTextFile } from './formats.ts';
+import {
+  createCrossReferenceColumns,
+  createStudyNotesFile,
+  createTranslationFile,
+} from '../../test-utils/fixtures.ts';
+import {
+  parseCrossReferencesFile,
+  parseStudyNotesFile,
+  parseTranslationTextFile,
+} from './formats.ts';
 
 const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
@@ -61,5 +69,40 @@ describe('dataset file parsing', () => {
         { id: 'openbible', versification: 'kjv' },
       ),
     ).toThrow('links.votes[0]: expected an integer');
+  });
+});
+
+describe('study notes files', () => {
+  const note = {
+    number: 1,
+    verse: 0,
+    at: 16,
+    parts: [{ kind: 'translation', text: ['Or ', { style: 'italic', text: ['sky'] }, '.'] }],
+  };
+
+  it('accepts a book of notes', () => {
+    const file = createStudyNotesFile('Gen', [note] as never);
+    expect(
+      parseStudyNotesFile(roundTrip(file), { id: 'net', versification: 'kjv', book: 'Gen' }),
+    ).toEqual(file);
+  });
+
+  it('refuses another book’s notes, a kind it does not know, and markup in place of text', () => {
+    const expected = { id: 'net', versification: 'kjv', book: 'Exod' } as const;
+    expect(() => parseStudyNotesFile(roundTrip(createStudyNotesFile('Gen')), expected)).toThrow(
+      'book: expected one of "Exod", got "Gen"',
+    );
+    const withKind = createStudyNotesFile('Gen', [
+      { ...note, parts: [{ kind: 'gossip', text: [] }] },
+    ] as never);
+    expect(() => parseStudyNotesFile(roundTrip(withKind), { ...expected, book: 'Gen' })).toThrow(
+      'notes[0].parts[0].kind',
+    );
+    const withMarkup = createStudyNotesFile('Gen', [
+      { ...note, parts: [{ kind: 'study', text: [{ html: '<script>' }] }] },
+    ] as never);
+    expect(() => parseStudyNotesFile(roundTrip(withMarkup), { ...expected, book: 'Gen' })).toThrow(
+      'notes[0].parts[0].text[0]',
+    );
   });
 });

@@ -73,29 +73,110 @@ function tidy(text: string): string {
 
 type SpanKind = 'number' | 'smallCaps' | 'other';
 
+/** Where one of the NET's notes is marked in its text. */
+export interface NetNoteAnchor {
+  /** The verse the marker is in, by OSIS ID. */
+  readonly verse: string;
+  /** How many characters of the verse's text come before the marker. */
+  readonly at: number;
+}
+
+/** A book of the NET as its HTML gives it: the text of each verse, and where its notes are marked. */
+export interface NetBookText {
+  /** Verse texts keyed by OSIS ID (e.g. `John.3.16`), in the order they appear. */
+  readonly verses: Map<string, string>;
+  /** Where each of the book's notes is marked, by the NET's number for it within the book. */
+  readonly notes: Map<number, NetNoteAnchor>;
+}
+
+/**
+ * Stands for a note marker while a verse's pieces are joined (a private-use character, which the
+ * text itself never contains), so that its place survives the tidying of the text around it.
+ */
+const MARKER = '';
+
+/**
+ * The places of the markers in a verse's tidied text. Tidying removes some spaces (before closing
+ * punctuation, after an opening bracket), and a marker can keep a space from being removed, so
+ * the text with markers is walked alongside the text without them.
+ */
+function placeMarkers(joined: string): { readonly text: string; readonly at: number[] } {
+  const text = tidy(joined.replaceAll(MARKER, ''));
+  const marked = tidy(joined);
+  const at: number[] = [];
+  let index = 0;
+  for (const character of marked) {
+    if (character === MARKER) {
+      at.push(index);
+      continue;
+    }
+    if (character !== ' ' && text[index] === ' ' && text[index + 1] === character) {
+      // A space only the text has: the marker kept the tidying from seeing it the same way.
+      index += 1;
+    }
+    if (text[index] === character) {
+      index += 1;
+    } else if (character !== ' ') {
+      throw new Error(`NET: the text "${text}" does not line up with its note markers.`);
+    }
+  }
+  return { text, at };
+}
+
 /** Verse texts keyed by OSIS ID (e.g. `John.3.16`), in the order they appear. */
 export function netVersesFromHtml(html: string): Map<string, string> {
+  return netBookFromHtml(html).verses;
+}
+
+/**
+ * The text of a book of the NET, and the place of each note marker in it (`<sup><a
+ * class="netNoteSuper">219</a></sup>`, the 219th note of the book). A marker in a part of the text
+ * that is left out (a heading, an acrostic letter, a speaker's name) stands at the start of the
+ * verse that follows it.
+ */
+export function netBookFromHtml(html: string): NetBookText {
   const pieces = new Map<string, string[]>();
+  const markerOrder = new Map<string, number[]>();
+  const notes = new Map<number, NetNoteAnchor>();
+  const pending: number[] = [];
   const spans: SpanKind[] = [];
   let verse: string | null = null;
   let noteDepth = 0;
   let boldDepth = 0;
   let inHeading = false;
   let paragraph = '';
+  let markerDigits: string | null = null;
+
+  const leftOut = () =>
+    inHeading ||
+    paragraph === 'lamhebrew' ||
+    (paragraph === 'sosspeaker' && boldDepth > 0) ||
+    spans.includes('number');
+
+  const push = (id: string, piece: string) => {
+    const list = pieces.get(id) ?? [];
+    list.push(piece);
+    pieces.set(id, list);
+  };
+
+  const marked = new Set<number>();
+  const mark = (id: string, number: number) => {
+    if (marked.has(number)) {
+      throw new Error(`NET: note ${String(number)} is marked more than once.`);
+    }
+    marked.add(number);
+    push(id, MARKER);
+    markerOrder.set(id, [...(markerOrder.get(id) ?? []), number]);
+  };
 
   const keep = (text: string) => {
+    if (markerDigits !== null) {
+      markerDigits += text;
+      return;
+    }
     if (verse === null || text === '') return;
-    const skipped =
-      noteDepth > 0 ||
-      inHeading ||
-      paragraph === 'lamhebrew' ||
-      (paragraph === 'sosspeaker' && boldDepth > 0) ||
-      spans.includes('number');
-    if (skipped) return;
-    const words = spans.includes('smallCaps') ? text.toUpperCase() : text;
-    const list = pieces.get(verse) ?? [];
-    list.push(words);
-    pieces.set(verse, list);
+    if (noteDepth > 0 || leftOut()) return;
+    push(verse, spans.includes('smallCaps') ? text.toUpperCase() : text);
   };
 
   let last = 0;
@@ -117,9 +198,28 @@ export function netVersesFromHtml(html: string): Map<string, string> {
       });
       // A verse resuming on a new line: its pieces are joined with a space between the lines.
       pieces.get(verse)?.push(' ');
+      for (const number of pending.splice(0)) {
+        mark(verse, number);
+      }
     }
 
     switch (name) {
+      case 'a':
+        if (!closing && className.includes('netNoteSuper')) {
+          markerDigits = '';
+        } else if (closing && markerDigits !== null) {
+          const number = Number(markerDigits.trim());
+          markerDigits = null;
+          if (!Number.isInteger(number) || number < 1) {
+            throw new Error(`NET: a note marker has no number (${verse ?? 'before the text'}).`);
+          }
+          if (verse === null || leftOut()) {
+            pending.push(number);
+          } else {
+            mark(verse, number);
+          }
+        }
+        break;
       case 'sup':
         noteDepth = Math.max(0, noteDepth + (closing ? -1 : 1));
         break;
@@ -153,10 +253,21 @@ export function netVersesFromHtml(html: string): Map<string, string> {
     }
   }
   keep(html.slice(last));
+  if (pending.length > 0) {
+    throw new Error(`NET: notes ${pending.join(', ')} are marked after the last verse.`);
+  }
 
   // The pieces are joined as the HTML has them: its own spaces separate the words, and none
   // belongs between a word and the dash or quotation mark set against it.
-  return new Map([...pieces].map(([id, parts]) => [id, tidy(parts.join(''))]));
+  const verses = new Map<string, string>();
+  for (const [id, parts] of pieces) {
+    const { text, at } = placeMarkers(parts.join(''));
+    verses.set(id, text);
+    (markerOrder.get(id) ?? []).forEach((number, index) => {
+      notes.set(number, { verse: id, at: at[index] ?? text.length });
+    });
+  }
+  return { verses, notes };
 }
 
 /**
