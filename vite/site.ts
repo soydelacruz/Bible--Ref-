@@ -29,10 +29,14 @@ export const SITE_ORIGIN =
  */
 export const SITE_URL = new URL(process.env['BASE_PATH'] ?? DEPLOY_BASE, SITE_ORIGIN).href;
 
+/**
+ * Who the site names as its author, in its metadata and structured data: SoyDeLaCruz, whose name
+ * leads to the page of the same name here (the footer's link goes there too). The original
+ * project's author is credited in LICENSE and the README.
+ */
 export const AUTHOR = {
-  name: 'Oleksii Trekhleb',
-  url: 'https://trekhleb.dev',
-  twitter: '@Trekhleb',
+  name: 'SoyDeLaCruz',
+  url: new URL('soydelacruz/', SITE_URL).href,
 };
 
 /**

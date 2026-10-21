@@ -113,6 +113,19 @@ describe('siteHead', () => {
     expect(tags).toContain('twitter:');
   });
 
+  it('names SoyDeLaCruz as the author, with no Twitter handle', () => {
+    const plugin = siteHead();
+    resolveConfig(plugin, 'build', '/bible-cross-references/');
+    const tags = JSON.stringify(
+      hook(plugin, 'transformIndexHtml')(HTML, {
+        path: PAGE_PATH,
+      }),
+    );
+    expect(tags).toContain('"name":"author","content":"SoyDeLaCruz"');
+    expect(tags).not.toContain('twitter:creator');
+    expect(tags).not.toContain('Trekhleb');
+  });
+
   it('gives every page its icons and a dataset preload', () => {
     const plugin = siteHead();
     resolveConfig(plugin, 'build', '/base/');
