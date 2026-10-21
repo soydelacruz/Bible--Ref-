@@ -26,9 +26,9 @@
       "description": "World English Bible (Protestant canon), eBible.org edition, verse-per-line text in a ZIP archive",
       "url": "https://ebible.org/Scriptures/engwebp_vpl.zip",
       "fileName": "engwebp_vpl.zip",
-      "sha256": "bd5f4ac05c5742338b3b17086d5731cb2ca005f3ba5025f71494643eb7799833",
+      "sha256": "02f57a7f6d5da180088b937353b3378de9bd77bce3bc4a66d4cb1923588a0808",
       "member": "engwebp_vpl.txt",
-      "retrievedAt": "2026-10-19",
+      "retrievedAt": "2026-10-21",
       "license": "Public domain",
       "homepage": "https://ebible.org/find/details.php?id=engwebp"
     },
