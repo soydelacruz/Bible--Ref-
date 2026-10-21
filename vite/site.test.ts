@@ -20,7 +20,9 @@ describe('the site', () => {
 
   it('names itself and its author', () => {
     expect(SITE_NAME).toBe('Bible SoyDeLaCruz-Reference');
-    expect(AUTHOR.name).toBeTruthy();
+    expect(AUTHOR.name).toBe('SoyDeLaCruz');
+    // The author's name leads to the cross page on this site, as the footer's link does.
+    expect(AUTHOR.url).toBe(new URL('soydelacruz/', SITE_URL).href);
     expect(AUTHOR.url.startsWith('https://')).toBe(true);
     expect(SOCIAL_IMAGE.file).toMatch(/\.(png|jpe?g)$/);
     expect(SOCIAL_IMAGE.width).toBeGreaterThan(SOCIAL_IMAGE.height);
