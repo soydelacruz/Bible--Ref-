@@ -1,4 +1,5 @@
 import {
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -242,6 +243,20 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   );
 
   const credits = <Credits translation={translationManifest} />;
+  // A view made of words waits for them inside its own frame: the masthead stays, so the views
+  // already drawn are one switch away, and so does the translation picker.
+  const waitingFrame = (
+    <VizPage masthead={masthead} credits={credits} controls={translationMenu}>
+      {text.state !== 'loaded' && (
+        <TextPending
+          status={text}
+          onRetry={() => {
+            resetTranslation(location.translation);
+          }}
+        />
+      )}
+    </VizPage>
+  );
 
   return VIEWS.map((view) => {
     const isActive = view === active;
@@ -313,19 +328,12 @@ export function Explorer({ core }: { readonly core: VizCore }) {
         >
           {'drawsBeforeText' in view ? (
             <view.Component data={early} {...props} />
-          ) : complete === null ? (
-            // A view made of words waits for them inside its own frame: the masthead stays, so
-            // the views already drawn are one switch away, and so does the translation picker.
-            <VizPage masthead={masthead} credits={credits} controls={translationMenu}>
-              <TextPending
-                status={text}
-                onRetry={() => {
-                  resetTranslation(location.translation);
-                }}
-              />
-            </VizPage>
           ) : (
-            <view.Component data={complete} {...props} />
+            // A boundary of its own: such a view is first drawn when the words arrive, and the
+            // moment its code takes to start must not blank the views already on screen.
+            <Suspense fallback={waitingFrame}>
+              {complete === null ? waitingFrame : <view.Component data={complete} {...props} />}
+            </Suspense>
           )}
         </ErrorBoundary>
       </div>

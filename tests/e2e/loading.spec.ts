@@ -30,10 +30,27 @@ test.describe('loading', () => {
     // Drawn from the links alone; only the words wait, inside the panel.
     await expect(page.locator(`${PANEL} ${PENDING}`)).toHaveText('Loading the text…');
     await expect(page.locator(`${ACTIVE} footer`)).toContainText('BSB');
+    // What is on screen stays there as the words arrive. Threads is first drawn at that moment,
+    // and while its code started the whole page once went back to the loading screen.
+    await page.evaluate(() => {
+      const view = document.querySelector<HTMLElement>('div[data-active="true"]');
+      const record = window as unknown as { viewHidden?: boolean };
+      record.viewHidden = false;
+      if (view) {
+        new MutationObserver(() => {
+          record.viewHidden ||= view.style.display === 'none';
+        }).observe(view, { attributes: true, attributeFilter: ['style'] });
+      }
+    });
 
     release();
     await expect(page.locator(PANEL)).toContainText(/For God so loved the world/);
     await expect(page.locator(`${PANEL} ${PENDING}`)).toHaveCount(0);
+    // Threads, hidden, is drawn once the words are in: give it the moment it takes.
+    await page.waitForTimeout(1000);
+    expect(
+      await page.evaluate(() => (window as unknown as { viewHidden?: boolean }).viewHidden),
+    ).toBe(false);
   });
 
   test('a page made of words waits inside its own frame, one switch from the arcs', async ({
