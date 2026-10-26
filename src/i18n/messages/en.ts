@@ -246,10 +246,19 @@ export const en = {
   'error.viewFailed': (view: string, message: string) => `${view} could not start: ${message}`,
 
   'threads.direction': 'Thread direction',
-  'threads.outgoing': 'Points to',
-  'threads.incoming': 'Pointed from',
-  'threads.both': 'Both',
-  'threads.verse': (number: string) => `Verse ${number}: show its connections`,
+  'threads.outgoing': 'Where it points',
+  'threads.incoming': 'What points here',
+  'threads.both': 'Both ways',
+  'threads.verse': (number: string) => `Verse ${number}: show its cross-references`,
+  // Under the chapter's heading, until the reader scrolls: what the picture and the numbers are.
+  'threads.hint':
+    'Threads run from each verse to where its cross-references land · the number on the right ' +
+    'is how many · click a verse to see them',
+  'threads.hint.touch':
+    'Threads run from each verse to where its cross-references land · the number on the right ' +
+    'is how many · tap a verse to see them',
+  // Said after the number beside a verse, for a reader who hears it rather than sees it: "4 links".
+  'threads.links': (plural: number): string => (plural === 1 ? 'link' : 'links'),
   'threads.omitted': (abbreviation: string) =>
     `Omitted in the ${abbreviation} (not in the earliest manuscripts).`,
   'threads.spineHover': (count: string, plural: number) =>
