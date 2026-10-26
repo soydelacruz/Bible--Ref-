@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ACTIVE, PANEL, openPassage, waitForApp } from './helpers.ts';
+import { ACTIVE, PANEL, openPassage, waitForApp, openHeaderMenu, headerButton } from './helpers.ts';
 
 test.describe('translations', () => {
   test('the text changes when another translation is chosen, and the address says which', async ({
@@ -8,10 +8,7 @@ test.describe('translations', () => {
     await openPassage(page, 'John.3.16');
     await expect(page.locator(PANEL)).toContainText(/one and only Son/);
 
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await page
       .locator(ACTIVE)
       .getByRole('radio', { name: /King James/ })
@@ -24,17 +21,12 @@ test.describe('translations', () => {
   test('a shared address opens in the translation it names', async ({ page }) => {
     await openPassage(page, 'John.3.16', '&t=kjv');
     await expect(page.locator(PANEL)).toContainText(/only begotten Son/);
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Translation/ })).toContainText(
-      'KJV',
-    );
+    await expect(await headerButton(page, /Translation/)).toContainText('KJV');
   });
 
   test('the choice is remembered for the next visit', async ({ page }) => {
     await openPassage(page, 'John.3.16');
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await page
       .locator(ACTIVE)
       .getByRole('radio', { name: /King James/ })
@@ -43,9 +35,7 @@ test.describe('translations', () => {
 
     await page.goto('./');
     await waitForApp(page);
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Translation/ })).toContainText(
-      'KJV',
-    );
+    await expect(await headerButton(page, /Translation/)).toContainText('KJV');
   });
 
   test('the credit in the footer follows the translation on screen', async ({ page }) => {

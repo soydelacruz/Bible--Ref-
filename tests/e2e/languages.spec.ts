@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, openPanel, waitForApp } from './helpers.ts';
+import { ACTIVE, PANEL, openPanel, waitForApp, openHeaderMenu, headerButton } from './helpers.ts';
 
 /** Opens the app in a language, with the details of a passage in view. */
 async function open(page: Page, query: string): Promise<void> {
@@ -13,9 +13,7 @@ test.describe('reading in Spanish', () => {
     await open(page, '?lang=es');
     await expect(page.locator(ACTIVE).getByRole('button', { name: /Filtros/ })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Traducción/ })).toContainText(
-      'RV1909',
-    );
+    await expect(await headerButton(page, /Traducción/)).toContainText('RV1909');
   });
 
   test('a reference can be typed in Spanish, under Spanish book names', async ({ page }) => {
@@ -44,11 +42,9 @@ test.describe('reading in Portuguese', () => {
     const page = await context.newPage();
     await page.goto('./');
     await waitForApp(page);
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Tradução/ })).toBeVisible();
+    await expect(await headerButton(page, /Tradução/)).toBeVisible();
     // The Portuguese Bible comes with the Portuguese interface.
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Tradução/ })).toContainText(
-      'BLIVRE',
-    );
+    await expect(await headerButton(page, /Tradução/)).toContainText('BLIVRE');
     await context.close();
   });
 
@@ -94,10 +90,7 @@ test.describe('reading in Portuguese', () => {
 test.describe('choosing a language', () => {
   test('the picker groups the translations under their language', async ({ page }) => {
     await open(page, '');
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     const menu = page.locator(ACTIVE).getByRole('radiogroup', { name: 'Translation' });
     await expect(menu.getByText('English', { exact: true })).toBeVisible();
     await expect(menu.getByText('Português', { exact: true })).toBeVisible();
@@ -106,10 +99,7 @@ test.describe('choosing a language', () => {
 
   test('the interface language is chosen in the same menu, and remembered', async ({ page }) => {
     await open(page, '');
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await page.locator(ACTIVE).getByLabel('Language').selectOption('pt');
     await expect(page.locator(ACTIVE).getByRole('button', { name: /Filtros/ })).toBeVisible();
     await expect(page).toHaveURL(/lang=pt/);
@@ -120,10 +110,7 @@ test.describe('choosing a language', () => {
 
   test('changing the text leaves the interface language alone', async ({ page }) => {
     await open(page, '?lang=pt');
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Tradução/ })
-      .click();
+    await openHeaderMenu(page, /Tradução/);
     await page
       .locator(ACTIVE)
       .getByRole('radio', { name: /King James/ })

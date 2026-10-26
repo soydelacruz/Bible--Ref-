@@ -69,19 +69,28 @@
   pointer-events: none;
 }
 
-/* The book picker sits among the header's buttons, so it takes its text's width, not a row. */
+/* The view's toolbar above the clusters (the book picker and the tour), and the canvas under it;
+   on phones the toolbar is hidden (its controls are in the header's More menu) and the canvas
+   has the whole stage. */
+.layout {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* Placed by row, not by order: a hidden toolbar takes no cell, and the canvas would otherwise slip
+   into the toolbar's row and be drawn zero pixels tall. */
+.canvasArea {
+  position: relative;
+  grid-row: 2;
+  min-block-size: 0;
+}
+
+/* The book picker sits among buttons, so it takes its text's width, not a row. */
 .bookSelect {
   inline-size: auto;
   max-inline-size: 12rem;
-}
-
-/* The tour button's word. Below 66rem it would push the header's controls onto a row of their
-   own sooner (Spanish's "Recorrido", the longest, needs about 1,050px), so there the button
-   stands on its icon, still named in full to screen readers and in its tooltip. */
-@media (max-width: 65.99rem) {
-  .tourLabel {
-    display: none;
-  }
 }
 
 .touchHint {

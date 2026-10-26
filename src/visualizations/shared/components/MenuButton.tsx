@@ -1,14 +1,24 @@
 import {
+  createContext,
+  use,
   useEffect,
   useEffectEvent,
   useId,
   useLayoutEffect,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { ExpandIcon, type IconComponent } from '../../../shared/ui/icons.tsx';
 import styles from './controls.module.css';
+
+/**
+ * Whether the menus inside are rows of another menu (the phone header's More) rather than
+ * buttons of the header: a row spells out its name, and opens its content in place below itself,
+ * so a menu in a menu is a list that unfolds rather than a popover stacked on a popover.
+ */
+export const MenuRows = createContext(false);
 
 interface MenuButtonProps {
   /** What the menu is called, e.g. "Filters". Always its accessible name. */
@@ -37,12 +47,25 @@ interface MenuButtonProps {
    */
   readonly open?: boolean | undefined;
   readonly onOpenChange?: ((open: boolean) => void) | undefined;
+  /**
+   * Moves keyboard focus to the first control inside once open, for a menu that is a list of
+   * controls (More) rather than a setting to glance at.
+   */
+  readonly focusOnOpen?: boolean;
+  /**
+   * Closes once one of its own buttons has done its job (e.g. "Save as image"), as a menu of
+   * actions does. A menu inside it is left alone: opening one is not an action.
+   */
+  readonly closeOnAction?: boolean;
   /** The popover's content. */
   readonly children: ReactNode;
 }
 
 /** Space kept between an open popover and the edges of the viewport (matches `.popover`). */
 const VIEWPORT_MARGIN_PX = 12;
+
+/** Marks a popover, so an action can tell which menu it belongs to. */
+const POPOVER = 'data-popover';
 
 /**
  * The popover hangs from the button's end edge, which can push it past the viewport on narrow
@@ -67,8 +90,11 @@ export function MenuButton({
   busy = false,
   open: openProp,
   onOpenChange,
+  focusOnOpen = false,
+  closeOnAction = false,
   children,
 }: MenuButtonProps) {
+  const isRow = use(MenuRows);
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const setOpen = onOpenChange ?? setOwnOpen;
@@ -76,6 +102,7 @@ export function MenuButton({
     setOpen(false);
   });
   const name = value === undefined ? label : `${label}: ${value}`;
+  const accessibleName = indicator && changedLabel !== undefined ? changedLabel : name;
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -91,12 +118,14 @@ export function MenuButton({
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        close();
-        // Escape is a keyboard gesture, so focus goes back to the button it came from rather
-        // than to the top of the page.
-        buttonRef.current?.focus();
+      // A menu open inside this one takes the Escape for itself: one press closes one menu.
+      if (event.key !== 'Escape' || popoverRef.current?.querySelector('[aria-expanded="true"]')) {
+        return;
       }
+      close();
+      // Escape is a keyboard gesture, so focus goes back to the button it came from rather than
+      // to the top of the page.
+      buttonRef.current?.focus();
     };
     document.addEventListener('pointerdown', closeOnOutside);
     document.addEventListener('keydown', closeOnEscape);
@@ -106,10 +135,17 @@ export function MenuButton({
     };
   }, [open]);
 
-  // Before paint, so the popover never flashes at its clipped position.
+  useEffect(() => {
+    if (open && focusOnOpen) {
+      popoverRef.current?.querySelector<HTMLElement>('button, input, select, a[href]')?.focus();
+    }
+  }, [open, focusOnOpen]);
+
+  // Before paint, so the popover never flashes at its clipped position. A row's content unfolds
+  // in the flow, inside a popover that is already placed.
   useLayoutEffect(() => {
     const popover = popoverRef.current;
-    if (!open || !popover) {
+    if (!open || !popover || isRow) {
       return undefined;
     }
     const place = () => {
@@ -120,17 +156,31 @@ export function MenuButton({
     return () => {
       window.removeEventListener('resize', place);
     };
-  }, [open]);
+  }, [open, isRow]);
 
+  const closeAfterAction = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target instanceof Element ? event.target.closest('button') : null;
+    if (
+      target !== null &&
+      !target.hasAttribute('aria-expanded') &&
+      target.closest(`[${POPOVER}]`) === event.currentTarget
+    ) {
+      setOpen(false);
+    }
+  };
+
+  const dot = indicator && <span className={styles.indicator} />;
   return (
-    <div ref={menuRef} className={styles.menu}>
+    <div ref={menuRef} className={isRow ? `${styles.menu} ${styles.menuRow}` : styles.menu}>
       <button
         ref={buttonRef}
         type="button"
         className={`${styles.button} ${styles.menuButton}`}
         // Named explicitly: on phones the label is hidden and only the icon shows, and a menu
-        // showing its value says both ("Translation: KJV").
-        aria-label={indicator && changedLabel !== undefined ? changedLabel : name}
+        // showing its value says both ("Translation: KJV"). The tooltip says it to a pointer
+        // where the header has room for the icon alone; a row spells it out already.
+        aria-label={accessibleName}
+        title={isRow ? undefined : accessibleName}
         aria-expanded={open}
         aria-controls={popoverId}
         aria-busy={busy || undefined}
@@ -139,19 +189,38 @@ export function MenuButton({
         }}
       >
         {Icon && <Icon />}
-        {value === undefined ? (
-          <span className={styles.menuLabel}>{label}</span>
-        ) : (
+        {isRow ? (
+          // A row has the width to say both what it is and what it is set to.
           <>
-            <span className={styles.menuValue}>{value}</span>
+            <span className={styles.rowLabel}>{label}</span>
+            {dot}
+            {value !== undefined && <span className={styles.menuValue}>{value}</span>}
             <ExpandIcon className={styles.menuChevron} />
           </>
+        ) : (
+          <>
+            {value === undefined ? (
+              <span className={styles.menuLabel}>{label}</span>
+            ) : (
+              <>
+                <span className={styles.menuValue}>{value}</span>
+                <ExpandIcon className={styles.menuChevron} />
+              </>
+            )}
+            {dot}
+          </>
         )}
-        {indicator && <span className={styles.indicator} />}
       </button>
       {open && (
-        <div ref={popoverRef} id={popoverId} className={styles.popover}>
-          {children}
+        <div
+          ref={popoverRef}
+          id={popoverId}
+          className={isRow ? styles.rowPopover : styles.popover}
+          {...{ [POPOVER]: '' }}
+          onClick={closeOnAction ? closeAfterAction : undefined}
+        >
+          {/* The rows inside belong to this popover, not to the one it may itself sit in. */}
+          <MenuRows value={false}>{children}</MenuRows>
         </div>
       )}
     </div>

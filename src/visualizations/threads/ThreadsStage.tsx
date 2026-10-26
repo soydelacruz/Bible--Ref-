@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { type BookId } from '../../core/bible/books.ts';
 import { getBookGenre } from '../../core/bible/genres.ts';
 import { chapterPassageOf, versePassage, type Passage } from '../../core/bible/passage.ts';
@@ -37,6 +37,11 @@ interface ThreadsStageProps {
    */
   readonly preview: Connection | null;
   readonly onSelect: (passage: Passage | null) => void;
+  /**
+   * The view's own controls (the threads' direction), above the threads they steer and level
+   * with the chapter bar; the threads start under it.
+   */
+  readonly toolbar?: ReactNode;
 }
 
 /** Room for the spine bar and its labels, right of the thread area. */
@@ -60,6 +65,7 @@ export function ThreadsStage({
   direction,
   preview,
   onSelect,
+  toolbar,
 }: ThreadsStageProps) {
   const { t, n, books, genreName } = useLocalization();
   const { versification, translation, crossReferences, verseGenres } = data;
@@ -446,6 +452,7 @@ export function ThreadsStage({
           </ol>
         </div>
       </div>
+      {toolbar !== undefined && <div className={styles.toolbar}>{toolbar}</div>}
       <div
         ref={canvasHostRef}
         className={styles.canvasHost}

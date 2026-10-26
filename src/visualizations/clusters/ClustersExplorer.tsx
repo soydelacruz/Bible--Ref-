@@ -93,72 +93,84 @@ export function ClustersExplorer({
     onNavigate(null);
   };
 
+  // The view's own controls: in a toolbar at the top of the stage, and in More on phones.
+  const viewTools = (
+    <>
+      <select
+        className={`${controls.select} ${stageStyles.bookSelect}`}
+        aria-label={t('clusters.book')}
+        title={t('clusters.book')}
+        value={openBook ?? ''}
+        onChange={(event) => {
+          const { value } = event.target;
+          setOpenBook(isBookId(value) ? value : null);
+        }}
+      >
+        <option value="">{t('clusters.wholeBible')}</option>
+        {BOOKS.map((book) => (
+          <option key={book.id} value={book.id}>
+            {books[book.id].name}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className={controls.button}
+        {...{ [TOUR_TOGGLE]: '' }}
+        aria-pressed={touring}
+        aria-label={touring ? t('clusters.tour.stop') : t('clusters.tour.start')}
+        title={touring ? t('clusters.tour.stop') : t('clusters.tour.start')}
+        onClick={() => {
+          if (!touring) setOpenBook(null);
+          setTouring(!touring);
+        }}
+      >
+        {touring ? <StopIcon /> : <PlayIcon />}
+        {/* A bare ▷ says nothing about what it plays. */}
+        {t('clusters.tour.label')}
+      </button>
+    </>
+  );
+
   return (
     <VizPage
       masthead={masthead}
       credits={<Credits translation={data.translation.manifest} inspiration={INSPIRATION} />}
       onPanelClose={closePanel}
-      controls={
+      search={
+        <ReferenceSearch
+          versification={data.versification}
+          translation={data.translation}
+          onSelect={onNavigate}
+        />
+      }
+      tools={
         <>
-          <ReferenceSearch
-            versification={data.versification}
-            translation={data.translation}
-            onSelect={onNavigate}
-          />
           {translationMenu}
           <SavedMenu
             versification={data.versification}
             translation={data.translation}
             onSelect={onNavigate}
           />
-          <select
-            className={`${controls.select} ${stageStyles.bookSelect}`}
-            aria-label={t('clusters.book')}
-            title={t('clusters.book')}
-            value={openBook ?? ''}
-            onChange={(event) => {
-              const { value } = event.target;
-              setOpenBook(isBookId(value) ? value : null);
-            }}
-          >
-            <option value="">{t('clusters.wholeBible')}</option>
-            {BOOKS.map((book) => (
-              <option key={book.id} value={book.id}>
-                {books[book.id].name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={controls.button}
-            {...{ [TOUR_TOGGLE]: '' }}
-            aria-pressed={touring}
-            aria-label={touring ? t('clusters.tour.stop') : t('clusters.tour.start')}
-            title={touring ? t('clusters.tour.stop') : t('clusters.tour.start')}
-            onClick={() => {
-              if (!touring) setOpenBook(null);
-              setTouring(!touring);
-            }}
-          >
-            {touring ? <StopIcon /> : <PlayIcon />}
-            {/* A bare ▷ says nothing about what it plays; where there is no room, the icon alone. */}
-            <span className={stageStyles.tourLabel}>{t('clusters.tour.label')}</span>
-          </button>
           <GenreMenu
             hiddenGenres={filter.hiddenGenres}
             onToggle={(genre) => {
               onFilterChange({ ...filter, hiddenGenres: toggleGenre(filter.hiddenGenres, genre) });
             }}
           />
-          <FiltersMenu
-            filter={filter}
-            defaults={DEFAULT_LINK_FILTER}
-            onChange={onFilterChange}
-            shownLinks={shownLinks}
-            totalLinks={index.linkCount}
-          />
         </>
       }
+      filters={
+        <FiltersMenu
+          filter={filter}
+          defaults={DEFAULT_LINK_FILTER}
+          onChange={onFilterChange}
+          shownLinks={shownLinks}
+          totalLinks={index.linkCount}
+        />
+      }
+      viewTools={viewTools}
+      moreChanged={filter.hiddenGenres.size > 0}
       panel={
         passage && (
           <PassagePanel
@@ -173,15 +185,20 @@ export function ClustersExplorer({
         )
       }
     >
-      <ClustersStage
-        data={data}
-        active={active}
-        filter={filter}
-        openBook={openBook}
-        focus={passage}
-        onSelect={onNavigate}
-        onOpenBook={setOpenBook}
-      />
+      <div className={stageStyles.layout}>
+        <div className={controls.stageToolbar}>{viewTools}</div>
+        <div className={stageStyles.canvasArea}>
+          <ClustersStage
+            data={data}
+            active={active}
+            filter={filter}
+            openBook={openBook}
+            focus={passage}
+            onSelect={onNavigate}
+            onOpenBook={setOpenBook}
+          />
+        </div>
+      </div>
     </VizPage>
   );
 }

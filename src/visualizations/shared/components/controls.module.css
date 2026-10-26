@@ -1,7 +1,14 @@
+/* It fills the room the header gives it, up to a comfortable width for a reference or a few
+   words; on two rows (below 64rem) the room is the whole row less the controls. */
 .search {
   position: relative;
-  flex: 1 1 14rem;
-  max-inline-size: 22rem;
+  max-inline-size: 24rem;
+}
+
+@media (max-width: 63.99rem) {
+  .search {
+    max-inline-size: none;
+  }
 }
 
 .searchIcon {
@@ -21,41 +28,6 @@
    and on a phone that room is the end of the placeholder's word. */
 .search .input:placeholder-shown::-webkit-search-cancel-button {
   display: none;
-}
-
-/* Where the controls get a row of their own, the search box starts narrower and grows into the
-   room left by the busiest view's controls. The two thresholds match VizPage.module.css: 80rem
-   for English, and 86rem for a language whose controls need the second row sooner. */
-@media (max-width: 79.99rem) {
-  .search {
-    flex-basis: 10rem;
-  }
-}
-
-@media (max-width: 85.99rem) {
-  :global(html[lang|='pt']) .search,
-  :global(html[lang|='es']) .search {
-    flex-basis: 10rem;
-  }
-}
-
-/* Phones: the box starts small so that the busiest header still fits its controls on one row,
-   and then grows into whatever room is left, which is most of the row. */
-@media (max-width: 47.99rem) {
-  .search {
-    flex-basis: 4.5rem;
-    max-inline-size: none;
-  }
-
-  /* Where the row leaves the box little room, a tighter inset keeps its one word whole. The box
-     itself is no wider, so the row around it does not move. */
-  .searchIcon {
-    inset-inline-start: var(--space-2);
-  }
-
-  .search .input {
-    padding-inline: calc(var(--space-2) + 1.4em) var(--space-2);
-  }
 }
 
 .input,
@@ -235,9 +207,28 @@
   color: var(--color-text);
 }
 
-/* Up to 64rem the busiest header would need a second row for the controls that spell out their
-   options, so there they stand on their icons (with the name as a tooltip and to screen readers). */
-@media (max-width: 63.99rem) {
+/* A view's own controls, at the top of its stage rather than in the header, which then never
+   changes from one view to the next. A container, so what it holds can answer to the room it has
+   — with the details panel open beside it that is much less than the window's width. Phones have
+   no room for it at all; there its controls join the header's More menu. */
+.stageToolbar {
+  container: stage-toolbar / inline-size;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 3rem;
+  padding-inline: var(--space-4);
+}
+
+@media (max-width: 47.99rem) {
+  .stageToolbar {
+    display: none;
+  }
+}
+
+/* Where a stage toolbar is too narrow for the options' words (the longest set, Portuguese's, needs
+   about 30rem), they stand on their icons, with the name as a tooltip and to screen readers. */
+@container stage-toolbar (max-width: 30.99rem) {
   .segmented[data-icons-only-when-narrow='true'] .optionLabel {
     display: none;
   }
@@ -336,8 +327,26 @@
   font-size: 0.8125rem;
 }
 
-.shortLabel {
+.shortLabel,
+.rowLabel {
   display: none;
+}
+
+/* One row is at its tightest between 64rem and the width where the menus' names fit beside the
+   search box: 80rem in English, 86rem in Portuguese and Spanish, whose names run about 45px
+   longer (`lang` is set by main.tsx before the first paint). There the menus stand on their
+   icons, named in full to screen readers and in a tooltip. */
+@media (min-width: 64rem) and (max-width: 79.99rem) {
+  .menuLabel {
+    display: none;
+  }
+}
+
+@media (min-width: 64rem) and (max-width: 85.99rem) {
+  :global(html[lang|='pt']) .menuLabel,
+  :global(html[lang|='es']) .menuLabel {
+    display: none;
+  }
 }
 
 /* Phones: header controls get compact. Labels shorten or give way to their icons, and menu
@@ -366,6 +375,22 @@
     padding-inline: var(--space-2);
   }
 
+  /* The view switch as a phone's tab bar: each view's icon over its short name. Side by side,
+     the three names did not fit beside the site's in Portuguese ("Aglomerados"); stacked, every
+     language has room down to 320px, and every view keeps its name. */
+  .segmented > a.button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-inline-size: 2.75rem;
+    font-size: 0.6875rem;
+    line-height: 1.1;
+  }
+
+  .segmented > a.button > svg {
+    font-size: 0.9375rem;
+  }
+
   .menuButton {
     position: relative;
     justify-content: center;
@@ -379,7 +404,111 @@
   }
 }
 
-/* Touch devices: comfortable targets, and 16px inputs so iOS Safari does not zoom on focus. */
+/* The More menu (VizPage, phones): the header's controls as a list, each a full-width row that
+   says what it is. A menu among them unfolds in place under its row (`MenuRows`). */
+.rows,
+.rowsSection {
+  display: grid;
+  gap: 2px;
+}
+
+/* The view's own controls, under a rule: the same menu, but they change this view only. */
+.rowsSection {
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* Only the rows themselves: a button inside an unfolded menu (Saved's export, say) keeps its own
+   look. */
+.rows > .button,
+.rows > .menu > .button,
+.rowsSection > .button,
+.rowsSection > .segmented > .button {
+  justify-content: flex-start;
+  gap: var(--space-3);
+  inline-size: 100%;
+  padding-inline: var(--space-3);
+  border-color: transparent;
+  background: none;
+}
+
+.rowsSection > .select {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+/* A row with no icon of its own (the translation, which wears its value instead) keeps its name
+   in line with the names under it. */
+.rows > .menu > .button:not(:has(> svg)) {
+  padding-inline-start: calc(var(--space-3) * 2 + 1.15em);
+}
+
+.rows > .button .rowLabel,
+.rowsSection > .button .rowLabel {
+  display: inline;
+}
+
+/* A choice of one (the threads' direction) is a column of rows, each spelled out. */
+.rowsSection > .segmented {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.rowsSection > .segmented > .button[aria-pressed='true'] {
+  background: var(--color-surface-muted);
+}
+
+@media (hover: hover) {
+  .rows > .button:hover,
+  .rows > .menu > .button:hover,
+  .rowsSection > .button:hover,
+  .rowsSection > .segmented > .button:hover {
+    background: var(--color-surface-muted);
+  }
+}
+
+/* A menu as a row: its name takes the room, and its dot, value and chevron sit at the end. */
+.menuRow > .menuButton .rowLabel {
+  display: inline;
+  flex: 1;
+  text-align: start;
+}
+
+.menuRow > .menuButton .indicator {
+  position: static;
+}
+
+.menuRow > .menuButton .menuValue {
+  color: var(--color-text-muted);
+}
+
+.menuRow > .menuButton .menuChevron {
+  display: inline-block;
+  margin-inline-start: 0;
+  transition: rotate 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menuRow > .menuButton[aria-expanded='true'] .menuChevron {
+  rotate: 180deg;
+}
+
+/* What a row's menu holds, unfolded under it on a quieter surface. */
+.rowPopover {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: 2px var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--color-surface-muted);
+  font-size: 0.875rem;
+}
+
+/* Touch devices: comfortable targets, and 16px inputs so iOS Safari does not zoom on focus.
+   44px is the smallest a fingertip finds without looking twice. */
 @media (pointer: coarse) {
   /* A radio row is a tap target like any other, and at its natural 21px it was the one control
      in the app below the 24px minimum. */
@@ -389,16 +518,32 @@
 
   .input,
   .select {
-    min-block-size: 2.5rem;
+    min-block-size: 2.75rem;
     font-size: max(1rem, 16px);
   }
 
   .button {
-    min-block-size: 2.5rem;
+    justify-content: center;
+    min-block-size: 2.75rem;
+    min-inline-size: 2.75rem;
+  }
+
+  /* The frame's line is drawn inside it rather than added around it, so each option is a whole
+     44px target and the control is no taller than the buttons beside it. */
+  .segmented {
+    padding: 0;
+    border: 0;
+    box-shadow: inset 0 0 0 1px var(--color-border);
   }
 
   .segmented .button {
-    min-block-size: calc(2.5rem - 6px);
+    min-block-size: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menuRow > .menuButton .menuChevron {
+    transition: none;
   }
 }
 
@@ -435,12 +580,4 @@
 
 .languageRow .select {
   inline-size: auto;
-}
-
-/* The narrowest phones have no room for every view's name beside the site's: the current view
-   keeps its name, and the others stand on their icons (each link is still named in full). */
-@media (max-width: 29.99rem) {
-  .segmented a.button:not([aria-current='page']) .shortLabel {
-    display: none;
-  }
 }

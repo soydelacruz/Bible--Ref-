@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FiltersIcon } from '../../../shared/ui/icons.tsx';
-import { MenuButton } from './MenuButton.tsx';
+import { MenuButton, MenuRows } from './MenuButton.tsx';
 
 function renderMenu(props: Partial<Parameters<typeof MenuButton>[0]> = {}) {
   return render(
@@ -125,6 +125,107 @@ describe('MenuButton', () => {
     await userEvent.click(button);
     const id = button.getAttribute('aria-controls');
     expect(document.getElementById(id ?? '')?.textContent).toBe('menu contents');
+  });
+
+  it('names its icon in a tooltip, for a pointer where the header shows the icon alone', () => {
+    renderMenu({ indicator: true, changedLabel: 'Filters (changed)' });
+    expect(screen.getByRole('button').getAttribute('title')).toBe('Filters (changed)');
+  });
+
+  it('moves focus to its first control when asked, for a menu that is a list of controls', async () => {
+    render(
+      <MenuButton label="More" focusOnOpen>
+        <button type="button">Saved</button>
+      </MenuButton>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Saved' }));
+  });
+
+  it('leaves focus on its button otherwise', async () => {
+    render(
+      <MenuButton label="Filters">
+        <button type="button">Reset</button>
+      </MenuButton>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Filters' }));
+  });
+
+  it('closes after one of its actions when asked, as a menu of actions does', async () => {
+    const onAction = vi.fn();
+    render(
+      <MenuButton label="More" closeOnAction>
+        <button type="button" onClick={onAction}>
+          Save as image
+        </button>
+        <p>a note</p>
+      </MenuButton>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    // Text is not an action.
+    await userEvent.click(screen.getByText('a note'));
+    expect(screen.getByText('a note')).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: 'Save as image' }));
+    expect(onAction).toHaveBeenCalled();
+    expect(screen.queryByText('a note')).toBeNull();
+  });
+
+  it('stays open while a menu inside it is opened and used', async () => {
+    render(
+      <MenuButton label="More" closeOnAction>
+        <MenuRows value>
+          <MenuButton label="Genres">
+            <button type="button">Law</button>
+          </MenuButton>
+        </MenuRows>
+      </MenuButton>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Genres' }));
+    // A choice inside the inner menu belongs to that menu, which stays open too.
+    await userEvent.click(screen.getByRole('button', { name: 'Law' }));
+    expect(screen.getByRole('button', { name: 'Law' })).toBeDefined();
+  });
+
+  it('spells out a menu that is a row of another, with its value, and unfolds it in place', async () => {
+    render(
+      <MenuRows value>
+        <MenuButton label="Translation" value="KJV">
+          <p>the translations</p>
+        </MenuButton>
+      </MenuRows>,
+    );
+    const row = screen.getByRole('button', { name: 'Translation: KJV' });
+    expect(row.textContent).toContain('Translation');
+    expect(row.textContent).toContain('KJV');
+    // Spelled out already, so no tooltip.
+    expect(row.getAttribute('title')).toBeNull();
+    await userEvent.click(row);
+    expect(screen.getByText('the translations')).toBeDefined();
+  });
+
+  it('closes one menu per Escape, the innermost first', async () => {
+    render(
+      <MenuButton label="More">
+        <MenuRows value>
+          <MenuButton label="Genres">
+            <p>genre list</p>
+          </MenuButton>
+        </MenuRows>
+      </MenuButton>,
+    );
+    const more = screen.getByRole('button', { name: 'More' });
+    await userEvent.click(more);
+    const genres = screen.getByRole('button', { name: 'Genres' });
+    await userEvent.click(genres);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('genre list')).toBeNull();
+    expect(genres.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(genres);
+    await userEvent.keyboard('{Escape}');
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(more);
   });
 
   it('stops listening once it is gone', async () => {

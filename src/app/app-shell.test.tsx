@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DebugPage } from '../features/debug/DebugPage.tsx';
@@ -136,20 +136,68 @@ describe('VizDataBoundary', () => {
 });
 
 describe('VizPage', () => {
-  it('lays out the masthead, the controls, the stage and the credits', () => {
+  it('lays out the masthead, the search box, the controls, the stage and the credits', () => {
     render(
       <VizPage
         masthead={<h1>Title</h1>}
-        controls={<button type="button">Filter</button>}
+        search={<input type="search" aria-label="Go to" />}
+        tools={<button type="button">Saved</button>}
+        filters={<button type="button">Filter</button>}
         credits={<span>Credits</span>}
       >
         <canvas />
       </VizPage>,
     );
     expect(screen.getByRole('heading', { name: 'Title' })).toBeDefined();
+    expect(screen.getByRole('searchbox', { name: 'Go to' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Saved' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Filter' })).toBeDefined();
     expect(screen.getByText('Credits')).toBeDefined();
     expect(screen.getByRole('main')).toBeDefined();
+  });
+
+  it('gathers the controls and the view’s own into a More menu, for phones', async () => {
+    render(
+      <VizPage
+        tools={<button type="button">Saved</button>}
+        viewTools={<button type="button">Tour</button>}
+        credits={<span>Credits</span>}
+      >
+        <canvas />
+      </VizPage>,
+    );
+    // The view's own controls are on its stage, not in the header: here only once More opens.
+    expect(screen.queryByRole('button', { name: 'Tour' })).toBeNull();
+    const more = screen.getByRole('button', { name: 'More' });
+    await userEvent.click(more);
+    const popover = document.getElementById(more.getAttribute('aria-controls') ?? '');
+    if (!popover) throw new Error('More opened nothing');
+    const menu = within(popover);
+    // Focus moves into it, to its first control.
+    expect(document.activeElement).toBe(menu.getByRole('button', { name: 'Saved' }));
+    expect(menu.getByRole('button', { name: 'Tour' })).toBeDefined();
+    // Escape closes it and returns focus to the button that opened it.
+    await userEvent.keyboard('{Escape}');
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(more);
+  });
+
+  it('says on the More button when something inside it hides part of the picture', () => {
+    render(
+      <VizPage tools={<button type="button">Genres</button>} moreChanged credits={<span>C</span>}>
+        <canvas />
+      </VizPage>,
+    );
+    expect(screen.getByRole('button', { name: 'More (genres hidden)' })).toBeDefined();
+  });
+
+  it('has no More menu when there is nothing to put in it', () => {
+    render(
+      <VizPage filters={<button type="button">Filter</button>} credits={<span>Credits</span>}>
+        <canvas />
+      </VizPage>,
+    );
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
   });
 
   it('has no details panel until there is something to show', () => {

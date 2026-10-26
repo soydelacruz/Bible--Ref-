@@ -1,14 +1,31 @@
 import type { ReactNode } from 'react';
+import { MoreIcon } from '../../../shared/ui/icons.tsx';
 import { SiteFooter } from '../../../shared/ui/SiteFooter.tsx';
 import { useLocalization } from '../../../i18n/use-locale.tsx';
 import { useBottomSheet } from '../use-bottom-sheet.ts';
+import controls from './controls.module.css';
+import { MenuButton, MenuRows } from './MenuButton.tsx';
 import styles from './VizPage.module.css';
 
 interface VizPageProps {
   /** The header's leading part, provided by the host app: the site's name and navigation. */
   readonly masthead?: ReactNode;
-  /** Search box, filters and visualization-specific controls. */
-  readonly controls?: ReactNode;
+  /** The search box: in the header at every width, taking the room the row leaves it. */
+  readonly search?: ReactNode;
+  /**
+   * The controls every view has a place for: the translation, saved verses, genres or image
+   * export. In the header's row, and in the More menu on phones, where the row has no room.
+   */
+  readonly tools?: ReactNode;
+  /** The filters menu: last in the header at every width, so it is always in the same place. */
+  readonly filters?: ReactNode;
+  /**
+   * The view's own controls, which it keeps in a toolbar on its stage (`controls.stageToolbar`):
+   * here they join the More menu on phones, where that toolbar is hidden.
+   */
+  readonly viewTools?: ReactNode;
+  /** Marks the More menu while something inside it hides part of the picture (genres). */
+  readonly moreChanged?: boolean;
   /** The details panel: a side column on wide screens, a bottom sheet on phones; omit or pass
    * `null` / `false` for none. */
   readonly panel?: ReactNode;
@@ -20,10 +37,20 @@ interface VizPageProps {
   readonly children: ReactNode;
 }
 
-/** The shared frame of every visualization page. */
+/**
+ * The shared frame of every visualization page.
+ *
+ * The header is the same in every view, so switching views never moves the content: one row on a
+ * desktop; on narrower screens the name and the switch, and under them the search box and the
+ * controls. A control that belongs to one view lives on that view's stage instead.
+ */
 export function VizPage({
   masthead,
-  controls,
+  search,
+  tools,
+  filters,
+  viewTools,
+  moreChanged = false,
   panel,
   onPanelClose,
   credits,
@@ -35,11 +62,35 @@ export function VizPage({
     hasPanel,
     onPanelClose,
   );
+  const hasMore = Boolean(tools) || Boolean(viewTools);
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.masthead}>{masthead}</div>
-        <div className={styles.controls}>{controls}</div>
+        <div className={styles.search}>{search}</div>
+        <div className={styles.tools}>
+          {/* The same controls are rendered again inside More, which only exists while open:
+              there is never more than one of each on screen or to a screen reader. */}
+          <div className={styles.shared}>{tools}</div>
+          {filters}
+          {hasMore && (
+            <div className={styles.more}>
+              <MenuButton
+                label={t('menu.more')}
+                changedLabel={t('menu.moreChanged')}
+                icon={MoreIcon}
+                indicator={moreChanged}
+                focusOnOpen
+                closeOnAction
+              >
+                <MenuRows value>
+                  <div className={controls.rows}>{tools}</div>
+                  {Boolean(viewTools) && <div className={controls.rowsSection}>{viewTools}</div>}
+                </MenuRows>
+              </MenuButton>
+            </div>
+          )}
+        </div>
       </header>
       <div
         ref={containerRef}

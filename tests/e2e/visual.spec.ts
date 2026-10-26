@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, openPanel, settle, waitForApp } from './helpers.ts';
+import { ACTIVE, PANEL, openPanel, settle, waitForApp, openHeaderMenu } from './helpers.ts';
 
 /**
  * A picture of every major screen, at a desktop size and on a phone.
@@ -132,10 +132,7 @@ test.describe('the controls', () => {
 
   test('the translations', async ({ page }) => {
     await show(page);
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await settle(page);
     await expect(page).toHaveScreenshot('menu-translation.png', FULL);
   });
@@ -275,10 +272,7 @@ test.describe('the controls, in use', () => {
   test('the genres menu, where a view labels them itself', async ({ page }) => {
     // Threads puts the genres behind a menu button; the arcs show the legend outright.
     await show(page, './threads/');
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Genres/ })
-      .click();
+    await openHeaderMenu(page, /Genres/);
     await settle(page);
     await expect(page).toHaveScreenshot('menu-genres.png', FULL);
   });
@@ -436,10 +430,7 @@ test.describe('in Portuguese', () => {
 
   test('the picker, grouped by language', async ({ page }) => {
     await show(page, './?lang=pt');
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Tradução/ })
-      .click();
+    await openHeaderMenu(page, /Tradução/);
     await settle(page);
     await expect(page).toHaveScreenshot('pt-menu-translation.png', FULL);
   });

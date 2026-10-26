@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, collectErrors, openPanel, waitForApp } from './helpers.ts';
+import {
+  ACTIVE,
+  PANEL,
+  collectErrors,
+  headerButton,
+  openHeaderMenu,
+  openPanel,
+  waitForApp,
+} from './helpers.ts';
 
 /** Every width the layout has to survive, from the oldest phone to a wide desktop. */
 const WIDTHS = [320, 360, 375, 390, 412, 430, 768, 834, 1024, 1280, 1440, 1920];
@@ -96,10 +104,7 @@ test.describe('the layout holds at every width', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('./');
     await waitForApp(page);
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     const picker = page.locator(ACTIVE).getByRole('combobox');
     if ((await picker.count()) === 0) {
       return ['en'];
@@ -217,10 +222,129 @@ test.describe('the layout holds at every width', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('./');
     await waitForApp(page);
-    for (const control of [/Filters/, /Translation/]) {
-      await expect(page.locator(ACTIVE).getByRole('button', { name: control })).toBeVisible();
+    const header = page.locator(`${ACTIVE} header`).first();
+    for (const control of [/Filters/, /^More/]) {
+      await expect(header.getByRole('button', { name: control })).toBeVisible();
     }
-    await expect(page.locator(ACTIVE).getByRole('searchbox')).toBeVisible();
+    await expect(header.getByRole('searchbox')).toBeVisible();
+    // The rest are one tap away, in More.
+    await expect(await headerButton(page, /Translation/)).toBeVisible();
+    await expect(page.locator(ACTIVE).getByRole('button', { name: /Saved verses/ })).toBeVisible();
+  });
+});
+
+/** The view pages, each at its own address. */
+const VIEW_PATHS = ['./', './threads/', './clusters/'] as const;
+
+/** The header's height in every view, at the size and language a page was opened at. */
+async function headerHeights(page: Page, query: string): Promise<number[]> {
+  const heights: number[] = [];
+  for (const path of VIEW_PATHS) {
+    await page.goto(`${path}${query}`);
+    await waitForApp(page);
+    const box = await page.locator(`${ACTIVE} header`).first().boundingBox();
+    heights.push(Math.round(box?.height ?? 0));
+  }
+  return heights;
+}
+
+test.describe('the header', () => {
+  test.beforeEach(() => {
+    test.skip(test.info().project.name !== 'desktop', 'Sizes are driven directly here.');
+  });
+
+  /**
+   * Switching views must never move the content, so the header is the same height in all of
+   * them; on a desktop that is one row. Portuguese is the language with the longest controls.
+   */
+  for (const width of [1024, 1280, 1440]) {
+    for (const lang of ['en', 'pt'] as const) {
+      test(`${String(width)}px, ${lang}: one row, the same in every view`, async ({ page }) => {
+        test.setTimeout(120_000);
+        await page.setViewportSize({ width, height: 900 });
+        const heights = await headerHeights(page, `?lang=${lang}`);
+        expect(new Set(heights).size, heights.join(', ')).toBe(1);
+        expect(heights[0]).toBeLessThan(56);
+      });
+    }
+  }
+
+  /**
+   * A phone, touch and all: two rows of 44px targets, and no taller than 105px in any view, in
+   * the language with the longest names. The search box keeps most of its row.
+   */
+  test('on a phone: two rows of whole touch targets, the same in every view', async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      viewport: { width: 375, height: 812 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    const heights = await headerHeights(page, '?lang=pt');
+    expect(new Set(heights).size, heights.join(', ')).toBe(1);
+    expect(heights[0]).toBeLessThanOrEqual(105);
+
+    const measured = await page
+      .locator(`${ACTIVE} header`)
+      .first()
+      .evaluate((header) => {
+        const targets = [...header.querySelectorAll('a, button, input')].filter(
+          (element) => element.getBoundingClientRect().width > 0,
+        );
+        return {
+          smallest: Math.min(
+            ...targets.map((element) => {
+              const { width, height } = element.getBoundingClientRect();
+              return Math.min(width, height);
+            }),
+          ),
+          widest: Math.max(...targets.map((element) => element.getBoundingClientRect().right)),
+          search: header.querySelector('input')?.getBoundingClientRect().width ?? 0,
+        };
+      });
+    expect(measured.smallest).toBeGreaterThanOrEqual(44);
+    expect(measured.widest).toBeLessThanOrEqual(375);
+    // About 11rem at the least, so a typed phrase stays readable.
+    expect(measured.search).toBeGreaterThanOrEqual(176);
+    await context.close();
+  });
+
+  test('More is a disclosure: it opens into its controls and Escape closes it', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('./threads/');
+    await waitForApp(page);
+    const more = page.locator(ACTIVE).getByRole('button', { name: /^More/ });
+    await more.click();
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    // Focus moves into it; the direction of the threads is there too, on a phone.
+    await expect(page.locator(ACTIVE).getByRole('button', { name: /Translation/ })).toBeFocused();
+    await expect(
+      page.locator(ACTIVE).getByRole('group', { name: 'Thread direction' }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+    await expect(more).toBeFocused();
+  });
+
+  test('a view’s own controls are on its stage, not in the header', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('./threads/');
+    await waitForApp(page);
+    const stage = page.locator(`${ACTIVE} main`);
+    await expect(stage.getByRole('group', { name: 'Thread direction' })).toBeVisible();
+    await expect(
+      page.locator(`${ACTIVE} header`).first().getByRole('group', { name: 'Thread direction' }),
+    ).toHaveCount(0);
+
+    await page.goto('./clusters/');
+    await waitForApp(page);
+    await expect(stage.getByRole('combobox', { name: 'Book' })).toBeVisible();
+    await expect(stage.getByRole('button', { name: /tour/ })).toBeVisible();
   });
 });
 
