@@ -23,6 +23,7 @@ export function VerseLibrary({
   const { library, update } = useLibrary(versification);
   const entry = entryOf(library, verse);
   const noteId = useId();
+  const highlightId = useId();
   return (
     <div className={styles.library}>
       <div className={styles.row}>
@@ -37,7 +38,11 @@ export function VerseLibrary({
           {entry.saved ? <SavedIcon /> : <SaveIcon />}
           {entry.saved ? t('library.saved') : t('library.save')}
         </button>
-        <div role="group" aria-label={t('library.highlights')} className={styles.swatches}>
+        {/* Named on screen, not only for a screen reader: four plain circles read as decoration. */}
+        <div role="group" aria-labelledby={highlightId} className={styles.swatches}>
+          <span id={highlightId} className={styles.label}>
+            {t('library.highlights')}
+          </span>
           {HIGHLIGHT_COLORS.map((color) => (
             <button
               key={color}
@@ -67,7 +72,7 @@ export function VerseLibrary({
           )}
         </div>
       </div>
-      <label htmlFor={noteId} className={styles.noteLabel}>
+      <label htmlFor={noteId} className={styles.label}>
         {t('library.note')}
       </label>
       <textarea

@@ -120,6 +120,9 @@ export function NotesSection({
         description={t('notes.note')}
         count={notes.length}
         countLabel={t('notes.counted')}
+        // Folded until asked for: a verse's notes can be pages long, and they used to stand
+        // between its text and every cross-reference. The band still says how many there are.
+        defaultOpen={false}
       >
         {!inNet && (
           <p className={styles.notesCaveat}>

@@ -63,6 +63,12 @@ describe('VerseLibrary', () => {
     expect(screen.getByRole('button', { name: 'Save verse' })).toBeDefined();
   });
 
+  it('names its colours on screen, not only to a screen reader', () => {
+    renderPanel();
+    const label = screen.getByText('Highlight');
+    expect(screen.getByRole('group', { name: 'Highlight' }).contains(label)).toBe(true);
+  });
+
   it('marks the verse in the colour chosen, and takes it off again', async () => {
     renderPanel();
     const colours = screen.getByRole('group', { name: 'Highlight' });
@@ -88,8 +94,10 @@ describe('SavedMenu', () => {
   it('says how to start when nothing is saved', async () => {
     renderMenu();
     await openMenu();
-    expect(screen.getByText(/Nothing saved yet/)).toBeDefined();
-    expect(screen.getByRole('button', { name: /Export/ })).toHaveProperty('disabled', true);
+    expect(screen.getByText(/No saved verses yet. Click any verse, then Save verse/)).toBeDefined();
+    // Nothing to export: the button waits until there is.
+    expect(screen.queryByRole('button', { name: /Export/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Import/ })).toBeDefined();
   });
 
   it('lists what is kept, notes in place of the text, and opens a verse', async () => {

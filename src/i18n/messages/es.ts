@@ -124,19 +124,28 @@ export const es: LocaleMessages = {
   'note.fromVerse': (verse) => `desde el v. ${verse}`,
   'note.toVerse': (verse) => `al v. ${verse}`,
 
-  'panel.connectsTo': 'Se conecta con',
+  'panel.connectsTo': 'Enlaces por género',
   'panel.connectsTo.note': (count) => (count === 1 ? '1 género' : `${String(count)} géneros`),
   'panel.references': 'Referencias',
   'panel.references.note': 'adonde apunta este pasaje',
   'panel.referencedBy': 'Referido por',
   'panel.referencedBy.note': 'pasajes que apuntan aquí',
   'panel.verses': 'Versículos',
-  'panel.verses.note': 'toca uno para enfocarlo',
+  'panel.verses.note': 'elige uno para leerlo',
   'panel.none': 'Ninguno',
   'panel.items': 'elementos',
   'panel.passages': 'pasajes',
   'panel.linksCounted': 'enlaces',
   'panel.versesCounted': 'versículos',
+  'panel.linksUnit': (plural) => (plural === 1 ? 'enlace' : 'enlaces'),
+  'panel.passagesUnit': (plural) => (plural === 1 ? 'pasaje' : 'pasajes'),
+  'panel.summary.references': (count, plural) =>
+    plural === 1 ? `${count} referencia` : `${count} referencias`,
+  'panel.summary.referencedBy': (count, plural) =>
+    plural === 1 ? `${count} apunta aquí` : `${count} apuntan aquí`,
+  'panel.summary.notes': (count, plural) => (plural === 1 ? `${count} nota` : `${count} notas`),
+  'panel.summary.none': 'Ninguna referencia cruzada',
+  'panel.announce': (passage, summary) => `${passage} · ${summary}`,
 
   'library.save': 'Guardar versículo',
   'library.saved': 'Guardado',
@@ -150,7 +159,8 @@ export const es: LocaleMessages = {
   'library.note.placeholder': 'Escribe una nota sobre este versículo…',
   'saved.menu': 'Versículos guardados',
   'saved.empty':
-    'Aún no hay nada guardado. Abre un versículo para guardarlo, resaltarlo o escribir una nota.',
+    'Aún no hay versículos guardados. Haz clic en un versículo y luego en Guardar versículo: ' +
+    'puedes resaltarlo y añadir una nota.',
   'saved.count': (count, plural) =>
     plural === 1
       ? '1 versículo guardado en este dispositivo.'
@@ -188,6 +198,7 @@ export const es: LocaleMessages = {
   'words.heading': (language) => `Misma palabra ${language}`,
   'words.note': 'dónde más se usa',
   'words.counted': 'palabras',
+  'words.versesUnit': (plural) => (plural === 1 ? 'versículo' : 'versículos'),
   'words.showMore': (count) => `Ver ${count} más`,
   'language.hebrew': 'hebrea',
   'language.greek': 'griega',

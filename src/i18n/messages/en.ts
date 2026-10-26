@@ -137,19 +137,34 @@ export const en = {
   'note.fromVerse': (verse: string) => `from v. ${verse}`,
   'note.toVerse': (verse: string) => `to v. ${verse}`,
 
-  'panel.connectsTo': 'Connects to',
+  'panel.connectsTo': 'Links by genre',
   'panel.connectsTo.note': (count: number) => (count === 1 ? '1 genre' : `${String(count)} genres`),
   'panel.references': 'References',
   'panel.references.note': 'where this passage points',
   'panel.referencedBy': 'Referenced by',
   'panel.referencedBy.note': 'passages that point here',
   'panel.verses': 'Verses',
-  'panel.verses.note': 'tap one to focus it',
+  'panel.verses.note': 'choose one to read it',
   'panel.none': 'None',
   'panel.items': 'items',
   'panel.passages': 'passages',
   'panel.linksCounted': 'links',
   'panel.versesCounted': 'verses',
+  // What a bare number in the panel counts, for a reader who hears it rather than sees it.
+  'panel.linksUnit': (plural: number): string => (plural === 1 ? 'link' : 'links'),
+  'panel.passagesUnit': (plural: number): string => (plural === 1 ? 'passage' : 'passages'),
+  // The line under the passage's title, each part a jump to its section: "23 references ·
+  // 73 referenced by · 4 notes".
+  'panel.summary.references': (count: string, plural: number) =>
+    plural === 1 ? `${count} reference` : `${count} references`,
+  // The same words either way in English; the number is there for languages where they differ.
+  'panel.summary.referencedBy': (count: string, plural: number) =>
+    plural === 1 ? `${count} referenced by` : `${count} referenced by`,
+  'panel.summary.notes': (count: string, plural: number) =>
+    plural === 1 ? `${count} note` : `${count} notes`,
+  'panel.summary.none': 'No cross-references',
+  // Said when the passage changes out of the reader's sight, e.g. from the arcs or the tour.
+  'panel.announce': (passage: string, summary: string) => `${passage} · ${summary}`,
 
   'library.save': 'Save verse',
   'library.saved': 'Saved',
@@ -163,7 +178,7 @@ export const en = {
   'library.note.placeholder': 'Write a note about this verse…',
   'saved.menu': 'Saved verses',
   'saved.empty':
-    'Nothing saved yet. Open a verse to save it, highlight it or write a note about it.',
+    'No saved verses yet. Click any verse, then Save verse — you can highlight it and add a note.',
   'saved.count': (count: string, plural: number) =>
     plural === 1 ? '1 verse saved on this device.' : `${count} verses saved on this device.`,
   'saved.export': 'Export',
@@ -199,6 +214,7 @@ export const en = {
   'words.heading': (language: string) => `Same ${language} word`,
   'words.note': 'where else it is used',
   'words.counted': 'words',
+  'words.versesUnit': (plural: number): string => (plural === 1 ? 'verse' : 'verses'),
   'words.showMore': (count: string) => `Show ${count} more`,
   'language.hebrew': 'Hebrew',
   'language.greek': 'Greek',

@@ -120,7 +120,29 @@ describe('OriginalWordsSection', () => {
   it('marks the original script, so a screen reader says it correctly', async () => {
     renderSection(GEN_1_1);
     await screen.findAllByRole('button', { name: /bara/ });
-    expect(document.querySelector('strong[lang="he"]')).not.toBeNull();
+    expect(document.querySelector('strong[lang="he"]')?.getAttribute('dir')).toBe('rtl');
+    // The glosses are the dictionary's English, whatever language the interface is in.
+    expect(screen.getByText('to create').getAttribute('lang')).toBe('en');
+  });
+
+  it('marks Greek as ancient Greek, as the notes do', async () => {
+    renderSection(ACTS_5_14);
+    await screen.findByRole('button', { name: /plēthos/ });
+    expect(screen.getByText('πλῆθος').getAttribute('lang')).toBe('grc');
+    expect(screen.getByText('πλῆθος').hasAttribute('dir')).toBe(false);
+  });
+
+  it('says what the number beside a word counts', async () => {
+    renderSection(ACTS_5_14);
+    const word = await screen.findByRole('button', { name: /plēthos/ });
+    expect(word.textContent).toContain('2 verses');
+  });
+
+  it("marks its verses' language, which is the translation's", async () => {
+    renderSection(ACTS_5_14);
+    await userEvent.click(await screen.findByRole('button', { name: /plēthos/ }));
+    const verse = screen.getByText(/Luke 5:6/).closest('button');
+    expect(verse?.querySelector('[lang]')?.getAttribute('lang')).toBe('en');
   });
 
   it('opens a word to show every verse that uses it', async () => {

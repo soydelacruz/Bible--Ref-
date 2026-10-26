@@ -101,12 +101,24 @@ export function OriginalWordsSection({
                 }}
               >
                 <span className={styles.itemRef}>
-                  <strong lang={hebrew ? 'he' : 'el'}>{word.lemma}</strong>
+                  {/* Ancient Greek, as the notes have it; Hebrew is written right to left. */}
+                  <strong lang={hebrew ? 'he' : 'grc'} dir={hebrew ? 'rtl' : undefined}>
+                    {word.lemma}
+                  </strong>
                   <span className={styles.wordSound}>{word.transliteration}</span>
-                  <span className={styles.count}>{n(word.verseCount)}</span>
+                  <span className={styles.count}>
+                    {n(word.verseCount)}
+                    <span className={styles.visuallyHidden}>
+                      {' '}
+                      {t('words.versesUnit')(word.verseCount)}
+                    </span>
+                  </span>
                   <ExpandIcon className={styles.chevron} />
                 </span>
-                <span className={styles.snippet}>{word.gloss}</span>
+                {/* The dictionary's glosses are English, whatever the interface's language. */}
+                <span className={styles.snippet} lang="en">
+                  {word.gloss}
+                </span>
               </button>
               {open &&
                 words.index.versesOf(word.index).map((other) => (
@@ -122,7 +134,13 @@ export function OriginalWordsSection({
                     <span className={styles.itemRef}>
                       <strong>{formatPassage(versePassage(other), versification, books)}</strong>
                     </span>
-                    <span className={styles.snippet}>{verseTextOrNote(translation, other)}</span>
+                    <span
+                      className={styles.snippet}
+                      lang={translation.manifest.language}
+                      dir={translation.manifest.direction}
+                    >
+                      {verseTextOrNote(translation, other)}
+                    </span>
                   </button>
                 ))}
             </div>

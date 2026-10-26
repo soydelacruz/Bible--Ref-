@@ -7,8 +7,9 @@
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-1) var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-block-end: 1px solid var(--color-border);
 }
@@ -27,10 +28,86 @@
   font-size: 0.75rem;
 }
 
+/* The passage's name, in the reading serif as Threads' chapter title is: it names the text below
+   it, and at this size it stands clear of the verse rather than a point above it. */
 .title {
   margin: 2px 0 0;
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Focus lands here when the passage changes (see `panel-focus.ts`): shown for the keyboard, not
+   for a click. */
+.title:focus {
+  outline: none;
+}
+
+.title:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* How many links and notes, each a way to its section: quiet, a line of small type. */
+.summary {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 0 var(--space-1);
+  align-items: baseline;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.summaryLink {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 0.2em;
+  transition:
+    color 150ms ease-out,
+    text-decoration-color 150ms ease-out;
+}
+
+.summaryLink:hover {
+  color: var(--color-text);
+  text-decoration-color: currentColor;
+}
+
+.summaryLink:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Small type on a phone: the target reaches up and down to a finger's size, not sideways into
+   its neighbour. */
+@media (pointer: coarse) {
+  .summaryLink::after {
+    position: absolute;
+    inset: -0.75rem 0;
+    content: '';
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summaryLink {
+    transition: none;
+  }
+}
+
+.summarySeparator {
+  opacity: 0.6;
 }
 
 .iconButton {
