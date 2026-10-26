@@ -12,5 +12,7 @@ export const arcs = {
   shortTitleKey: 'view.arcs.short',
   icon: ArcsIcon,
   openLabelKey: 'view.arcs.open',
+  // Drawn from the links alone: it shows before the text has arrived.
+  drawsBeforeText: true,
   Component: lazy(async () => ({ default: (await explorer).ArcsExplorer })),
 } as const satisfies Visualization;

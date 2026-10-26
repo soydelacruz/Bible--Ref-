@@ -17,6 +17,7 @@ import { LinkStats } from '../shared/components/LinkStats.tsx';
 import { PassagePanel } from '../shared/components/PassagePanel.tsx';
 import { SavedMenu } from '../shared/components/SavedMenu.tsx';
 import { ReferenceSearch } from '../shared/components/ReferenceSearch.tsx';
+import { WithText } from '../shared/components/TextPending.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
 import { DEFAULT_LINK_FILTER, isDefaultFilter, selectLinks } from '../shared/link-filter.ts';
 import { summarizeLinks } from '../shared/link-summary.ts';
@@ -25,6 +26,7 @@ import controls from '../shared/components/controls.module.css';
 import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
 import { composeImage, downloadImage, imageFileName } from '../shared/image-export.ts';
 import type { Connection } from '../shared/connections.ts';
+import type { EarlyVizData } from '../shared/viz-data.ts';
 import type { VisualizationProps } from '../visualization.ts';
 import type { ArcsController } from './arcs-controller.ts';
 import { ArcsStage } from './ArcsStage.tsx';
@@ -46,7 +48,7 @@ export function ArcsExplorer({
   translationMenu,
   passageLinks,
   shareUrl,
-}: VisualizationProps) {
+}: VisualizationProps<EarlyVizData>) {
   const { t, books } = useLocalization();
   const { index } = data.crossReferences;
   const linkIds = useMemo(
@@ -97,24 +99,24 @@ export function ArcsExplorer({
     }
   };
 
+  // The arcs need only the links; the words come when they come, and only what shows them waits.
+  const text = data.text.state === 'loaded' ? data.text.translation : null;
+
   return (
     <VizPage
       masthead={masthead}
-      credits={<Credits translation={data.translation.manifest} inspiration={INSPIRATION} />}
+      credits={<Credits translation={data.translationManifest} inspiration={INSPIRATION} />}
       onPanelClose={closePanel}
       controls={
         <>
           <ReferenceSearch
             versification={data.versification}
-            translation={data.translation}
+            translation={text ?? undefined}
+            textUnavailable={data.text.state === 'loaded' ? undefined : data.text.state}
             onSelect={onNavigate}
           />
           {translationMenu}
-          <SavedMenu
-            versification={data.versification}
-            translation={data.translation}
-            onSelect={onNavigate}
-          />
+          <SavedMenu versification={data.versification} translation={text} onSelect={onNavigate} />
           <FiltersMenu
             filter={filter}
             defaults={DEFAULT_LINK_FILTER}
@@ -137,18 +139,22 @@ export function ArcsExplorer({
       }
       panel={
         passage && (
-          <PassagePanel
-            data={data}
-            passage={passage}
-            filter={filter}
-            actions={passageLinks(passage)}
-            onSelect={onNavigate}
-            onClose={closePanel}
-            shareUrl={shareUrl}
-            onPreview={(connection) => {
-              setPreview(connection && { passage, connection });
-            }}
-          />
+          <WithText data={data}>
+            {(complete) => (
+              <PassagePanel
+                data={complete}
+                passage={passage}
+                filter={filter}
+                actions={passageLinks(passage)}
+                onSelect={onNavigate}
+                onClose={closePanel}
+                shareUrl={shareUrl}
+                onPreview={(connection) => {
+                  setPreview(connection && { passage, connection });
+                }}
+              />
+            )}
+          </WithText>
         )
       }
     >

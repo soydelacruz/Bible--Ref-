@@ -4,8 +4,18 @@ import type { Page } from '@playwright/test';
 export const PANEL = 'div[data-active="true"] aside';
 export const ACTIVE = 'div[data-active="true"]';
 
-/** Waits for the app to have drawn: the data is loaded and the canvas is up. */
+/**
+ * Waits for the app to have drawn: the data is loaded, the canvas is up, and the words are in.
+ * The views draw from the links before the text has arrived, and a test that reads words waits
+ * for them as a reader would.
+ */
 export async function waitForApp(page: Page): Promise<void> {
+  await waitForDrawing(page);
+  await page.locator(`${ACTIVE} [data-text-pending]`).waitFor({ state: 'detached' });
+}
+
+/** Waits for the view to have drawn from the links, whether or not the text has arrived. */
+export async function waitForDrawing(page: Page): Promise<void> {
   await page.locator(`${ACTIVE} canvas`).first().waitFor({ state: 'attached' });
   await page.locator(`${ACTIVE} footer`).first().waitFor();
 }

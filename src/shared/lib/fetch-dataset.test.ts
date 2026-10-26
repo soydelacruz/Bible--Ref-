@@ -54,6 +54,14 @@ describe('fetchDataset', () => {
     await expect(fetchDataset('data/x.json')).rejects.toThrow(/not valid JSON/);
   });
 
+  it('says when the bytes are in, before reading them, so the next download need not wait', async () => {
+    respondWith('not json');
+    const onDownloaded = vi.fn();
+    // Called even though the body turns out unreadable: the reading comes after.
+    await expect(fetchDataset('data/x.json', { onDownloaded })).rejects.toThrow();
+    expect(onDownloaded).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the path on the error, so a caller can say which file', async () => {
     respondWith('', { status: 500 });
     await expect(fetchDataset('data/named.json')).rejects.toMatchObject({

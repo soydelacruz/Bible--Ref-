@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type SubmitEvent } from 'react';
 import { passageFromReference, versePassage, type Passage } from '../../../core/bible/passage.ts';
 import { formatVerseRef } from '../../../core/bible/reference-format.ts';
-import { parseReference } from '../../../core/bible/reference-parse.ts';
+import { parseReference, type ReferenceParseResult } from '../../../core/bible/reference-parse.ts';
 import type { VerseIndex } from '../../../core/bible/verse-ref.ts';
 import type { Versification } from '../../../core/bible/versification.ts';
 import { describeReferenceError } from '../../../i18n/describe-reference-error.ts';
@@ -43,6 +43,12 @@ interface ReferenceSearchProps {
   readonly versification: Versification;
   /** The text being read: what the box searches when it is given words rather than a reference. */
   readonly translation?: Translation | undefined;
+  /**
+   * Why there is no `translation` to search, when one is coming: it is still `'loading'` — a word
+   * search then waits for it and says so — or its download `'failed'`, which the box says instead
+   * of reporting that nothing matched. References need no text and work either way.
+   */
+  readonly textUnavailable?: 'loading' | 'failed' | undefined;
   readonly onSelect: (passage: Passage) => void;
 }
 
@@ -50,6 +56,14 @@ interface TextResults {
   readonly query: string;
   readonly totalCount: number;
   readonly verses: readonly VerseIndex[];
+}
+
+/** A search for words: what was typed, the words in it, and how it read as a reference. */
+interface WordSearch {
+  readonly typed: string;
+  readonly words: string;
+  /** `null` when the input was quoted, and so never read as a reference. */
+  readonly reference: Exclude<ReferenceParseResult, { readonly ok: true }> | null;
 }
 
 /**
@@ -64,11 +78,18 @@ function searchWords(input: string): string {
  * "Go to" box: accepts references such as `John 3:16`, `jn 3 16`, `Ps 23` or `Gen.1.1`, and
  * otherwise searches the text being read for the words, e.g. `living water`.
  */
-export function ReferenceSearch({ versification, translation, onSelect }: ReferenceSearchProps) {
+export function ReferenceSearch({
+  versification,
+  translation,
+  textUnavailable,
+  onSelect,
+}: ReferenceSearchProps) {
   const localization = useLocalization();
   const { t, books } = localization;
   const [message, setMessage] = useState<BoxMessage | null>(null);
   const [results, setResults] = useState<TextResults | null>(null);
+  // Words searched for before the text had arrived, to be searched the moment it does.
+  const [waiting, setWaiting] = useState<WordSearch | null>(null);
   // On a phone the example is cut to "Joh", so the empty box says only what it is for; once it
   // has focus, the reader is about to type and the full example shows.
   const isNarrow = useSyncExternalStore(subscribeToNarrowScreen, isNarrowScreen);
@@ -115,26 +136,54 @@ export function ReferenceSearch({ versification, translation, onSelect }: Refere
     // Words rather than a reference: a book that is not there, or nothing shaped like one. A
     // reference that names a real book but a chapter or verse it lacks is a mistyped reference,
     // and the reader is better served by being told so than by a search for "John 3:99".
-    const words = searchWords(typed);
-    const searchable =
-      translation !== undefined &&
-      words !== '' &&
+    const search = { typed, words: searchWords(typed), reference: result };
+    const wantsWords =
+      search.words !== '' &&
       (result === null ||
         result.error.kind === 'unreadable' ||
         result.error.kind === 'unknown-book');
-    const found = searchable ? translation.search(words, MAX_RESULTS) : null;
+    setWaiting(null);
+    if (wantsWords && translation === undefined && textUnavailable !== undefined) {
+      setResults(null);
+      if (textUnavailable === 'loading') {
+        setMessage({ text: t('loading.text'), tone: 'notice' });
+        setWaiting(search);
+      } else {
+        setMessage({ text: t('error.datasetUnavailable'), tone: 'error' });
+      }
+      return;
+    }
+    showMatches(search, wantsWords ? translation : undefined);
+  };
+
+  /** Shows what a search finds in `text`, or why it found nothing (no `text`: not searched). */
+  const showMatches = ({ typed, words, reference }: WordSearch, text: Translation | undefined) => {
+    const found = text?.search(words, MAX_RESULTS) ?? null;
     if (found !== null && found.totalCount > 0) {
       setMessage(null);
       setResults({ query: words, ...found });
       return;
     }
     setResults(null);
-    if (result === null || (searchable && result.error.kind === 'unreadable')) {
+    if (reference === null || (text !== undefined && reference.error.kind === 'unreadable')) {
       setMessage({ text: t('search.noResults')(words), tone: 'notice' });
     } else if (typed.trim() !== '') {
-      setMessage({ text: describeReferenceError(result.error, localization), tone: 'error' });
+      setMessage({ text: describeReferenceError(reference.error, localization), tone: 'error' });
     }
   };
+
+  // The text has arrived while a search waited for it: its results replace the wait, in the same
+  // render rather than a frame later.
+  if (waiting !== null && translation !== undefined) {
+    setWaiting(null);
+    setMessage(null);
+    showMatches(waiting, translation);
+  }
+  // Or it never will: the wait gives way to the reason, as a search made after the failure would.
+  if (waiting !== null && translation === undefined && textUnavailable === 'failed') {
+    setWaiting(null);
+    setMessage({ text: t('error.datasetUnavailable'), tone: 'error' });
+  }
 
   return (
     <form
@@ -169,6 +218,7 @@ export function ReferenceSearch({ versification, translation, onSelect }: Refere
         enterKeyHint="go"
         onChange={() => {
           setMessage(null);
+          setWaiting(null);
         }}
         onFocus={() => {
           setIsFocused(true);

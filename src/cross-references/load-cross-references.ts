@@ -5,7 +5,11 @@ import {
   type ImportNotice,
 } from '../core/datasets/formats.ts';
 import { crossReferencesDatasetPath } from '../core/datasets/paths.ts';
-import { loadDataset, type DatasetLoadReport } from '../shared/lib/fetch-dataset.ts';
+import {
+  loadDataset,
+  type DatasetLoadReport,
+  type FetchDatasetOptions,
+} from '../shared/lib/fetch-dataset.ts';
 import { CrossReferenceIndex } from './cross-reference-index.ts';
 import type { CrossReferenceSourceManifest } from './source-manifest.ts';
 
@@ -25,6 +29,7 @@ export interface LoadedCrossReferences {
 
 export async function loadCrossReferences(
   manifest: CrossReferenceSourceManifest,
+  options: FetchDatasetOptions = {},
 ): Promise<LoadedCrossReferences> {
   const { value: dataset, report } = await loadDataset(
     crossReferencesDatasetPath(manifest.id),
@@ -41,6 +46,7 @@ export async function loadCrossReferences(
         index: new CrossReferenceIndex(file.links, CANONICAL_VERSIFICATION.verseCount),
       };
     },
+    options,
   );
   return { dataset, report };
 }

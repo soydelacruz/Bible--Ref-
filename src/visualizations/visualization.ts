@@ -3,14 +3,14 @@ import type { Passage } from '../core/bible/passage.ts';
 import type { MessageKey } from '../i18n/messages/types.ts';
 import type { IconComponent } from '../shared/ui/icons.tsx';
 import type { LinkFilter } from './shared/link-filter.ts';
-import type { VizData } from './shared/viz-data.ts';
+import type { EarlyVizData, VizCore, VizData } from './shared/viz-data.ts';
 
 /**
  * What the host app gives a visualization. The host owns the URL, where it keeps the focused
  * passage and the active visualization, so every visualization shares the same passage.
  */
-export interface VisualizationProps {
-  readonly data: VizData;
+export interface VisualizationProps<Data extends VizCore = VizData> {
+  readonly data: Data;
   /** The focused passage, or `null` for none. */
   readonly passage: Passage | null;
   /**
@@ -38,12 +38,7 @@ export interface VisualizationProps {
   readonly shareUrl: (passage: Passage) => string;
 }
 
-/**
- * A visualization of the explorer. Each folder under `src/visualizations/` exports one from its
- * `index.ts`, and the app lists them in `src/app/views.ts`. Visualizations never import each other;
- * the host connects them.
- */
-export interface Visualization {
+interface VisualizationInfo {
   readonly id: string;
   /** Message keys rather than words: the switch is read in the reader's own language. */
   readonly titleKey: MessageKey;
@@ -52,6 +47,28 @@ export interface Visualization {
   readonly icon: IconComponent;
   /** Invites a reader into this visualization from another one, e.g. "Read in context". */
   readonly openLabelKey: MessageKey;
-  /** Usually lazy, so each visualization's code (e.g. Three.js) is a chunk of its own. */
-  readonly Component: JSXElementConstructor<VisualizationProps>;
 }
+
+/**
+ * A visualization of the explorer. Each folder under `src/visualizations/` exports one from its
+ * `index.ts`, and the app lists them in `src/app/views.ts`. Visualizations never import each other;
+ * the host connects them.
+ *
+ * `Component` is usually lazy, so each visualization's code (e.g. Three.js) is a chunk of its own.
+ */
+export type Visualization = VisualizationInfo &
+  (
+    | {
+        /** Shown once the text has arrived: what it draws is the words. */
+        readonly drawsBeforeText?: false;
+        readonly Component: JSXElementConstructor<VisualizationProps>;
+      }
+    | {
+        /**
+         * Drawn from the links alone, so it shows before the text has arrived — seconds sooner on
+         * a phone — and only its parts that show words wait for it (see `WithText`).
+         */
+        readonly drawsBeforeText: true;
+        readonly Component: JSXElementConstructor<VisualizationProps<EarlyVizData>>;
+      }
+  );
