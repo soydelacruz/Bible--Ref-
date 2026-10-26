@@ -125,19 +125,28 @@ export const pt: LocaleMessages = {
   'note.fromVerse': (verse) => `do v. ${verse}`,
   'note.toVerse': (verse) => `para o v. ${verse}`,
 
-  'panel.connectsTo': 'Conecta-se a',
+  'panel.connectsTo': 'Ligações por gênero',
   'panel.connectsTo.note': (count) => (count === 1 ? '1 gênero' : `${String(count)} gêneros`),
   'panel.references': 'Referências',
   'panel.references.note': 'para onde esta passagem aponta',
   'panel.referencedBy': 'Referenciado por',
   'panel.referencedBy.note': 'que apontam para cá',
   'panel.verses': 'Versículos',
-  'panel.verses.note': 'toque num para focá-lo',
+  'panel.verses.note': 'escolha um para lê-lo',
   'panel.none': 'Nenhuma',
   'panel.items': 'itens',
   'panel.passages': 'passagens',
   'panel.linksCounted': 'ligações',
   'panel.versesCounted': 'versículos',
+  'panel.linksUnit': (plural) => (plural === 1 ? 'ligação' : 'ligações'),
+  'panel.passagesUnit': (plural) => (plural === 1 ? 'passagem' : 'passagens'),
+  'panel.summary.references': (count, plural) =>
+    plural === 1 ? `${count} referência` : `${count} referências`,
+  'panel.summary.referencedBy': (count, plural) =>
+    plural === 1 ? `${count} aponta para cá` : `${count} apontam para cá`,
+  'panel.summary.notes': (count, plural) => (plural === 1 ? `${count} nota` : `${count} notas`),
+  'panel.summary.none': 'Nenhuma referência cruzada',
+  'panel.announce': (passage, summary) => `${passage} · ${summary}`,
 
   // The language names are already in the case Portuguese wants them: a message puts its
   // arguments in place, it does not reshape them.
@@ -153,7 +162,8 @@ export const pt: LocaleMessages = {
   'library.note.placeholder': 'Escreva uma nota sobre este versículo…',
   'saved.menu': 'Versículos salvos',
   'saved.empty':
-    'Nada salvo ainda. Abra um versículo para salvá-lo, destacá-lo ou escrever uma nota.',
+    'Nenhum versículo salvo ainda. Clique num versículo e depois em Salvar versículo — você ' +
+    'pode destacá-lo e escrever uma nota.',
   'saved.count': (count, plural) =>
     plural === 1
       ? '1 versículo salvo neste dispositivo.'
@@ -191,6 +201,7 @@ export const pt: LocaleMessages = {
   'words.heading': (language) => `Mesma palavra ${language}`,
   'words.note': 'onde mais ela aparece',
   'words.counted': 'palavras',
+  'words.versesUnit': (plural) => (plural === 1 ? 'versículo' : 'versículos'),
   'words.showMore': (count) => `Ver mais ${count}`,
   'language.hebrew': 'hebraica',
   'language.greek': 'grega',

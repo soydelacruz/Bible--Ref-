@@ -135,8 +135,16 @@ describe('the copy button', () => {
     expect(written).toContain('https://example.org/?ref=John.3.16');
   });
 
-  /** Each copy button has a status of its own; the verse's is the first on the page. */
+  /** The panel's one live region, which every copy button speaks through. */
   const verseStatus = () => screen.getAllByRole('status')[0];
+
+  it('has one live region for all its copy buttons, not one each', () => {
+    renderPanel();
+    expect(screen.getAllByRole('button', { name: /^Copy .* with a link$/ }).length).toBeGreaterThan(
+      1,
+    );
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+  });
 
   it('says so, and then stops saying so', async () => {
     renderPanel();

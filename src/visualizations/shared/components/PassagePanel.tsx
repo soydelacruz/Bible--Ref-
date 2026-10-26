@@ -1,4 +1,13 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { GENRES, getBookGenre } from '../../../core/bible/genres.ts';
 import {
   chapterPassageOf,
@@ -37,9 +46,17 @@ import {
 import type { LinkFilter } from '../link-filter.ts';
 import { canCopy, copyQuote, quotePassage, type PassageQuote } from '../passage-quote.ts';
 import { GENRE_COLORS, GENRE_HEX } from '../palette.ts';
+import {
+  PANEL_TITLE_ATTRIBUTE,
+  pendingFocusRequest,
+  returnFocus,
+  settleFocusRequest,
+} from '../panel-focus.ts';
+import { useAnnouncer } from '../use-announcer.ts';
+import { useBookNotes } from '../use-study-notes.ts';
 import { NotesSection } from './NotesSection.tsx';
 import { OriginalWordsSection } from './OriginalWordsSection.tsx';
-import { PanelSection } from './PanelSection.tsx';
+import { openPanelSection, PANEL_SECTION_ATTRIBUTE, PanelSection } from './PanelSection.tsx';
 import { PathSection } from './PathSection.tsx';
 import { StudySection } from './StudySection.tsx';
 import { VerseLibrary } from './VerseLibrary.tsx';
@@ -67,6 +84,9 @@ interface PassagePanelProps {
   readonly shareUrl: (passage: Passage) => string;
 }
 
+/** Says something through the panel's live region (see `useAnnouncer`). */
+type Announce = (message: string) => void;
+
 const INITIAL_ITEMS = 40;
 /** How long the copy button shows that it copied. */
 const COPIED_FEEDBACK_MS = 1600;
@@ -74,14 +94,17 @@ const COPIED_FEEDBACK_MS = 1600;
 /**
  * Copies a verse or passage, in full, with its reference and link, e.g. to quote it in a
  * discussion. It shows on hover (on touch screens, always, dimmed), and not at all where the page
- * can't use the clipboard.
+ * can't use the clipboard. That it copied is said through the panel's live region, not one of its
+ * own: a list of links would otherwise carry a silent region for every row.
  */
 function CopyQuoteButton({
   reference,
   quote,
+  announce,
 }: {
   readonly reference: string;
   readonly quote: () => PassageQuote;
+  readonly announce: Announce;
 }) {
   const { t } = useLocalization();
   const [copied, setCopied] = useState(false);
@@ -100,28 +123,24 @@ function CopyQuoteButton({
     return null;
   }
   return (
-    <>
-      <button
-        type="button"
-        className={styles.copy}
-        data-copied={copied}
-        aria-label={t('panel.copy')(reference)}
-        title={t('panel.copy.title')}
-        onClick={() => {
-          void copyQuote(quote()).then(
-            () => {
-              setCopied(true);
-            },
-            () => undefined,
-          );
-        }}
-      >
-        {copied ? <CopiedIcon /> : <CopyIcon />}
-      </button>
-      <span className={styles.visuallyHidden} role="status">
-        {copied ? t('panel.copied')(reference) : ''}
-      </span>
-    </>
+    <button
+      type="button"
+      className={styles.copy}
+      data-copied={copied}
+      aria-label={t('panel.copy')(reference)}
+      title={t('panel.copy.title')}
+      onClick={() => {
+        void copyQuote(quote()).then(
+          () => {
+            setCopied(true);
+            announce(t('panel.copied')(reference));
+          },
+          () => undefined,
+        );
+      }}
+    >
+      {copied ? <CopiedIcon /> : <CopyIcon />}
+    </button>
   );
 }
 
@@ -193,9 +212,54 @@ function ConnectionText({
   );
 }
 
+/** One part of the summary under the title: how much a section holds, and a way to it. */
+interface SummaryItem {
+  /** The section's `id`, as `PanelSection` has it. */
+  readonly section: string;
+  readonly text: string;
+}
+
 /**
- * Details of the focused passage: its text, where it connects (by genre) and every connection,
- * grouped by book. Every connection is a button that travels there, so nothing depends on hover.
+ * The passage at a glance, under its title: how many links go each way and how many notes there
+ * are, each a jump to its section. The longer list of links can start a long way down.
+ */
+function PassageSummary({
+  id,
+  items,
+  onJump,
+}: {
+  readonly id: string;
+  readonly items: readonly SummaryItem[];
+  readonly onJump: (section: string) => void;
+}) {
+  return (
+    <p id={id} className={styles.summary}>
+      {items.map((item, index) => (
+        <Fragment key={item.section}>
+          {index > 0 && (
+            <span className={styles.summarySeparator} aria-hidden="true">
+              ·
+            </span>
+          )}
+          <button
+            type="button"
+            className={styles.summaryLink}
+            onClick={() => {
+              onJump(item.section);
+            }}
+          >
+            {item.text}
+          </button>
+        </Fragment>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * Details of the focused passage: its text, every connection grouped by book (and by genre, at a
+ * glance), then the tools for reading further. Every connection is a button that travels there,
+ * so nothing depends on hover.
  */
 export function PassagePanel({
   data,
@@ -207,7 +271,7 @@ export function PassagePanel({
   onPreview,
   shareUrl,
 }: PassagePanelProps) {
-  const { t, books, genreName } = useLocalization();
+  const { t, books, n, genreName } = useLocalization();
   const { versification, translation, crossReferences, verseGenres } = data;
   const connections = useMemo(
     () =>
@@ -225,12 +289,113 @@ export function PassagePanel({
   const previous = neighbor(passage, -1, versification);
   const next = neighbor(passage, 1, versification);
   const isVerse = passage.kind === 'verse';
+  const passageId = toPassageOsisId(passage, versification);
+  const title = formatPassage(passage, versification, books);
   // Outside the part keyed by passage, so that it outlives a step along the path to it.
   const [destination, setDestination] = useState<Passage | null>(null);
   const { library: kept } = useLibrary(versification);
   const highlight = isVerse ? entryOf(kept, passage.verse).highlight : null;
-  // Near the top, where it is found: one line until it is used, and its answer then appears where
-  // it was asked for rather than below every connection.
+  // The same notes the notes section shows, for the summary's count: they are fetched once.
+  const bookNotes = useBookNotes(isVerse ? book.id : null);
+  const noteCount = isVerse ? (bookNotes?.notesOn(passage.verse).length ?? 0) : 0;
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Where focus goes back to when the panel closes.
+  const opener = useRef<HTMLElement | null>(null);
+  // The passage last shown, `null` before the first.
+  const shown = useRef<string | null>(null);
+  const [regionRef, announce] = useAnnouncer<HTMLParagraphElement>();
+  const summaryId = useId();
+
+  const outgoing = connections.outgoing.length;
+  const incoming = connections.incoming.length;
+  const linkSummary: readonly SummaryItem[] = [
+    ...(outgoing > 0
+      ? [{ section: 'references', text: t('panel.summary.references')(n(outgoing), outgoing) }]
+      : []),
+    ...(incoming > 0
+      ? [
+          {
+            section: 'referenced-by',
+            text: t('panel.summary.referencedBy')(n(incoming), incoming),
+          },
+        ]
+      : []),
+  ];
+  const summary: readonly SummaryItem[] =
+    noteCount > 0
+      ? [
+          ...linkSummary,
+          { section: 'net-notes', text: t('panel.summary.notes')(n(noteCount), noteCount) },
+        ]
+      : linkSummary;
+  // What a screen reader hears when the passage changes somewhere it is not looking. The notes
+  // arrive later than the passage does, so they are left to the summary.
+  const announcement = t('panel.announce')(
+    title,
+    linkSummary.length > 0
+      ? linkSummary.map((item) => item.text).join(' · ')
+      : t('panel.summary.none'),
+  );
+
+  // A new passage, from wherever it came. Following a link replaces the button that was pressed,
+  // and focus would fall to the page; it lands on the title instead, which is read out. Where
+  // focus is somewhere it can stay (the arcs, the tour's button, the next-verse button), it
+  // stays, and the change is said instead. The first passage, from the address, moves nothing.
+  const showPassage = useEffectEvent((id: string) => {
+    const root = rootRef.current;
+    const heading = titleRef.current;
+    if (!root || !heading) {
+      return;
+    }
+    const first = shown.current === null;
+    shown.current = id;
+    const focused = document.activeElement;
+    const lost = focused === null || focused === document.body;
+    const request = pendingFocusRequest();
+    if (request?.returnTo) {
+      opener.current = request.returnTo;
+    } else if (focused instanceof HTMLElement && !lost && !root.contains(focused)) {
+      opener.current = focused;
+    }
+    if (focused !== heading && (request !== null || (lost && !first))) {
+      heading.focus({ preventScroll: true });
+      // An inert view's panel cannot take focus, and leaves the request to the one on screen.
+      if (document.activeElement === heading) {
+        settleFocusRequest();
+        return;
+      }
+    }
+    if (!lost || !first) {
+      announce(announcement);
+    }
+  });
+  useEffect(() => {
+    showPassage(passageId);
+  }, [passageId]);
+
+  const close = () => {
+    const target = opener.current;
+    onClose();
+    returnFocus(target, rootRef.current);
+  };
+
+  const jumpTo = (section: string) => {
+    openPanelSection(section);
+    const scroll = scrollRef.current;
+    const target = scroll?.querySelector<HTMLElement>(`[${PANEL_SECTION_ATTRIBUTE}="${section}"]`);
+    if (!scroll || !target) {
+      return;
+    }
+    // The panel's own scroll, not the page's: on a phone the page is not what moves.
+    scroll.scrollTop += target.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
+    target.querySelector('button')?.focus({ preventScroll: true });
+  };
+
+  // After every link, not before them: it is a tool for going further once the links are read.
+  // Its answer appears where it was asked for.
   const path = (
     <PathSection
       data={data}
@@ -243,7 +408,9 @@ export function PassagePanel({
   );
 
   return (
-    <div className={styles.panel}>
+    <div ref={rootRef} className={styles.panel}>
+      {/* The panel's one live region, there before anything is said in it. */}
+      <p ref={regionRef} className={styles.visuallyHidden} role="status" />
       <header className={styles.header}>
         <div className={styles.heading}>
           <p className={styles.eyebrow}>
@@ -251,7 +418,15 @@ export function PassagePanel({
             {genreName(genre.id)} ·{' '}
             {book.testament === 'OT' ? t('testament.OT') : t('testament.NT')}
           </p>
-          <h2 className={styles.title}>{formatPassage(passage, versification, books)}</h2>
+          <h2
+            ref={titleRef}
+            className={styles.title}
+            tabIndex={-1}
+            aria-describedby={summary.length > 0 ? summaryId : undefined}
+            {...{ [PANEL_TITLE_ATTRIBUTE]: '' }}
+          >
+            {title}
+          </h2>
         </div>
         <button
           type="button"
@@ -279,14 +454,17 @@ export function PassagePanel({
           type="button"
           className={styles.iconButton}
           aria-label={t('panel.close')}
-          onClick={onClose}
+          onClick={close}
         >
           <CloseIcon />
         </button>
+        {/* A line of its own under the title and the buttons, so that on a phone it does not
+            wrap round them. */}
+        {summary.length > 0 && <PassageSummary id={summaryId} items={summary} onJump={jumpTo} />}
       </header>
 
       {/* Keyed by passage: following a link starts the new passage's details at the top. */}
-      <div key={toPassageOsisId(passage, versification)} className={styles.scroll}>
+      <div key={passageId} ref={scrollRef} className={styles.scroll}>
         {/* A verse's links follow its text; a chapter's come before its (long) list of verses. */}
         {passage.kind === 'verse' ? (
           <>
@@ -304,7 +482,7 @@ export function PassagePanel({
                 </span>
               </p>
               <CopyQuoteButton
-                reference={formatPassage(passage, versification, books)}
+                reference={title}
                 quote={() =>
                   quotePassage({
                     translation,
@@ -315,18 +493,15 @@ export function PassagePanel({
                     url: shareUrl(passage),
                   })
                 }
+                announce={announce}
               />
             </div>
             {actions && <div className={styles.actions}>{actions}</div>}
             <VerseLibrary verse={passage.verse} versification={versification} />
-            {path}
-            {/* Beside the text they explain, before where it leads. */}
-            <NotesSection verse={passage.verse} data={data} onSelect={onSelect} />
           </>
         ) : (
           <>
             {actions && <div className={styles.actions}>{actions}</div>}
-            {path}
             <ChapterVerses
               start={range.start}
               end={range.end}
@@ -336,6 +511,7 @@ export function PassagePanel({
             />
           </>
         )}
+        {/* What the panel is for comes first: where the passage leads, and what leads to it. */}
         <GenreBreakdown
           connections={[...connections.outgoing, ...connections.incoming]}
           verseGenres={verseGenres}
@@ -352,6 +528,7 @@ export function PassagePanel({
           onSelect={onSelect}
           onPreview={onPreview}
           shareUrl={shareUrl}
+          announce={announce}
         />
         <ConnectionSection
           id="referenced-by"
@@ -365,10 +542,15 @@ export function PassagePanel({
           onSelect={onSelect}
           onPreview={onPreview}
           shareUrl={shareUrl}
+          announce={announce}
         />
-        {/* A verse at a time: a chapter's words would be most of its vocabulary. */}
+        {path}
+        {/* A verse at a time: a chapter's notes and words would be most of a book's. */}
         {passage.kind === 'verse' && (
-          <OriginalWordsSection verse={passage.verse} data={data} onSelect={onSelect} />
+          <>
+            <NotesSection verse={passage.verse} data={data} onSelect={onSelect} />
+            <OriginalWordsSection verse={passage.verse} data={data} onSelect={onSelect} />
+          </>
         )}
         <StudySection passage={passage} versification={versification} />
       </div>
@@ -404,20 +586,32 @@ function ChapterVerses({
       count={verses.length}
       countLabel={t('panel.versesCounted')}
     >
-      {verses.map((verse, offset) => (
-        <button
-          key={verse}
-          type="button"
-          className={styles.verseRow}
-          onClick={() => {
-            onSelect(versePassage(verse));
-          }}
-        >
-          <span className={styles.verseNumber}>{offset + 1}</span>
-          <span className={styles.snippet}>{verseTextOrNote(translation, verse)}</span>
-          <span className={styles.count}>{n(counts.get(verse) ?? 0)}</span>
-        </button>
-      ))}
+      {verses.map((verse, offset) => {
+        const count = counts.get(verse) ?? 0;
+        return (
+          <button
+            key={verse}
+            type="button"
+            className={styles.verseRow}
+            onClick={() => {
+              onSelect(versePassage(verse));
+            }}
+          >
+            <span className={styles.verseNumber}>{offset + 1}</span>
+            <span
+              className={styles.snippet}
+              lang={translation.manifest.language}
+              dir={translation.manifest.direction}
+            >
+              {verseTextOrNote(translation, verse)}
+            </span>
+            <span className={styles.count}>
+              {n(count)}
+              <span className={styles.visuallyHidden}> {t('panel.linksUnit')(count)}</span>
+            </span>
+          </button>
+        );
+      })}
     </PanelSection>
   );
 }
@@ -501,7 +695,10 @@ function GenreBreakdown({
                   background: elementAt(GENRE_HEX, genre.ordinal),
                 }}
               />
-              <span className={styles.count}>{n(count)}</span>
+              <span className={styles.count}>
+                {n(count)}
+                <span className={styles.visuallyHidden}> {t('panel.linksUnit')(count)}</span>
+              </span>
             </div>
           );
         })}
@@ -522,6 +719,7 @@ function ConnectionSection({
   onSelect,
   onPreview,
   shareUrl,
+  announce,
 }: {
   /** Identifies the section in storage, so a reader's choice to close it lasts. */
   readonly id: string;
@@ -536,6 +734,7 @@ function ConnectionSection({
   readonly onSelect: (passage: Passage) => void;
   readonly onPreview: ((connection: Connection | null) => void) | undefined;
   readonly shareUrl: (passage: Passage) => string;
+  readonly announce: Announce;
 }) {
   const localization = useLocalization();
   const { t, books, n } = localization;
@@ -563,7 +762,13 @@ function ConnectionSection({
               style={{ background: GENRE_COLORS[getBookGenre(group.book).id] }}
             />
             {books[group.book].name}
-            <span className={styles.count}>{n(group.connections.length)}</span>
+            <span className={styles.count}>
+              {n(group.connections.length)}
+              <span className={styles.visuallyHidden}>
+                {' '}
+                {t('panel.passagesUnit')(group.connections.length)}
+              </span>
+            </span>
           </p>
           {group.connections.map((connection) => {
             const note = landingNote(connection, versification, showSourceVerse);
@@ -624,6 +829,7 @@ function ConnectionSection({
                       url: shareUrl(versePassage(connection.otherStart)),
                     })
                   }
+                  announce={announce}
                 />
               </div>
             );

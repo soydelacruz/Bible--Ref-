@@ -1,8 +1,18 @@
 import { useId, type ReactNode } from 'react';
 import { useLocalization } from '../../../i18n/use-locale.tsx';
-import { useBooleanPreference } from '../../../shared/lib/preferences.ts';
+import { useBooleanPreference, writePreference } from '../../../shared/lib/preferences.ts';
 import { ExpandIcon, type IconComponent } from '../../../shared/ui/icons.tsx';
 import styles from './PassagePanel.module.css';
+
+/** Carries a section's `id` on its element, so the panel's summary can find it. */
+export const PANEL_SECTION_ATTRIBUTE = 'data-section';
+
+const preferenceOf = (id: string) => `panel:${id}`;
+
+/** Opens a section, e.g. one the reader jumps to from the summary, as if its band were pressed. */
+export function openPanelSection(id: string): void {
+  writePreference(preferenceOf(id), 'true');
+}
 
 /**
  * One band of the details panel.
@@ -43,10 +53,10 @@ export function PanelSection({
   readonly children: ReactNode;
 }) {
   const { t, n } = useLocalization();
-  const [open, setOpen] = useBooleanPreference(`panel:${id}`, defaultOpen);
+  const [open, setOpen] = useBooleanPreference(preferenceOf(id), defaultOpen);
   const bodyId = useId();
   return (
-    <section className={styles.section}>
+    <section className={styles.section} {...{ [PANEL_SECTION_ATTRIBUTE]: id }}>
       <h3 className={styles.sectionHeader}>
         <button
           type="button"
