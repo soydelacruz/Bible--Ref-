@@ -228,6 +228,7 @@ export const pt: LocaleMessages = {
 
   'loading.data': (verses, links) =>
     `Carregando ${verses} versículos e ${links} referências cruzadas…`,
+  'loading.text': 'Carregando o texto…',
   'error.datasetUnavailable':
     'Não foi possível carregar esta parte dos dados da Bíblia. Verifique sua conexão e tente novamente.',
   'error.retry': 'Tentar novamente',

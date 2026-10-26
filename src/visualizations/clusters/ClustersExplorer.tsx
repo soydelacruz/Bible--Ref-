@@ -10,9 +10,11 @@ import { toggleGenre } from '../shared/components/GenreToggles.tsx';
 import { PassagePanel } from '../shared/components/PassagePanel.tsx';
 import { ReferenceSearch } from '../shared/components/ReferenceSearch.tsx';
 import { SavedMenu } from '../shared/components/SavedMenu.tsx';
+import { WithText } from '../shared/components/TextPending.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
 import controls from '../shared/components/controls.module.css';
 import { DEFAULT_LINK_FILTER, selectLinks } from '../shared/link-filter.ts';
+import type { EarlyVizData } from '../shared/viz-data.ts';
 import type { VisualizationProps } from '../visualization.ts';
 import { ClustersStage } from './ClustersStage.tsx';
 import stageStyles from './ClustersStage.module.css';
@@ -43,7 +45,7 @@ export function ClustersExplorer({
   translationMenu,
   passageLinks,
   shareUrl,
-}: VisualizationProps) {
+}: VisualizationProps<EarlyVizData>) {
   const { t, books } = useLocalization();
   const { index } = data.crossReferences;
   const [openBook, setOpenBook] = useState<BookId | null>(null);
@@ -92,25 +94,24 @@ export function ClustersExplorer({
   const closePanel = () => {
     onNavigate(null);
   };
+  // The clusters need only the links; only what shows the words waits for them.
+  const text = data.text.state === 'loaded' ? data.text.translation : null;
 
   return (
     <VizPage
       masthead={masthead}
-      credits={<Credits translation={data.translation.manifest} inspiration={INSPIRATION} />}
+      credits={<Credits translation={data.translationManifest} inspiration={INSPIRATION} />}
       onPanelClose={closePanel}
       controls={
         <>
           <ReferenceSearch
             versification={data.versification}
-            translation={data.translation}
+            translation={text ?? undefined}
+            textUnavailable={data.text.state === 'loaded' ? undefined : data.text.state}
             onSelect={onNavigate}
           />
           {translationMenu}
-          <SavedMenu
-            versification={data.versification}
-            translation={data.translation}
-            onSelect={onNavigate}
-          />
+          <SavedMenu versification={data.versification} translation={text} onSelect={onNavigate} />
           <select
             className={`${controls.select} ${stageStyles.bookSelect}`}
             aria-label={t('clusters.book')}
@@ -159,15 +160,19 @@ export function ClustersExplorer({
       }
       panel={
         passage && (
-          <PassagePanel
-            data={data}
-            passage={passage}
-            filter={filter}
-            actions={passageLinks(passage)}
-            onSelect={onNavigate}
-            onClose={closePanel}
-            shareUrl={shareUrl}
-          />
+          <WithText data={data}>
+            {(complete) => (
+              <PassagePanel
+                data={complete}
+                passage={passage}
+                filter={filter}
+                actions={passageLinks(passage)}
+                onSelect={onNavigate}
+                onClose={closePanel}
+                shareUrl={shareUrl}
+              />
+            )}
+          </WithText>
         )
       }
     >

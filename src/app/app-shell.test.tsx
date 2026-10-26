@@ -237,6 +237,12 @@ describe('the views', () => {
       expect(view.openLabelKey.length).toBeGreaterThan(0);
     }
   });
+
+  it('draws Arcs and Clusters before the text has arrived, and Threads once it has', () => {
+    // vite/plugins.test.ts pins the other side: these are the pages that do not preload the text.
+    const early = VIEWS.filter((view) => 'drawsBeforeText' in view && view.drawsBeforeText);
+    expect(early.map((view) => view.path)).toEqual(['', 'clusters/']);
+  });
 });
 
 describe('DebugPage', () => {

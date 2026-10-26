@@ -45,7 +45,8 @@ export function SavedMenu({
   onSelect,
 }: {
   readonly versification: Versification;
-  readonly translation: Translation;
+  /** The text the verses are quoted from; `null` while it downloads, which shows them without. */
+  readonly translation: Translation | null;
   readonly onSelect: (passage: Passage) => void;
 }) {
   const { t, books, n } = useLocalization();
@@ -88,12 +89,15 @@ export function SavedMenu({
                     {formatVerseRef(versification.refAt(verse), books)}
                     {entry.saved && <SavedIcon className={styles.mark} />}
                   </strong>
-                  <span
-                    className={hasNote ? styles.note : library.snippet}
-                    lang={hasNote ? undefined : translation.manifest.language}
-                  >
-                    {hasNote ? entry.note : verseTextOrNote(translation, verse)}
-                  </span>
+                  {hasNote ? (
+                    <span className={styles.note}>{entry.note}</span>
+                  ) : (
+                    translation !== null && (
+                      <span className={library.snippet} lang={translation.manifest.language}>
+                        {verseTextOrNote(translation, verse)}
+                      </span>
+                    )
+                  )}
                 </button>
               </li>
             );

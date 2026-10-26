@@ -72,6 +72,12 @@
   font-size: 0.8125rem;
 }
 
+/* Where an error would be, for a search that is waiting rather than wrong (with `.error`). */
+.pending {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
 /* Verses that contain the words searched for, under the box like its message, and wide enough to
    read a verse on a phone where the box itself is narrow. */
 .results {

@@ -16,10 +16,10 @@ export function vizCrossReferenceSource(): CrossReferenceSourceManifest {
 
 /**
  * The files a first visit needs, relative to the site's base: the links, and the text of the
- * default translation. The HTML preloads them (see vite/site-head.ts), so they download while the
- * scripts do, instead of after. A reader who has chosen another translation downloads that one
- * when the app starts (see `translationLoader`); only the default can be preloaded, because the
- * HTML is the same for everyone.
+ * default translation, which the offline cache stores when it installs. The HTML preloads the links
+ * (and, on a page whose first screen is words, the reader's text) so they download while the
+ * scripts do — see vite/site-head.ts; elsewhere the text follows once the links are in (see
+ * `afterLinksDownloaded`).
  */
 export function vizDatasetPaths(): readonly string[] {
   return [

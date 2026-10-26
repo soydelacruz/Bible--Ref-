@@ -1,7 +1,11 @@
 import { translationDatasetPath } from '../core/datasets/paths.ts';
 import { mount } from '../shared/lib/mount.tsx';
 import { VizDataBoundary } from '../visualizations/shared/components/VizDataBoundary.tsx';
-import { translationLoader, vizCoreLoader } from '../visualizations/shared/viz-data.ts';
+import {
+  afterLinksDownloaded,
+  translationLoader,
+  vizCoreLoader,
+} from '../visualizations/shared/viz-data.ts';
 import { Explorer } from './Explorer.tsx';
 import { registerOfflineCache } from './register-offline-cache.ts';
 import {
@@ -35,10 +39,16 @@ setActiveLocale(locale);
 setPreferredLocale(initialPreferredLocale(navigator.languages));
 document.documentElement.lang = getLocale(locale).tag;
 
-// The text downloads beside the links rather than after them: which one to show is known from the
-// URL (or the reader's last choice) before anything renders. The app awaits it through `use()`;
-// this only starts it, so a failure is handled there.
-const loadingTranslation = translationLoader(translation).load();
+// The text downloads once the links' bytes are in, not beside them: the first picture is drawn
+// from the links alone, and on a slow connection the two would split the bandwidth and hold it
+// back by seconds. It starts before the links are read, so the connection is not idle meanwhile.
+// Nothing waits for it here — the views follow its status (see `useTextStatus`), so a failure is
+// handled there.
+const loadingTranslation = new Promise<unknown>((resolve) => {
+  afterLinksDownloaded(() => {
+    resolve(translationLoader(translation).load());
+  });
+});
 void loadingTranslation.catch(() => undefined);
 
 mount(<VizDataBoundary>{(core) => <Explorer core={core} />}</VizDataBoundary>);

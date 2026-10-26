@@ -14,7 +14,14 @@ import {
   SITE_NAME,
   SITE_ORIGIN,
   SOCIAL_IMAGE,
+  type Page,
 } from './site.ts';
+
+/**
+ * The pages whose first screen is drawn from the links alone: the views that draw before the text
+ * has arrived (`drawsBeforeText`, which `vite/plugins.test.ts` checks this against).
+ */
+const LINKS_FIRST: ReadonlySet<Page> = new Set([PAGES.main, PAGES.clusters]);
 
 /**
  * Completes every page's head: icons and theme color; for listed pages, the canonical URL, Open
@@ -39,6 +46,13 @@ export function siteHead(): Plugin {
       // when the offline cache serves the page: it has them already, and Chrome can't hand a
       // preload over to the app's own request through a service worker (it would read them twice).
       //
+      // The text only on a page whose first screen is words. Arcs and Clusters draw from the
+      // links alone, and the text downloading beside them would take half of a slow connection:
+      // on Fast 3G their first picture waited 21 s for both files instead of ~13 s for the links.
+      // The app asks for the text there the moment the links' bytes are in. Neither file is
+      // marked high priority: that put 1.9 MB of links level with the page's own stylesheet,
+      // which then waited six seconds behind them and held up every script.
+      //
       // Which Bible to preload depends on the reader, and the reader is only known here, in
       // the browser: the HTML is one file for everybody. Guessing wrong is expensive — the wrong
       // text is ~3.8 MB downloaded on top of the ~3.8 MB that is actually read.
@@ -48,9 +62,11 @@ export function siteHead(): Plugin {
       // address's `?lang=`, then the stored one, then the browser's. `vite/plugins.test.ts`
       // runs this script against that function to keep the two from drifting, which they did
       // the first time this was written.
+      const page = pageOf(context.path);
       const shared = `${base}${crossReferencesDatasetPath(vizCrossReferenceSource().id)}`;
       const preload = {
         shared,
+        withText: page === undefined || !LINKS_FIRST.has(page),
         byTranslation: Object.fromEntries(
           TRANSLATION_MANIFESTS.map((manifest) => [
             manifest.id,
@@ -68,7 +84,6 @@ export function siteHead(): Plugin {
         translationKey: TRANSLATION_STORAGE_KEY,
       };
       tags.push({ tag: 'script', children: preloadScript(preload) });
-      const page = pageOf(context.path);
       if (!page?.listed) {
         tags.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } });
         return atEndOfHead(tags);
@@ -149,6 +164,8 @@ export function siteHead(): Plugin {
 /** What the inline preload script needs to make the same choice the app will. */
 interface PreloadPlan {
   readonly shared: string;
+  /** Whether to preload the text too; when not, the app asks for it once the links are in. */
+  readonly withText: boolean;
   readonly byTranslation: Readonly<Record<string, string>>;
   readonly byLocale: Readonly<Record<string, string>>;
   readonly fallback: string;
@@ -157,7 +174,8 @@ interface PreloadPlan {
 }
 
 /**
- * The script that starts the datasets downloading before the app has parsed.
+ * The script that starts the datasets downloading before the app has parsed: the links, and —
+ * on a page whose first screen is words — the text beside them.
  *
  * Written as a string because it has to run before any module does. `Object.keys` rather than
  * `in` throughout: `in` finds `toString` on the prototype of a plain object, so `?lang=toString`
@@ -167,26 +185,31 @@ export function preloadScript(plan: PreloadPlan): string {
   return [
     'if (!navigator.serviceWorker?.controller) {',
     `  const plan = ${JSON.stringify(plan)};`,
-    '  const read = (key) => { try { return localStorage.getItem(key); } catch { return null; } };',
-    '  const pick = (map, key) => (key !== null && Object.keys(map).includes(key) ? map[key] : null);',
-    '  const params = new URL(location.href).searchParams;',
-    '  const lang =',
-    '    pick(plan.byLocale, params.get("lang")) !== null',
-    '      ? params.get("lang")',
-    '      : pick(plan.byLocale, read(plan.localeKey)) !== null',
-    '        ? read(plan.localeKey)',
-    '        : (navigator.languages || [])',
-    '            .map((tag) => String(tag).toLowerCase().split("-")[0])',
-    '            .find((tag) => Object.keys(plan.byLocale).includes(tag)) ?? null;',
-    '  const text =',
-    '    pick(plan.byTranslation, params.get("t")) ??',
-    '    pick(plan.byTranslation, read(plan.translationKey)) ??',
-    '    pick(plan.byLocale, lang) ??',
-    '    plan.fallback;',
-    '  for (const href of [plan.shared, text]) {',
+    '  const preload = (href) => {',
     '    const link = document.createElement("link");',
     '    link.rel = "preload"; link.as = "fetch"; link.crossOrigin = "anonymous";',
     '    link.href = href; document.head.append(link);',
+    '  };',
+    '  preload(plan.shared);',
+    '  if (plan.withText) {',
+    '    const read = (key) => { try { return localStorage.getItem(key); } catch { return null; } };',
+    '    const pick = (map, key) =>',
+    '      key !== null && Object.keys(map).includes(key) ? map[key] : null;',
+    '    const params = new URL(location.href).searchParams;',
+    '    const lang =',
+    '      pick(plan.byLocale, params.get("lang")) !== null',
+    '        ? params.get("lang")',
+    '        : pick(plan.byLocale, read(plan.localeKey)) !== null',
+    '          ? read(plan.localeKey)',
+    '          : (navigator.languages || [])',
+    '              .map((tag) => String(tag).toLowerCase().split("-")[0])',
+    '              .find((tag) => Object.keys(plan.byLocale).includes(tag)) ?? null;',
+    '    preload(',
+    '      pick(plan.byTranslation, params.get("t")) ??',
+    '        pick(plan.byTranslation, read(plan.translationKey)) ??',
+    '        pick(plan.byLocale, lang) ??',
+    '        plan.fallback,',
+    '    );',
     '  }',
     '}',
   ].join('\n');

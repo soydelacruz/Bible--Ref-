@@ -67,6 +67,77 @@ describe('ReferenceSearch', () => {
   });
 });
 
+describe('ReferenceSearch, before the text has arrived', () => {
+  const JOHN_4_10 = verseIndex('John', 4, 10);
+  const { translation } = createVizData(
+    [],
+    new Map([[JOHN_4_10, 'He would have given you living water.']]),
+  );
+
+  it('opens references at once: they need no text', async () => {
+    const onSelect = vi.fn();
+    render(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        textUnavailable="loading"
+        onSelect={onSelect}
+      />,
+    );
+    await userEvent.type(screen.getByRole('searchbox'), 'John 3:16{Enter}');
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'verse', verse: verseIndex('John', 3, 16) });
+  });
+
+  it('holds a search for words until the text is here, then shows what it finds', async () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        textUnavailable="loading"
+        onSelect={onSelect}
+      />,
+    );
+    await userEvent.type(screen.getByRole('searchbox'), 'living water{Enter}');
+    // Waiting, not "nothing found": the words have not been searched yet.
+    expect(screen.getByRole('status').textContent).toBe('Loading the text…');
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    rerender(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        translation={translation}
+        onSelect={onSelect}
+      />,
+    );
+    expect(screen.getByRole('status').textContent).toBe('1 verse contains “living water”.');
+  });
+
+  it('forgets a held search once the reader types something else', async () => {
+    render(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        textUnavailable="loading"
+        onSelect={vi.fn()}
+      />,
+    );
+    const input = screen.getByRole('searchbox');
+    await userEvent.type(input, 'living water{Enter}');
+    await userEvent.type(input, 's');
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('says the text could not be loaded rather than that nothing matched', async () => {
+    render(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        textUnavailable="failed"
+        onSelect={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByRole('searchbox'), 'living water{Enter}');
+    expect(screen.getByRole('alert').textContent).toMatch(/could not be loaded/);
+  });
+});
+
 describe('ReferenceSearch, given words rather than a reference', () => {
   const JOHN_4_10 = verseIndex('John', 4, 10);
   const JER_2_13 = verseIndex('Jer', 2, 13);

@@ -12,5 +12,7 @@ export const clusters = {
   shortTitleKey: 'view.clusters.short',
   icon: ClustersIcon,
   openLabelKey: 'view.clusters.open',
+  // Drawn from the links alone: it shows before the text has arrived.
+  drawsBeforeText: true,
   Component: lazy(async () => ({ default: (await explorer).ClustersExplorer })),
 } as const satisfies Visualization;

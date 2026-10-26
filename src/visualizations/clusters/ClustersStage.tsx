@@ -13,7 +13,7 @@ import controls from '../shared/components/controls.module.css';
 import { animate, MAX_PIXEL_RATIO } from '../shared/frames.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
-import type { VizData } from '../shared/viz-data.ts';
+import type { VizCore } from '../shared/viz-data.ts';
 import {
   drawnLinks,
   groupHighlight,
@@ -30,7 +30,7 @@ import { drawBase, drawOverlay } from './clusters-drawing.ts';
 import styles from './ClustersStage.module.css';
 
 interface ClustersStageProps {
-  readonly data: VizData;
+  readonly data: VizCore;
   /** Whether the view is on screen; a hidden one draws nothing. */
   readonly active: boolean;
   readonly filter: LinkFilter;
