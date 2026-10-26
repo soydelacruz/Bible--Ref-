@@ -2,17 +2,29 @@
  * Downloads the raw source files listed in `data/sources.json` into `data/raw/` and verifies them
  * against their pinned SHA-256 checksums.
  *
- *   npm run data:fetch               download missing or outdated files, verify checksums
- *   npm run data:fetch -- --update   accept new upstream versions and re-pin their checksums
+ *   npm run data:fetch                   download missing files, verify every checksum
+ *   npm run data:fetch -- --update       check upstream for new versions, show what changed in
+ *                                        each and re-pin it
+ *   npm run data:fetch -- --update web   the same for the sources named, and only those
  */
 import { parseArgs } from 'node:util';
-import { download } from './lib/download.ts';
+import { describePinnedChange } from './lib/changes.ts';
+import { download, unpackedSourceUnavailable } from './lib/download.ts';
 import { formatBytes, readFileIfExists, today, writeFileAtomic } from './lib/files.ts';
 import { rawFilePath } from './lib/paths.ts';
-import { pinnedDigest, readSources, writeSources, type RawSource } from './lib/sources.ts';
+import {
+  findSource,
+  pinnedContent,
+  pinnedDigest,
+  rawFileContent,
+  readSources,
+  writeSources,
+  type RawSource,
+} from './lib/sources.ts';
 
-const { values: options } = parseArgs({
+const { values: options, positionals: sourceIds } = parseArgs({
   options: { update: { type: 'boolean', default: false } },
+  allowPositionals: true,
 });
 
 /**
@@ -32,6 +44,10 @@ function repinExtractedSource(
     );
   }
   const sha256 = pinnedDigest(source, existing);
+  if (sha256 === source.sha256) {
+    console.log(`✓ ${source.id}: up to date (${formatBytes(existing.byteLength)})`);
+    return source;
+  }
   if (!options.update) {
     throw new Error(
       `${source.id}: data/raw/${source.fileName} does not match its pin (expected SHA-256 ` +
@@ -50,20 +66,35 @@ function repinExtractedSource(
 async function fetchSource(source: RawSource): Promise<RawSource> {
   const path = rawFilePath(source.fileName);
   const existing = await readFileIfExists(path);
-  if (existing && pinnedDigest(source, existing) === source.sha256) {
-    console.log(`✓ ${source.id}: up to date (${formatBytes(existing.byteLength)})`);
-    return source;
-  }
   if (source.extractedBy !== undefined) {
     return repinExtractedSource(source, source.extractedBy, existing);
   }
+  const pinned =
+    existing !== undefined && pinnedDigest(source, existing) === source.sha256
+      ? existing
+      : undefined;
+  // Only an update looks upstream for a file that already matches its pin: a copy the repository
+  // carries always does, so otherwise a newer version could never be found.
+  if (pinned && !options.update) {
+    console.log(`✓ ${source.id}: up to date (${formatBytes(pinned.byteLength)})`);
+    return source;
+  }
+  if (source.unpacked === true && !options.update) {
+    throw new Error(
+      unpackedSourceUnavailable(source, existing ? 'does not match its pin' : 'is missing'),
+    );
+  }
 
   console.log(`↓ ${source.id}: downloading ${source.url}`);
-  const content = await download(source.url);
+  const content = rawFileContent(source, await download(source.url));
   const sha256 = pinnedDigest(source, content);
   if (sha256 === source.sha256) {
-    await writeFileAtomic(path, content);
-    console.log(`✓ ${source.id}: downloaded and verified (${formatBytes(content.byteLength)})`);
+    if (pinned) {
+      console.log(`✓ ${source.id}: still the upstream version (${formatBytes(pinned.byteLength)})`);
+    } else {
+      await writeFileAtomic(path, content);
+      console.log(`✓ ${source.id}: downloaded and verified (${formatBytes(content.byteLength)})`);
+    }
     return source;
   }
   if (!options.update) {
@@ -76,13 +107,24 @@ async function fetchSource(source: RawSource): Promise<RawSource> {
   console.log(
     `↻ ${source.id}: pinned the new upstream version (${formatBytes(content.byteLength)})`,
   );
+  const changes = pinned
+    ? describePinnedChange(source, pinnedContent(source, pinned), pinnedContent(source, content))
+    : ['No pinned copy was here to compare it with.'];
+  for (const line of changes) {
+    console.log(`  ${line}`);
+  }
   return { ...source, sha256, retrievedAt: today() };
 }
 
 const sources = await readSources();
+const selected = new Set(sourceIds.map((id) => findSource(sources, id)));
 const updatedSources: RawSource[] = [];
 let failed = false;
 for (const source of sources) {
+  if (selected.size > 0 && !selected.has(source)) {
+    updatedSources.push(source);
+    continue;
+  }
   try {
     updatedSources.push(await fetchSource(source));
   } catch (error) {

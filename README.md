@@ -250,19 +250,28 @@ every link.
 
 The smaller files are committed to [`data/raw/`](data/raw/) exactly as downloaded;
 [`data/sources.json`](data/sources.json) pins every source by SHA-256, and anything not committed
-(the eBible.org archives, about 4 MB each) is downloaded by the build and checked against its pin, so a dataset is
-never built from a file nobody vouched for. `npm run dev` and `npm run build` turn them into the app's
-datasets in `public/data/` (generated, git-ignored), validated against the canonical KJV
-versification (31,102 verses).
+(the eBible.org archives, about 4 MB each, and STEPBible's tagged text) is downloaded by the build
+and checked against its pin, so a dataset is never built from a file nobody vouched for.
+`npm run dev` and `npm run build` turn them into the app's datasets in `public/data/` (generated,
+git-ignored), validated against the canonical KJV versification (31,102 verses).
 
-To adopt a newer upstream version (OpenBible.info updates its vote counts from time to time):
+One eBible.org text is committed all the same: the World English Bible's. The KJV, ASV and YLT are
+finished texts, but the WEB is a living translation whose editors keep correcting it, and each
+revision replaces the file eBible.org serves. Downloaded by the build, every revision stopped
+matching the pin and failed every deploy until someone re-pinned it; committed, the site builds
+from the copy that was reviewed, and adopting a revision is an ordinary pull request
+([`data/raw/README.md`](data/raw/README.md) has the details).
+
+To adopt a newer upstream version (OpenBible.info updates its vote counts from time to time, and
+the WEB's editors publish their corrections as they make them, sometimes days apart):
 
 ```sh
-npm run data:fetch -- --update   # download and re-pin the new version
-npm run data:build               # rebuild, then review the numbers on /debug/
+npm run data:fetch -- --update       # check every source upstream, show what changed, re-pin it
+npm run data:fetch -- --update web   # or only the sources named
+npm run data:build                   # rebuild, then review the numbers on /debug/
 ```
 
-Then commit `data/raw/` and `data/sources.json`.
+Then commit `data/raw/` and `data/sources.json`, and say in the pull request what changed upstream.
 
 ## Development
 
