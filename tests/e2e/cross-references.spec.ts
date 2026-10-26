@@ -44,7 +44,7 @@ test.describe('cross-references', () => {
 
   test('the genre breakdown opens', async ({ page }) => {
     await openPassage(page, 'John.3.16');
-    const band = page.locator(PANEL).getByRole('button', { name: /Connects to/ });
+    const band = page.locator(PANEL).getByRole('button', { name: /Links by genre/ });
     await band.click();
     await expect(band).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator(PANEL).getByText('Gospels').first()).toBeVisible();
@@ -55,9 +55,10 @@ test.describe('cross-references', () => {
   }) => {
     await page.goto('./');
     await waitForApp(page);
+    // The default filter says what it is: the best-rated links, with a way to see more.
     const shownBefore = await page
       .locator(ACTIVE)
-      .getByText(/of 344,799 links shown/)
+      .getByText(/best-rated of 344,799 cross-references/)
       .textContent();
     await page
       .locator(ACTIVE)
@@ -65,9 +66,23 @@ test.describe('cross-references', () => {
       .click();
     await page.locator(ACTIVE).getByRole('combobox').first().selectOption('20');
     await expect(page).toHaveURL(/votes=20/);
-    await expect(page.locator(ACTIVE).getByText(/of 344,799 links shown/)).not.toHaveText(
-      shownBefore ?? '',
+    await expect(
+      page.locator(ACTIVE).getByText(/of 344,799 cross-references shown/),
+    ).not.toHaveText(shownBefore ?? '');
+  });
+
+  test('the summary line opens the Filters menu while the default filter is on', async ({
+    page,
+  }) => {
+    await page.goto('./');
+    await waitForApp(page);
+    await page.locator(ACTIVE).getByLabel('Summary').getByText('Filters', { exact: true }).click();
+    // The header's button is the menu's one name for a keyboard or a screen reader.
+    await expect(page.locator(ACTIVE).getByRole('button', { name: /Filters/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
     );
+    await expect(page.locator(ACTIVE).getByRole('combobox').first()).toHaveValue('4');
   });
 
   test('a filtered link is shared by its address', async ({ page }) => {

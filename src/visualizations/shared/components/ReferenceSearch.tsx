@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type SubmitEvent } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type SubmitEvent } from 'react';
 import { passageFromReference, versePassage, type Passage } from '../../../core/bible/passage.ts';
 import { formatVerseRef } from '../../../core/bible/reference-format.ts';
 import { parseReference, type ReferenceParseResult } from '../../../core/bible/reference-parse.ts';
@@ -8,10 +8,36 @@ import { describeReferenceError } from '../../../i18n/describe-reference-error.t
 import { useLocalization } from '../../../i18n/use-locale.tsx';
 import { CloseIcon, SearchIcon } from '../../../shared/ui/icons.tsx';
 import type { Translation } from '../../../translations/translation.ts';
+import { focusPassageTitle } from '../panel-focus.ts';
 import styles from './controls.module.css';
 
 /** More than a reader scrolls through; past this, the box asks for a narrower search instead. */
 const MAX_RESULTS = 100;
+
+/** Phones, where the box starts too narrow for its example (the width controls.module.css uses). */
+const NARROW_SCREEN = '(max-width: 47.99rem)';
+
+/** Follows the narrow-screen query as the window is resized or turned. */
+function subscribeToNarrowScreen(onChange: () => void): () => void {
+  const list = window.matchMedia(NARROW_SCREEN);
+  list.addEventListener('change', onChange);
+  return () => {
+    list.removeEventListener('change', onChange);
+  };
+}
+
+function isNarrowScreen(): boolean {
+  return window.matchMedia(NARROW_SCREEN).matches;
+}
+
+/**
+ * What the box says under itself. A reference it cannot open is an `error`; a search that finds
+ * nothing is a `notice`, an answer rather than a mistake, and is not dressed as one.
+ */
+interface BoxMessage {
+  readonly text: string;
+  readonly tone: 'error' | 'notice';
+}
 
 interface ReferenceSearchProps {
   readonly versification: Versification;
@@ -60,11 +86,15 @@ export function ReferenceSearch({
 }: ReferenceSearchProps) {
   const localization = useLocalization();
   const { t, books } = localization;
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<BoxMessage | null>(null);
   const [results, setResults] = useState<TextResults | null>(null);
   // Words searched for before the text had arrived, to be searched the moment it does.
   const [waiting, setWaiting] = useState<WordSearch | null>(null);
-  const errorId = useId();
+  // On a phone the example is cut to "Joh", so the empty box says only what it is for; once it
+  // has focus, the reader is about to type and the full example shows.
+  const isNarrow = useSyncExternalStore(subscribeToNarrowScreen, isNarrowScreen);
+  const [isFocused, setIsFocused] = useState(false);
+  const messageId = useId();
   const resultsId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,12 +116,10 @@ export function ReferenceSearch({
   }, [results]);
 
   const finish = (passage: Passage) => {
-    setError(null);
+    setMessage(null);
     setResults(null);
     formRef.current?.reset();
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur(); // Closes the on-screen keyboard on phones.
-    }
+    focusPassageTitle(document.activeElement); // Also closes the on-screen keyboard on phones.
     onSelect(passage);
   };
 
@@ -118,10 +146,10 @@ export function ReferenceSearch({
     if (wantsWords && translation === undefined && textUnavailable !== undefined) {
       setResults(null);
       if (textUnavailable === 'loading') {
-        setError(null);
+        setMessage({ text: t('loading.text'), tone: 'notice' });
         setWaiting(search);
       } else {
-        setError(t('error.datasetUnavailable'));
+        setMessage({ text: t('error.datasetUnavailable'), tone: 'error' });
       }
       return;
     }
@@ -132,15 +160,15 @@ export function ReferenceSearch({
   const showMatches = ({ typed, words, reference }: WordSearch, text: Translation | undefined) => {
     const found = text?.search(words, MAX_RESULTS) ?? null;
     if (found !== null && found.totalCount > 0) {
-      setError(null);
+      setMessage(null);
       setResults({ query: words, ...found });
       return;
     }
     setResults(null);
     if (reference === null || (text !== undefined && reference.error.kind === 'unreadable')) {
-      setError(t('search.noResults')(words));
+      setMessage({ text: t('search.noResults')(words), tone: 'notice' });
     } else if (typed.trim() !== '') {
-      setError(describeReferenceError(reference.error, localization));
+      setMessage({ text: describeReferenceError(reference.error, localization), tone: 'error' });
     }
   };
 
@@ -148,6 +176,7 @@ export function ReferenceSearch({
   // render rather than a frame later.
   if (waiting !== null && translation !== undefined) {
     setWaiting(null);
+    setMessage(null);
     showMatches(waiting, translation);
   }
 
@@ -170,10 +199,12 @@ export function ReferenceSearch({
         name="reference"
         type="search"
         className={styles.input}
-        placeholder={t('search.placeholder')}
+        placeholder={
+          isNarrow && !isFocused ? t('search.placeholder.short') : t('search.placeholder')
+        }
         aria-label={t('search.label')}
-        aria-invalid={error !== null}
-        aria-describedby={error === null ? undefined : errorId}
+        aria-invalid={message?.tone === 'error'}
+        aria-describedby={message === null ? undefined : messageId}
         aria-controls={results === null ? undefined : resultsId}
         autoComplete="off"
         // The longest real reference is ~25 characters; this only bounds what a paste can hand
@@ -181,20 +212,26 @@ export function ReferenceSearch({
         maxLength={120}
         enterKeyHint="go"
         onChange={() => {
-          setError(null);
+          setMessage(null);
           setWaiting(null);
         }}
+        onFocus={() => {
+          setIsFocused(true);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+        }}
       />
-      {error !== null && (
-        <p id={errorId} role="alert" className={styles.error}>
-          {error}
-        </p>
-      )}
-      {waiting !== null && (
-        <p role="status" className={`${styles.error} ${styles.pending}`}>
-          {t('loading.text')}
-        </p>
-      )}
+      {message !== null &&
+        (message.tone === 'error' ? (
+          <p id={messageId} role="alert" className={styles.error}>
+            {message.text}
+          </p>
+        ) : (
+          <p id={messageId} role="status" className={styles.notice}>
+            {message.text}
+          </p>
+        ))}
       {results !== null && translation !== undefined && (
         <SearchResults
           id={resultsId}

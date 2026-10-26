@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FiltersIcon } from '../../../shared/ui/icons.tsx';
 import { MenuButton } from './MenuButton.tsx';
 
@@ -48,6 +48,28 @@ describe('MenuButton', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Filters' }));
     await userEvent.click(screen.getByText('menu contents'));
     expect(screen.getByText('menu contents')).toBeDefined();
+  });
+
+  it('can be opened and closed from elsewhere, and reports its own button', async () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <MenuButton label="Filters" open onOpenChange={onOpenChange}>
+        <p>menu contents</p>
+      </MenuButton>,
+    );
+    expect(screen.getByText('menu contents')).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    rerender(
+      <MenuButton label="Filters" open={false} onOpenChange={onOpenChange}>
+        <p>menu contents</p>
+      </MenuButton>,
+    );
+    expect(screen.queryByText('menu contents')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
   });
 
   it('closes on Escape', async () => {

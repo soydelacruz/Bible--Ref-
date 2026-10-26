@@ -286,7 +286,8 @@ export function ClustersStage({
           {t('clusters.wholeBible')}
         </button>
       )}
-      <p className={styles.hint}>{t('clusters.hint')}</p>
+      <p className={`${styles.hint} ${styles.pointerHint}`}>{t('clusters.hint')}</p>
+      <p className={`${styles.hint} ${styles.touchHint}`}>{t('clusters.hint.touch')}</p>
     </div>
   );
 }

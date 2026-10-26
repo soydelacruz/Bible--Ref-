@@ -38,7 +38,7 @@ function panelFor(passage: Passage, onSelect = vi.fn(), filter = EVERY_LINK) {
   );
 }
 
-/** The path's own section: the panel has other lists in it, such as the study links. */
+/** The path's own section: the panel has other lists in it (the study links) and a live region. */
 function pathSection() {
   const section = screen.getByRole('heading', { name: /^Path/ }).closest('section');
   if (!section) {
@@ -52,14 +52,14 @@ async function findPathTo(reference: string) {
     screen.getByRole('textbox', { name: 'Passage to find a path to' }),
     reference,
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Find' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Find path' }));
 }
 
 describe('PathSection', () => {
   it('shows the chain of links from the passage to the one asked for', async () => {
     render(panelFor(versePassage(GEN_3_15)));
     await findPathTo('Rev 12:9');
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(pathSection().getByRole('status').textContent).toBe(
       'Genesis 3:15 to Revelation 12:9 in 2 links:',
     );
     const steps = within(pathSection().getByRole('list')).getAllByRole('listitem');
@@ -83,7 +83,7 @@ describe('PathSection', () => {
     expect(onSelect).toHaveBeenCalledWith(versePassage(ROM_16_20));
 
     rerender(panelFor(versePassage(ROM_16_20), onSelect));
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(pathSection().getByRole('status').textContent).toBe(
       'Romans 16:20 to Revelation 12:9 in 1 link:',
     );
   });
@@ -91,7 +91,7 @@ describe('PathSection', () => {
   it('says so when the passage is already the destination', async () => {
     render(panelFor(versePassage(GEN_3_15)));
     await findPathTo('Gen 3');
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(pathSection().getByRole('status').textContent).toBe(
       'This passage is Genesis 3, or contains it.',
     );
     expect(pathSection().queryByRole('list')).toBeNull();
@@ -100,7 +100,7 @@ describe('PathSection', () => {
   it('says so when no chain of links gets there', async () => {
     render(panelFor(versePassage(GEN_3_15)));
     await findPathTo('Isa 7:14');
-    expect(screen.getByRole('status').textContent).toMatch(
+    expect(pathSection().getByRole('status').textContent).toMatch(
       /^No chain of links reaches Isaiah 7:14/,
     );
   });
@@ -108,23 +108,38 @@ describe('PathSection', () => {
   it('only follows the links the filters show', async () => {
     render(panelFor(versePassage(GEN_3_15), vi.fn(), DEFAULT_LINK_FILTER));
     await findPathTo('Rev 12:9');
-    expect(screen.getByRole('status').textContent).toMatch(/^No chain of links/);
+    expect(pathSection().getByRole('status').textContent).toMatch(/^No chain of links/);
   });
 
   it('explains a reference it cannot read, and finds nothing', async () => {
     render(panelFor(versePassage(GEN_3_15)));
     await findPathTo('Hesitations 4:4');
-    expect(screen.getByRole('alert').textContent).toBe('Unknown book “Hesitations”.');
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toBe(
+      'No book is called “Hesitations”. Try a name or abbreviation, like “Rev 12:9”.',
+    );
+    expect(pathSection().queryByRole('status')).toBeNull();
     await userEvent.type(screen.getByRole('textbox', { name: 'Passage to find a path to' }), 'x');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('clears the last path when the next entry cannot be read', async () => {
+    render(panelFor(versePassage(GEN_3_15)));
+    await findPathTo('Rev 12:9');
+    expect(pathSection().getByRole('list')).toBeDefined();
+    const input = screen.getByRole('textbox', { name: 'Passage to find a path to' });
+    await userEvent.clear(input);
+    await findPathTo('Hesitations 4:4');
+    expect(screen.getByRole('alert')).toBeDefined();
+    // No path left under the message, to be read as the answer to it.
+    expect(pathSection().queryByRole('status')).toBeNull();
+    expect(pathSection().queryByRole('list')).toBeNull();
   });
 
   it('can be cleared', async () => {
     render(panelFor(versePassage(GEN_3_15)));
     await findPathTo('Rev 12:9');
     await userEvent.click(screen.getByRole('button', { name: 'Clear path' }));
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(pathSection().queryByRole('status')).toBeNull();
     expect(pathSection().queryByRole('list')).toBeNull();
   });
 });

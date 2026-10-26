@@ -60,10 +60,30 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Unfolds the notes, which start folded; a reader's choice lasts, so it may be open already. */
+async function openNotes() {
+  const band = await screen.findByRole('button', { name: /^NET notes/ });
+  if (band.getAttribute('aria-expanded') === 'false') {
+    await userEvent.click(band);
+  }
+}
+
 describe('NotesSection', () => {
+  // First, before any test unfolds them: the fold is remembered for the rest of the file.
+  it('starts folded, the band saying how many notes there are', async () => {
+    serve(createStudyNotesFile('Gen', NOTES));
+    render(<NotesSection verse={GEN_1_1} data={inTheNet()} onSelect={vi.fn()} />);
+    const band = await screen.findByRole('button', { name: /^NET notes/ });
+    expect(band.getAttribute('aria-expanded')).toBe('false');
+    expect(band.textContent).toContain('2 notes');
+    // The credit is a condition of using the notes, so it shows while they are folded too.
+    expect(screen.getByText(/Biblical Studies Press/)).toBeDefined();
+  });
+
   it('lists a verse’s notes under the words they are about, with the credit', async () => {
     serve(createStudyNotesFile('Gen', NOTES));
     render(<NotesSection verse={GEN_1_1} data={inTheNet()} onSelect={vi.fn()} />);
+    await openNotes();
     expect(await screen.findByText('In the beginning')).toBeDefined();
     expect(screen.getByText('God')).toBeDefined();
     expect(screen.getByText('Or “when God began”.')).toBeDefined();
@@ -78,6 +98,7 @@ describe('NotesSection', () => {
   it('narrows the notes to one kind, and back', async () => {
     serve(createStudyNotesFile('Gen', NOTES));
     render(<NotesSection verse={GEN_1_1} data={inTheNet()} onSelect={vi.fn()} />);
+    await openNotes();
     await userEvent.click(await screen.findByRole('button', { name: 'Wording 1' }));
     expect(screen.getByText('Or “when God began”.')).toBeDefined();
     expect(screen.queryByText(/A long study note/)).toBeNull();
@@ -88,6 +109,7 @@ describe('NotesSection', () => {
   it('folds a long note until the reader asks for all of it', async () => {
     serve(createStudyNotesFile('Gen', NOTES));
     render(<NotesSection verse={GEN_1_1} data={inTheNet()} onSelect={vi.fn()} />);
+    await openNotes();
     const more = await screen.findByRole('button', { name: 'Read the whole note' });
     expect(more.getAttribute('aria-expanded')).toBe('false');
     await userEvent.click(more);
@@ -99,6 +121,7 @@ describe('NotesSection', () => {
     serve(createStudyNotesFile('Gen', NOTES));
     const onSelect = vi.fn();
     render(<NotesSection verse={GEN_1_1} data={inTheNet()} onSelect={onSelect} />);
+    await openNotes();
     await userEvent.click(await screen.findByRole('button', { name: 'Go to Genesis 1:2' }));
     expect(onSelect).toHaveBeenCalledWith({ kind: 'verse', verse: GEN_1_2 });
   });
@@ -106,6 +129,7 @@ describe('NotesSection', () => {
   it('says whose wording the notes follow when another translation is read', async () => {
     serve(createStudyNotesFile('Gen', NOTES));
     render(<NotesSection verse={GEN_1_1} data={createVizData()} onSelect={vi.fn()} />);
+    await openNotes();
     expect(await screen.findByText(/the text above is the BSB/)).toBeDefined();
     // The words a note is about are the NET's, so they are not shown under another text.
     expect(screen.queryByText('In the beginning')).toBeNull();

@@ -93,7 +93,11 @@ export function SavedMenu({
                     <span className={styles.note}>{entry.note}</span>
                   ) : (
                     translation !== null && (
-                      <span className={library.snippet} lang={translation.manifest.language}>
+                      <span
+                        className={library.snippet}
+                        lang={translation.manifest.language}
+                        dir={translation.manifest.direction}
+                      >
                         {verseTextOrNote(translation, verse)}
                       </span>
                     )
@@ -105,17 +109,19 @@ export function SavedMenu({
         </ul>
       )}
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={controls.button}
-          disabled={verses.length === 0}
-          onClick={() => {
-            downloadText(serializeLibrary(store.library, versification), EXPORT_FILE_NAME);
-          }}
-        >
-          <ExportIcon />
-          {t('saved.export')}
-        </button>
+        {/* Nothing to export yet: a button that can only be disabled is one more thing to read. */}
+        {verses.length > 0 && (
+          <button
+            type="button"
+            className={controls.button}
+            onClick={() => {
+              downloadText(serializeLibrary(store.library, versification), EXPORT_FILE_NAME);
+            }}
+          >
+            <ExportIcon />
+            {t('saved.export')}
+          </button>
+        )}
         <button
           type="button"
           className={controls.button}

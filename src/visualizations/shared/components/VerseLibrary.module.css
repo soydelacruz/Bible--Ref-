@@ -13,55 +13,99 @@
 
 .swatches {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-2);
   align-items: center;
 }
 
+/* The colours themselves, at full strength: a pale disc reads as a control that is switched off.
+   The pale tint is for the text a colour marks (see `.highlighted`). */
 .swatch {
+  position: relative;
   display: inline-grid;
   place-items: center;
-  inline-size: 1.75rem;
-  block-size: 1.75rem;
+  inline-size: 2rem;
+  block-size: 2rem;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 50%;
   background: none;
   color: var(--color-text-muted);
   cursor: pointer;
+  transition: scale 120ms ease-out;
 }
 
 .swatch[data-color] {
-  background: var(--highlight);
+  /* A darker rim of the same colour keeps the yellow distinct from a light page. */
+  border-color: color-mix(in oklab, var(--swatch), var(--color-text) 30%);
+  background: var(--swatch);
 }
 
+.swatch:hover {
+  scale: 1.08;
+}
+
+.swatch:active {
+  scale: 0.94;
+}
+
+/* The chosen colour: a ring with a gap, drawn as a shadow so that a focus outline can sit
+   outside it rather than replace it. */
 .swatch[aria-pressed='true'] {
-  outline: 2px solid var(--color-text);
-  outline-offset: 1px;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-text);
 }
 
 .swatch:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
+  outline-offset: 4px;
 }
 
-/* The highlight colours: translucent, so the text keeps its own colour in either theme. */
+/* A finger needs more than the disc: the target grows to 44px without the discs moving apart
+   more than their own targets need. */
+@media (pointer: coarse) {
+  .swatches {
+    gap: var(--space-3);
+  }
+
+  .swatch::after {
+    position: absolute;
+    inset: -0.375rem;
+    border-radius: 50%;
+    content: '';
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch {
+    transition: none;
+  }
+}
+
+/* The highlight colours: the swatch in full, and the same hue translucent behind marked text, so
+   the text keeps its own colour in either theme. */
 [data-color='yellow'] {
+  --swatch: light-dark(#eab308, #facc15);
   --highlight: rgb(250 204 21 / 0.35);
 }
 
 [data-color='green'] {
+  --swatch: light-dark(#22c55e, #4ade80);
   --highlight: rgb(74 222 128 / 0.3);
 }
 
 [data-color='blue'] {
+  --swatch: light-dark(#3b82f6, #60a5fa);
   --highlight: rgb(96 165 250 / 0.35);
 }
 
 [data-color='pink'] {
+  --swatch: light-dark(#ec4899, #f472b6);
   --highlight: rgb(244 114 182 / 0.35);
 }
 
-.noteLabel {
+/* "Highlight" and "Note": what the controls beside and below them are for. */
+.label {
   color: var(--color-text-muted);
   font-size: 0.75rem;
   font-weight: 600;

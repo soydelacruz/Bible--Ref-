@@ -46,8 +46,31 @@ describe('FiltersMenu', () => {
   it('offers every vote threshold once opened', async () => {
     renderMenu();
     await openMenu(/Filters/);
-    expect(screen.getByRole('option', { name: 'All' })).toBeDefined();
-    expect(screen.getByRole('option', { name: '≥ 100' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'Any number of votes' })).toBeDefined();
+    expect(screen.getByRole('option', { name: '100 or more votes' })).toBeDefined();
+  });
+
+  it('reads as a sentence from its label into the choice', async () => {
+    renderMenu();
+    await openMenu(/Filters/);
+    expect(screen.getByRole('combobox', { name: /^Show links with/ })).toHaveProperty('value', '4');
+    // The note names the threshold in the same words as the choice.
+    expect(screen.getByText(/\(4 or more votes\)/)).toBeDefined();
+  });
+
+  it('can be opened by the view, for a link to it elsewhere on the page', () => {
+    render(
+      <FiltersMenu
+        filter={DEFAULT_LINK_FILTER}
+        defaults={DEFAULT_LINK_FILTER}
+        onChange={vi.fn()}
+        shownLinks={120_000}
+        totalLinks={344_799}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: /^Show links with/ })).toBeDefined();
   });
 
   it('reports the threshold a reader picks', async () => {
@@ -200,9 +223,39 @@ describe('LinkStats', () => {
     expect(stats.textContent).toContain('of 344,799');
   });
 
+  it('names cross-references in full, where a reader first meets them', () => {
+    render(<LinkStats summary={SUMMARY} />);
+    expect(screen.getByLabelText('Summary').textContent).toContain(
+      '120,000 of 344,799 cross-references shown',
+    );
+  });
+
   it('leaves out the total when nothing is filtered', () => {
     render(<LinkStats summary={{ ...SUMMARY, shownLinks: SUMMARY.totalLinks }} />);
     expect(screen.getByLabelText('Summary').textContent).not.toContain('of 344,799');
+  });
+
+  it('says the default filter shows the best rated, and opens the Filters menu', async () => {
+    const onShowFilters = vi.fn();
+    render(<LinkStats summary={SUMMARY} isFilterDefault onShowFilters={onShowFilters} />);
+    expect(screen.getByLabelText('Summary').textContent).toContain(
+      '120,000 best-rated of 344,799 cross-references · Filters',
+    );
+    await userEvent.click(screen.getByText('Filters'));
+    expect(onShowFilters).toHaveBeenCalledOnce();
+  });
+
+  it('leaves the Filters link to the pointer: the header names the menu for everyone else', () => {
+    render(<LinkStats summary={SUMMARY} isFilterDefault onShowFilters={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Filters' })).toBeNull();
+    expect(screen.getByText('Filters').getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('drops the best-rated wording once the filter is changed', () => {
+    render(<LinkStats summary={SUMMARY} isFilterDefault={false} onShowFilters={vi.fn()} />);
+    const text = screen.getByLabelText('Summary').textContent;
+    expect(text).not.toContain('best-rated');
+    expect(text).not.toContain('Filters');
   });
 
   it('offers a hint for a mouse and one for a touch screen', () => {

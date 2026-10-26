@@ -27,7 +27,7 @@ export function Credits({ translation, inspiration }: CreditsProps) {
   const { t } = useLocalization();
   return (
     <>
-      <span className={styles.detail}>{t('credits.links')} </span>
+      <span className={styles.label}>{t('credits.links')} </span>
       <a href="https://www.openbible.info/labs/cross-references/" target="_blank" rel="noreferrer">
         OpenBible.info
       </a>{' '}

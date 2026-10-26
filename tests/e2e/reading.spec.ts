@@ -8,7 +8,7 @@ test.describe('reading the Bible', () => {
     await waitForApp(page);
     await expect(page.locator(`${ACTIVE} canvas`).first()).toBeVisible();
     await expect(page.getByText(/31,102 verses/)).toBeVisible();
-    await expect(page.getByText(/of 344,799 links shown/)).toBeVisible();
+    await expect(page.getByText(/best-rated of 344,799 cross-references/)).toBeVisible();
     expect(errors).toEqual([]);
   });
 
@@ -68,6 +68,37 @@ test.describe('reading the Bible', () => {
     await link.click();
     await expect(page.locator(PANEL).getByRole('heading', { name: 'Romans 5:8' })).toBeVisible();
     await expect(page).toHaveURL(/ref=Rom\.5\.8/);
+  });
+
+  test('the keyboard follows a cross-reference, and lands on the title it leads to', async ({
+    page,
+  }) => {
+    await openPassage(page, 'John.3.16');
+    await page
+      .locator(PANEL)
+      .getByRole('button', { name: /^Romans 5:8/ })
+      .first()
+      .focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(PANEL).getByRole('heading', { name: 'Romans 5:8' })).toBeFocused();
+    // From there the keyboard carries on through the panel, not from the top of the page.
+    await page.keyboard.press('Tab');
+    await expect(page.locator(PANEL).getByRole('button', { name: 'Previous verse' })).toBeFocused();
+  });
+
+  test('a search lands on the passage title, and closing goes back to the search', async ({
+    page,
+  }) => {
+    await page.goto('./');
+    await waitForApp(page);
+    const search = page.locator(ACTIVE).getByRole('searchbox');
+    await search.fill('Ps 23:1');
+    await search.press('Enter');
+    await expect(page.locator(PANEL).getByRole('heading', { name: 'Psalm 23:1' })).toBeFocused();
+    await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(search).toBeFocused();
   });
 
   test('Back returns to the passage before it', async ({ page }) => {

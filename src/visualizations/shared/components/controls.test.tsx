@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GENRES } from '../../../core/bible/genres.ts';
 import { CANONICAL_VERSIFICATION } from '../../../core/bible/versification.ts';
 import { verseIndex } from '../../../test-utils/fixtures.ts';
@@ -227,10 +227,15 @@ describe('ReferenceSearch, given words rather than a reference', () => {
     expect(screen.getByRole('status').textContent).toBe('1 verse contains “mark”.');
   });
 
-  it('says so when no verse contains the words', async () => {
+  it('says so when no verse contains the words, as an answer rather than an error', async () => {
     const { input } = renderSearch();
     await userEvent.type(input, 'zebra crossing{Enter}');
-    expect(screen.getByRole('alert').textContent).toMatch(/^No verse contains “zebra crossing”/);
+    expect(screen.getByRole('status').textContent).toBe(
+      'No verse contains “zebra crossing”. Try other words, or a reference like “John 3:16”.',
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(input.getAttribute('aria-describedby')).toBe(screen.getByRole('status').id);
   });
 
   it('treats a missing chapter of a real book as a mistyped reference, not a search', async () => {
@@ -242,7 +247,53 @@ describe('ReferenceSearch, given words rather than a reference', () => {
   it('keeps the message for an unknown book when the words are nowhere in the text', async () => {
     const { input } = renderSearch();
     await userEvent.type(input, 'Hesitations 4:4{Enter}');
-    expect(screen.getByRole('alert').textContent).toBe('Unknown book “Hesitations”.');
+    expect(screen.getByRole('alert').textContent).toBe(
+      'No book is called “Hesitations”. Try a name or abbreviation, like “Rev 12:9”.',
+    );
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+});
+
+describe('ReferenceSearch on a phone', () => {
+  /** A stand-in for the narrow-screen media query, which can be turned like a phone. */
+  function stubNarrowScreen(matches: boolean) {
+    const listeners = new Set<() => void>();
+    const list = {
+      matches,
+      addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+      removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+    };
+    vi.spyOn(window, 'matchMedia').mockImplementation(() => list as unknown as MediaQueryList);
+    return (next: boolean) => {
+      list.matches = next;
+      for (const listener of listeners) listener();
+    };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('says only what the box is for until it is focused', async () => {
+    stubNarrowScreen(true);
+    render(<ReferenceSearch versification={CANONICAL_VERSIFICATION} onSelect={vi.fn()} />);
+    const input = screen.getByRole('searchbox');
+    expect(input.getAttribute('placeholder')).toBe('Search');
+    await userEvent.click(input);
+    expect(input.getAttribute('placeholder')).toBe('John 3:16, Ps 23 or words…');
+    await userEvent.tab();
+    expect(input.getAttribute('placeholder')).toBe('Search');
+  });
+
+  it('follows the screen as it changes width', () => {
+    const turn = stubNarrowScreen(false);
+    render(<ReferenceSearch versification={CANONICAL_VERSIFICATION} onSelect={vi.fn()} />);
+    const input = screen.getByRole('searchbox');
+    expect(input.getAttribute('placeholder')).toBe('John 3:16, Ps 23 or words…');
+    act(() => {
+      turn(true);
+    });
+    expect(input.getAttribute('placeholder')).toBe('Search');
   });
 });
 

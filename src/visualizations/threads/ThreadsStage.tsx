@@ -20,6 +20,7 @@ import { getNoteSourceManifest } from '../../notes/registry.ts';
 import type { CitationHandlers } from '../shared/components/NoteText.tsx';
 import { useBookNotes } from '../shared/use-study-notes.ts';
 import { InlineNote, VerseWithNotes } from './VerseWithNotes.tsx';
+import { revealBlock } from './verse-in-view.ts';
 
 export type ThreadDirection = 'outgoing' | 'incoming' | 'both';
 
@@ -37,9 +38,6 @@ interface ThreadsStageProps {
   readonly preview: Connection | null;
   readonly onSelect: (passage: Passage | null) => void;
 }
-
-/** Scroll distance after which the chapter header condenses into a slim sticky bar. */
-const CONDENSE_AFTER_PX = 72;
 
 /** Room for the spine bar and its labels, right of the thread area. */
 const SPINE_WIDTH = { wide: 96, compact: 18 } as const;
@@ -70,7 +68,7 @@ export function ThreadsStage({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const verseElements = useRef(new Map<VerseIndex, HTMLElement>());
   const canvasSize = useElementSize(canvasHostRef);
-  const chapterHeaderRef = useRef<HTMLElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   // The NET's notes are marked in the NET's own words, so they show only while it is the text.
   const netNotes = useBookNotes(
     translation.manifest.id === getNoteSourceManifest('net').translationId ? book : null,
@@ -153,8 +151,8 @@ export function ThreadsStage({
 
     const scheduler = new FrameScheduler(() => {
       const top = canvas.getBoundingClientRect().top;
-      // Verses scrolled under the sticky chapter header send no threads.
-      const clipTop = (chapterHeaderRef.current?.getBoundingClientRect().bottom ?? top) - top;
+      // Verses scrolled under the sticky chapter bar send no threads.
+      const clipTop = (barRef.current?.getBoundingClientRect().bottom ?? top) - top;
       const anchors: VerseAnchor[] = [];
       for (const [verse, element] of verseElements.current) {
         const rect = element.getBoundingClientRect();
@@ -205,20 +203,26 @@ export function ThreadsStage({
     books,
   ]);
 
-  // Condense the chapter header once the reader scrolls, and track the verse at the top.
+  // Condense the chapter bar once the chapter's heading has scrolled away above it, and track the
+  // verse at the top.
+  //
+  // The bar keeps one height in both states, so condensing never moves the text. It used to: the
+  // whole heading shrank into the bar, the page got shorter, the browser's scroll anchoring pulled
+  // the reading back above the point where it condenses, and the bar flipped every frame.
   useEffect(() => {
     const reading = readingRef.current;
-    if (!reading) {
+    const bar = barRef.current;
+    if (!reading || !bar) {
       return undefined;
     }
     const scheduler = new FrameScheduler(() => {
-      setCondensed(reading.scrollTop > CONDENSE_AFTER_PX);
-      const headerBottom =
-        chapterHeaderRef.current?.getBoundingClientRect().bottom ??
-        reading.getBoundingClientRect().top;
+      const paneTop = reading.getBoundingClientRect().top;
+      const { top: barTop, bottom: barBottom } = bar.getBoundingClientRect();
+      // Stuck to the pane's top: the heading above it is out of sight.
+      setCondensed(barTop - paneTop < 1);
       let first: VerseIndex | null = null;
       for (const [verse, element] of verseElements.current) {
-        if (element.getBoundingClientRect().bottom > headerBottom + 4) {
+        if (element.getBoundingClientRect().bottom > barBottom + 4) {
           first = first === null ? verse : Math.min(first, verse);
         }
       }
@@ -235,19 +239,40 @@ export function ThreadsStage({
     };
   }, [start, end]);
 
-  // Keep the selected verse in view when it changes (e.g. after following a connection).
+  // Keep the selected verse in view: when it changes (e.g. after following a cross-reference), and
+  // when the pane gets shorter under it (on a phone, the details sheet takes the bottom of the
+  // screen). In view means below the chapter bar, which hides what scrolls under it.
   useEffect(() => {
-    const element = selectedVerse === null ? null : verseElements.current.get(selectedVerse);
     const reading = readingRef.current;
-    if (!element || !reading) {
-      return;
+    const bar = barRef.current;
+    if (selectedVerse === null || !reading || !bar) {
+      return undefined;
     }
-    const verseRect = element.getBoundingClientRect();
-    const paneRect = reading.getBoundingClientRect();
-    if (verseRect.top < paneRect.top || verseRect.bottom > paneRect.bottom) {
-      element.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }, [selectedVerse]);
+    const reveal = () => {
+      const element = verseElements.current.get(selectedVerse);
+      if (!element) return;
+      const verse = element.getBoundingClientRect();
+      const pane = reading.getBoundingClientRect();
+      const block = revealBlock({
+        verseTop: verse.top,
+        verseBottom: verse.bottom,
+        paneTop: pane.top,
+        paneBottom: pane.bottom,
+        barBottom: bar.getBoundingClientRect().bottom,
+      });
+      if (block) {
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        element.scrollIntoView({ block, behavior: still ? 'auto' : 'smooth' });
+      }
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(reading);
+    return () => {
+      observer.disconnect();
+    };
+    // The pane is remade for each chapter, so a new chapter observes the new one.
+  }, [selectedVerse, chapterKey]);
 
   const verseAtSpine = (event: MouseEvent<HTMLElement>): VerseIndex | null => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -267,48 +292,60 @@ export function ThreadsStage({
     <div className={styles.stage}>
       {/* Keyed by chapter: a new chapter is a new scroll container, so it starts at the top. */}
       <div key={`${book}.${chapter}`} ref={readingRef} className={styles.reading}>
-        <header ref={chapterHeaderRef} className={styles.chapterHeader} data-condensed={condensed}>
+        <header className={styles.chapterHeader}>
           <div className={styles.column}>
             <p className={styles.eyebrow}>
               <span className={styles.key} style={{ background: GENRE_COLORS[genre.id] }} />
               {genreName(genre.id)} ·{' '}
               {genre.testament === 'OT' ? t('testament.OT') : t('testament.NT')}
             </p>
-            <div className={styles.titleRow}>
-              <h2 className={styles.title}>
-                {books[book].name} {chapter}
-                {condensed && topVerse !== null && (
-                  <span className={styles.position}>:{versification.refAt(topVerse).verse}</span>
-                )}
-              </h2>
-              <nav className={styles.chapterNav} aria-label={t('threads.chapters')}>
-                <button
-                  type="button"
-                  disabled={!previousChapter}
-                  aria-label={t('threads.previousChapter')}
-                  onClick={() => {
-                    if (previousChapter) onSelect(previousChapter);
-                  }}
-                >
-                  <PreviousIcon />
-                  <span className={styles.navLabel}>{t('threads.previousChapter')}</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={!nextChapter}
-                  aria-label={t('threads.nextChapter')}
-                  onClick={() => {
-                    if (nextChapter) onSelect(nextChapter);
-                  }}
-                >
-                  <span className={styles.navLabel}>{t('threads.nextChapter')}</span>
-                  <NextIcon />
-                </button>
-              </nav>
-            </div>
+            <h2 className={styles.title}>
+              {books[book].name} {chapter}
+            </h2>
           </div>
         </header>
+        {/* Sticks to the top once the heading above has scrolled away, and then says where the
+            reader is ("John 1:14"); the heading itself stays the page's title for a screen reader. */}
+        <div ref={barRef} className={styles.chapterBar} data-condensed={condensed}>
+          <div className={`${styles.column} ${styles.barRow}`}>
+            <p className={styles.barTitle} aria-hidden="true">
+              {books[book].name} {chapter}
+              {topVerse !== null && (
+                <span className={styles.position}>:{versification.refAt(topVerse).verse}</span>
+              )}
+            </p>
+            <nav className={styles.chapterNav} aria-label={t('threads.chapters')}>
+              <button
+                type="button"
+                disabled={!previousChapter}
+                aria-label={t('threads.previousChapter')}
+                onClick={() => {
+                  if (previousChapter) onSelect(previousChapter);
+                }}
+              >
+                <PreviousIcon />
+                <span className={styles.navLabel}>{t('threads.previousChapter')}</span>
+              </button>
+              <button
+                type="button"
+                disabled={!nextChapter}
+                aria-label={t('threads.nextChapter')}
+                onClick={() => {
+                  if (nextChapter) onSelect(nextChapter);
+                }}
+              >
+                <span className={styles.navLabel}>{t('threads.nextChapter')}</span>
+                <NextIcon />
+              </button>
+            </nav>
+          </div>
+        </div>
         <div className={styles.column}>
+          {/* One of the two is shown, by whether the screen can hover: a finger taps, a mouse clicks. */}
+          <p className={styles.hint}>
+            <span className={styles.hintPointer}>{t('threads.hint')}</span>
+            <span className={styles.hintTouch}>{t('threads.hint.touch')}</span>
+          </p>
           <ol className={styles.verses}>
             {verses.map((verse, offset) => {
               const text = translation.verseText(verse);
@@ -320,6 +357,11 @@ export function ThreadsStage({
                   ? verseNotes.find((note) => note.number === openNote.number)
                   : undefined;
               const noteId = `net-note-${String(verse)}`;
+              // The verse is in the translation's language, not the interface's: unmarked, a
+              // screen reader reads the KJV in a Portuguese voice under a Portuguese interface.
+              const language = text
+                ? { lang: translation.manifest.language, dir: translation.manifest.direction }
+                : {};
               return (
                 <li
                   key={verse}
@@ -355,7 +397,10 @@ export function ThreadsStage({
                   >
                     {offset + 1}
                   </button>
-                  <span className={text ? styles.text : `${styles.text} ${styles.omitted}`}>
+                  <span
+                    className={text ? styles.text : `${styles.text} ${styles.omitted}`}
+                    {...language}
+                  >
                     {phrases ? (
                       <VerseWithNotes
                         text={text}
@@ -375,8 +420,13 @@ export function ThreadsStage({
                       text || t('threads.omitted')(translation.manifest.abbreviation)
                     )}
                   </span>
-                  <span className={styles.count} title={t('arcs.connections')(n(count), count)}>
-                    {count > 0 ? n(count) : ''}
+                  <span className={styles.count}>
+                    {count > 0 && (
+                      <>
+                        {n(count)}
+                        <span className={styles.visuallyHidden}> {t('threads.links')(count)}</span>
+                      </>
+                    )}
                   </span>
                   {opened && (
                     <InlineNote
@@ -400,7 +450,8 @@ export function ThreadsStage({
         ref={canvasHostRef}
         className={styles.canvasHost}
         onPointerMove={(event) => {
-          const verse = verseAtSpine(event);
+          // A finger has no hover, and the tooltip says "click": a tap on the spine just opens.
+          const verse = event.pointerType === 'touch' ? null : verseAtSpine(event);
           if (verse === null) {
             setSpineHover(null);
             return;
