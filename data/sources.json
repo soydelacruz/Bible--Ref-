@@ -23,11 +23,12 @@
     },
     {
       "id": "web",
-      "description": "World English Bible (Protestant canon), eBible.org edition, verse-per-line text in a ZIP archive",
+      "description": "World English Bible (Protestant canon), eBible.org edition, verse-per-line text from a ZIP archive, committed unpacked because eBible.org keeps revising it",
       "url": "https://ebible.org/Scriptures/engwebp_vpl.zip",
-      "fileName": "engwebp_vpl.zip",
+      "fileName": "engwebp_vpl.txt",
       "sha256": "8e37aaeba2f2c9fef4dad826bfe355f967c20288f4e0650f742cc6d7bfb775db",
       "member": "engwebp_vpl.txt",
+      "unpacked": true,
       "retrievedAt": "2026-10-26",
       "license": "Public domain",
       "homepage": "https://ebible.org/find/details.php?id=engwebp"

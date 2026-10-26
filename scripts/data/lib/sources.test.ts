@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { strToU8, zipSync } from 'fflate';
 import { sha256Hex } from './files.ts';
-import { findSource, pinnedDigest, type RawSource } from './sources.ts';
+import { findSource, pinnedDigest, rawFileContent, type RawSource } from './sources.ts';
 import type * as PathsModule from './paths.ts';
 
 const VALID: RawSource = {
@@ -148,5 +148,49 @@ describe('pinning an entry inside an archive', () => {
     await withSourcesFile({ sources: [{ ...VALID, member: '../escape.txt' }] });
     const { readSources: read } = await import('./sources.ts');
     await expect(read()).rejects.toThrow(/sources\[0\]\.member/);
+  });
+});
+
+describe('a source kept unpacked', () => {
+  const text = strToU8('GEN 1:1 In the beginning.');
+  const unpacked = {
+    ...VALID,
+    url: 'https://example.org/book.zip',
+    fileName: 'book.txt',
+    member: 'book.txt',
+    unpacked: true,
+    sha256: sha256Hex(text),
+  };
+
+  it('is read from the sources file', async () => {
+    await withSourcesFile({ sources: [unpacked] });
+    await expect((await import('./sources.ts')).readSources()).resolves.toEqual([unpacked]);
+  });
+
+  it('must name the entry it keeps', async () => {
+    const withoutMember: Record<string, unknown> = { ...unpacked };
+    delete withoutMember['member'];
+    await withSourcesFile({ sources: [withoutMember] });
+    await expect((await import('./sources.ts')).readSources()).rejects.toThrow(
+      /sources\[0\]\.unpacked: names no member/,
+    );
+  });
+
+  it('is either true or false', async () => {
+    await withSourcesFile({ sources: [{ ...unpacked, unpacked: 'yes' }] });
+    await expect((await import('./sources.ts')).readSources()).rejects.toThrow(
+      /sources\[0\]\.unpacked: expected true or false/,
+    );
+  });
+
+  it('pins its file as it is, since the file is the entry', () => {
+    expect(pinnedDigest(unpacked, text)).toBe(unpacked.sha256);
+  });
+
+  it('keeps the entry of a download, where other sources keep the download', () => {
+    const download = zipSync({ 'book.txt': text, 'book.xml': strToU8('<book/>') });
+    expect(rawFileContent(unpacked, download)).toEqual(text);
+    expect(rawFileContent({ ...unpacked, unpacked: false }, download)).toBe(download);
+    expect(rawFileContent(VALID, text)).toBe(text);
   });
 });

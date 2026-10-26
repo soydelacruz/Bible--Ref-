@@ -17,6 +17,9 @@ const MEMBERS: Readonly<Record<string, string>> = {
   'net-notes': 'net2-notes.jsonl',
 };
 
+/** The sources committed as the entry itself rather than the archive, as in `data/sources.json`. */
+const UNPACKED: ReadonlySet<string> = new Set(['web']);
+
 function source(id: string): RawSource {
   const member = MEMBERS[id];
   return {
@@ -26,6 +29,7 @@ function source(id: string): RawSource {
     fileName: `${id}.txt`,
     sha256: 'a'.repeat(64),
     ...(member === undefined ? {} : { member }),
+    ...(UNPACKED.has(id) ? { unpacked: true } : {}),
     retrievedAt: '2026-01-01',
     license: 'CC BY 4.0',
     homepage: 'https://example.org/',
@@ -68,7 +72,8 @@ const WEB = KJV.split('\n')
 const CONTENT: Readonly<Record<string, string | Uint8Array>> = {
   bsb: `The Holy Bible, Berean Standard Bible\nVerse\tBerean Standard Bible\n${BSB}`,
   kjv: zipSync({ 'eng-kjv2006_vpl.txt': strToU8(KJV) }),
-  web: zipSync({ 'engwebp_vpl.txt': strToU8(WEB) }),
+  // Committed as its text alone, since eBible.org keeps revising it: no archive around it.
+  web: WEB,
   asv: zipSync({ 'eng-asv_vpl.txt': strToU8(KJV) }),
   ylt: zipSync({ 'engylt_vpl.txt': strToU8(KJV) }),
   // Committed as plain text, extracted from the NET Bible study archive: no archive around it.
@@ -181,6 +186,15 @@ describe('DATASET_BUILDERS', () => {
     },
   );
 
+  it('reads the World English Bible from its text, or from an archive should it be zipped again', async () => {
+    const web = DATASET_BUILDERS.find((b) => b.outputPath.endsWith('/web.json'));
+    const zipped: RawSourceContent = {
+      source: { ...source('web'), unpacked: false },
+      content: Buffer.from(zipSync({ 'engwebp_vpl.txt': strToU8(WEB) })),
+    };
+    expect(await web?.build(() => Promise.resolve(zipped))).toEqual(await web?.build(readSource));
+  });
+
   it('reads the World English Bible into the KJV numbering', async () => {
     const web = DATASET_BUILDERS.find((b) => b.outputPath.endsWith('/web.json'));
     const dataset = await web?.build(readSource);
@@ -254,7 +268,12 @@ describe('the pins and the importers', () => {
         continue;
       }
       expect(expectMember(source), source.id).toBe(source.member);
-      expect(source.fileName.endsWith('.zip'), `${source.id} pins an entry of a ZIP`).toBe(true);
+      if (source.unpacked === true) {
+        // Kept under the entry's own name, so the file and the entry cannot be told apart.
+        expect(source.fileName, `${source.id} keeps the entry it pins`).toBe(source.member);
+      } else {
+        expect(source.fileName.endsWith('.zip'), `${source.id} pins an entry of a ZIP`).toBe(true);
+      }
     }
   });
 

@@ -104,4 +104,17 @@ describe('downloadPinnedSource', () => {
     ).rejects.toThrow(/not downloaded: make it with `node scripts\/data\/extract-thing.ts`/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('never downloads a text the repository carries, and says how to get it back', async () => {
+    // Upstream keeps revising it: a build that fell back to downloading would depend on the
+    // latest revision again, which is what committing it is for.
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(BODY)));
+    vi.stubGlobal('fetch', fetchMock);
+    const { module } = await loadWithRawDir();
+    const living = source({ member: 'thing.txt', unpacked: true });
+    await expect(module.downloadPinnedSource(living)).rejects.toThrow(
+      /thing.txt is missing.*`git checkout -- data\/raw\/thing.txt`.*`npm run data:fetch -- --update thing`/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

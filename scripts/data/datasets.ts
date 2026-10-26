@@ -25,7 +25,7 @@ import { importNetNotes, readNetNoteRecords } from './importers/netbible-notes.t
 import { importOpenBibleCrossReferences } from './importers/openbible.ts';
 import { getWordSourceManifest } from '../../src/words/registry.ts';
 import { importStepBibleWords, type TaggedLanguage } from './importers/stepbible.ts';
-import { expectMember } from './lib/sources.ts';
+import { expectMember, pinnedContent } from './lib/sources.ts';
 import { extractZipTextEntry } from './lib/files.ts';
 import type { RawSource } from './lib/sources.ts';
 
@@ -79,7 +79,9 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     outputPath: translationDatasetPath('web'),
     build: async (readSource) => {
       const { source, content } = await readSource('web');
-      const text = extractZipTextEntry(content, expectMember(source));
+      // Committed unpacked (eBible.org keeps revising it), so what the pin covers is the file
+      // itself; reading it through the pin keeps that true if the source is ever zipped again.
+      const text = new TextDecoder().decode(pinnedContent(source, content));
       return importEbibleVerseLines(text, 'web', {
         ...provenanceOf(source),
         snapshotDate: null,

@@ -1,10 +1,12 @@
 # Raw data
 
 Unmodified copies of the upstream files the app is built from. The small ones are committed so
-that the site can be rebuilt even if an upstream URL disappears; the KJV archive is not, because
-4.4 MB of it is more than a repository should carry for one translation, so `npm run data:build`
-downloads it on demand instead. Either way `../sources.json` pins the file by SHA-256 and the build
-refuses anything that does not match it, before turning them into the datasets in `public/data/`.
+that the site can be rebuilt even if an upstream URL disappears; the eBible.org archives are not,
+because 4 MB or more of each is more than a repository should carry for one translation, so
+`npm run data:build` downloads them on demand instead — all but the World English Bible's text,
+which is committed for a reason of its own (below). Either way `../sources.json` pins the file by
+SHA-256 and the build refuses anything that does not match it, before turning them into the
+datasets in `public/data/`.
 
 | File                                                        | Source                                                                                                                                                                                                    | License                                                                                                     |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -12,7 +14,7 @@ refuses anything that does not match it, before turning them into the datasets i
 | `openbible-cross-references.zip`                            | [OpenBible.info cross-references](https://www.openbible.info/labs/cross-references/), from <https://a.openbible.info/data/cross-references.zip>, snapshot 2026-09-21                                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                   |
 | `bliv-tr_vpl.zip`                                           | [Bíblia Livre](https://sites.google.com/site/biblialivre/) (Textus Receptus edition, February 2018), from the project's own [GitHub release](https://github.com/blivre/BibliaLivre/releases/tag/2018.2.0) | [CC BY 3.0 BR](https://creativecommons.org/licenses/by/3.0/br/)                                             |
 | `eng-kjv2006_vpl.zip` (not committed; fetched by the build) | [King James Version](https://ebible.org/Scriptures/details.php?id=eng-kjv2006), from <https://ebible.org/Scriptures/eng-kjv2006_vpl.zip>, retrieved 2026-10-17                                            | Public domain (in the United Kingdom: Crown copyright)                                                      |
-| `engwebp_vpl.zip` (not committed; fetched by the build)     | [World English Bible](https://ebible.org/find/details.php?id=engwebp), Protestant canon, from <https://ebible.org/Scriptures/engwebp_vpl.zip>, retrieved 2026-10-19                                       | Public domain ("World English Bible" is a trademark of eBible.org)                                          |
+| `engwebp_vpl.txt`                                           | [World English Bible](https://ebible.org/find/details.php?id=engwebp), Protestant canon: the text in <https://ebible.org/Scriptures/engwebp_vpl.zip>, unpacked, retrieved 2026-10-26                      | Public domain ("World English Bible" is a trademark of eBible.org)                                          |
 | `eng-asv_vpl.zip` (not committed; fetched by the build)     | [American Standard Version](https://ebible.org/find/details.php?id=eng-asv) (1901), from <https://ebible.org/Scriptures/eng-asv_vpl.zip>, retrieved 2026-10-19                                            | Public domain                                                                                               |
 | `engylt_vpl.zip` (not committed; fetched by the build)      | [Young's Literal Translation](https://ebible.org/find/details.php?id=engylt), from <https://ebible.org/Scriptures/engylt_vpl.zip>, retrieved 2026-10-19                                                   | Public domain                                                                                               |
 | `net2_vpl.txt`                                              | [NET Bible](https://netbible.org/) text (NET2), extracted from the NET Bible study archive (netbible.org responses, 2026-10-19) by `scripts/data/extract-netbible.ts`                                     | [Used by permission](https://netbible.com/copyright/) (non-commercial, with designation and acknowledgment) |
@@ -60,6 +62,22 @@ ones, and the three verses of the doxology it numbers Romans 14:24–26 are file
 16:25–27, where the KJV numbering has them; its words are untouched, so it is still the World
 English Bible, which is all its trademark asks. The brackets the ASV and YLT put around supplied
 words are kept, for the reason given above.
+
+The World English Bible's text is committed, though the other eBible.org texts are not, because
+it is the one that keeps changing. The KJV, ASV, YLT and Reina-Valera 1909 are finished texts:
+eBible.org rebuilds their archives from time to time, but the text inside stays the same, and the
+text is what their pins cover. The WEB is a living translation. Its editors keep correcting it, and
+eBible.org replaces the archive at the same URL with each revision — twice in October 2026 alone,
+five days apart. While the build downloaded it, each revision stopped matching the pin, and every
+deploy failed until someone re-pinned it by hand. So `engwebp_vpl.txt` is kept here, unpacked from
+the archive (`"unpacked": true` in `../sources.json`), and the build reads this copy and never
+downloads one: a revision upstream changes nothing until someone adopts it, on purpose, with
+`npm run data:fetch -- --update web`. That downloads the archive, prints the verses that changed
+and rewrites this file and its pin, for a pull request that says what changed. The text is kept
+rather than the archive because the archive holds the same text three times over (as XML and SQL
+too), compressed, so every revision would be a new 4 MB file that Git cannot compare with the last;
+as text, a revision shows in the pull request as the verses it changed, and Git stores it as little
+more than those verses.
 
 `net2_vpl.txt` is not a download but an extract. The NET Bible study archive holds the responses
 netbible.org served on 2026-10-19; each of its Bible responses pairs the NET with another
