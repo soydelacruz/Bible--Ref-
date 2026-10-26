@@ -166,6 +166,9 @@ export function MenuButton({
       target.closest(`[${POPOVER}]`) === event.currentTarget
     ) {
       setOpen(false);
+      // The control that did it goes with the popover, so focus would fall back to the top of the
+      // page; it goes back to the button the menu opened from, as after Escape.
+      buttonRef.current?.focus();
     }
   };
 

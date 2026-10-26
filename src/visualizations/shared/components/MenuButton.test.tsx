@@ -169,6 +169,9 @@ describe('MenuButton', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save as image' }));
     expect(onAction).toHaveBeenCalled();
     expect(screen.queryByText('a note')).toBeNull();
+    // The control that did it is gone, so focus goes back to the menu's own button rather than
+    // falling to the top of the page.
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'More' }));
   });
 
   it('stays open while a menu inside it is opened and used', async () => {
