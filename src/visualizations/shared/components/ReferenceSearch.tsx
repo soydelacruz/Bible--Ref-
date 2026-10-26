@@ -8,6 +8,7 @@ import { describeReferenceError } from '../../../i18n/describe-reference-error.t
 import { useLocalization } from '../../../i18n/use-locale.tsx';
 import { CloseIcon, SearchIcon } from '../../../shared/ui/icons.tsx';
 import type { Translation } from '../../../translations/translation.ts';
+import { focusPassageTitle } from '../panel-focus.ts';
 import styles from './controls.module.css';
 
 /** More than a reader scrolls through; past this, the box asks for a narrower search instead. */
@@ -97,9 +98,7 @@ export function ReferenceSearch({ versification, translation, onSelect }: Refere
     setMessage(null);
     setResults(null);
     formRef.current?.reset();
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur(); // Closes the on-screen keyboard on phones.
-    }
+    focusPassageTitle(document.activeElement); // Also closes the on-screen keyboard on phones.
     onSelect(passage);
   };
 
