@@ -15,6 +15,8 @@ import {
   resetTranslation,
   resetTranslations,
   studyNotesLoader,
+  subscribeToTexts,
+  textStatus,
   translationLoader,
   vizCoreLoader,
 } from './viz-data.ts';
@@ -133,6 +135,80 @@ describe('translationLoader', () => {
     const bsb = translationLoader('bsb');
     resetTranslations();
     expect(translationLoader('bsb')).not.toBe(bsb);
+  });
+});
+
+describe('textStatus', () => {
+  it('says a text is loading until it arrives, then hands it over without waiting', async () => {
+    serveDatasets();
+    expect(textStatus('bsb')).toEqual({ state: 'loading' });
+    // The same object while nothing changes, as useSyncExternalStore needs.
+    expect(textStatus('bsb')).toBe(textStatus('kjv'));
+    const translation = await translationLoader('bsb').load();
+    expect(textStatus('bsb')).toEqual({ state: 'loaded', translation });
+    expect(textStatus('bsb')).toBe(textStatus('bsb'));
+    expect(textStatus('kjv')).toEqual({ state: 'loading' });
+  });
+
+  it('says why a download failed, until it is forgotten for a retry', async () => {
+    serveDatasets({ 'translations/bsb.json': { not: 'a translation' } });
+    await expect(translationLoader('bsb').load()).rejects.toThrow();
+    expect(textStatus('bsb').state).toBe('failed');
+    resetTranslation('bsb');
+    expect(textStatus('bsb')).toEqual({ state: 'loading' });
+  });
+
+  it('tells its subscribers when a text arrives, fails, or is forgotten', async () => {
+    serveDatasets({ 'translations/kjv.json': { not: 'a translation' } });
+    const listener = vi.fn();
+    const unsubscribe = subscribeToTexts(listener);
+    await translationLoader('bsb').load();
+    expect(listener).toHaveBeenCalledTimes(1);
+    await translationLoader('kjv')
+      .load()
+      .catch(() => undefined);
+    expect(listener).toHaveBeenCalledTimes(2);
+    resetTranslations();
+    expect(listener).toHaveBeenCalledTimes(3);
+    // Nothing left to forget, so nothing to tell.
+    resetTranslations();
+    expect(listener).toHaveBeenCalledTimes(3);
+    unsubscribe();
+    resetTranslation('bsb');
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  it('is not overruled by a download a retry has already replaced', async () => {
+    serveDatasets();
+    const abandoned = translationLoader('bsb').load();
+    resetTranslation('bsb');
+    await abandoned;
+    expect(textStatus('bsb')).toEqual({ state: 'loading' });
+
+    serveDatasets({ 'translations/kjv.json': { not: 'a translation' } });
+    const failing = translationLoader('kjv').load();
+    resetTranslation('kjv');
+    await failing.catch(() => undefined);
+    expect(textStatus('kjv')).toEqual({ state: 'loading' });
+  });
+});
+
+describe('afterLinksDownloaded', () => {
+  it('starts what waits on the links once their bytes are in, before they are read', async () => {
+    // A fresh module: whether the links have arrived is remembered for the rest of the visit.
+    vi.resetModules();
+    const fresh = await import('./viz-data.ts');
+    serveDatasets({ 'cross-references': { not: 'links' } });
+    const start = vi.fn();
+    fresh.afterLinksDownloaded(start);
+    expect(start).not.toHaveBeenCalled();
+    // Unreadable, yet already downloaded: the text need not wait for the reading.
+    await expect(fresh.vizCoreLoader.load()).rejects.toThrow();
+    expect(start).toHaveBeenCalledTimes(1);
+
+    const late = vi.fn();
+    fresh.afterLinksDownloaded(late);
+    expect(late).toHaveBeenCalledTimes(1);
   });
 });
 

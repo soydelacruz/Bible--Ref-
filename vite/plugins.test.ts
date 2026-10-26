@@ -274,14 +274,25 @@ describe('the inline preload script', () => {
   }): readonly string[] {
     const href = `https://trekhleb.dev/bible-cross-references/${options.search ?? ''}`;
     const store = options.stored ?? {};
-    const hrefs: string[] = [];
-    const scope = {
+    return preloads(PLAN, {
       navigator: {
         serviceWorker: { controller: null },
         languages: options.languages ?? ['en-US'],
       },
       location: { href },
       localStorage: { getItem: (key: string) => store[key] ?? null },
+      URL,
+    });
+  }
+
+  /** Runs the script for `plan` in `scope`, with a document that records what it preloads. */
+  function preloads(
+    plan: Parameters<typeof preloadScript>[0],
+    scope: Record<string, unknown>,
+  ): readonly string[] {
+    const hrefs: string[] = [];
+    runInNewContext(preloadScript(plan), {
+      ...scope,
       document: {
         createElement: () => ({ rel: '', as: '', crossOrigin: '', href: '' }),
         head: {
@@ -290,14 +301,13 @@ describe('the inline preload script', () => {
           },
         },
       },
-      URL,
-    };
-    runInNewContext(preloadScript(PLAN), scope);
+    });
     return hrefs;
   }
 
   const PLAN = {
     shared: '/base/data/cross-references/openbible.json',
+    withText: true,
     byTranslation: Object.fromEntries(
       TRANSLATION_MANIFESTS.map((manifest) => [
         manifest.id,
@@ -373,8 +383,7 @@ describe('the inline preload script', () => {
   });
 
   it('survives a browser that refuses storage, rather than taking the page down with it', () => {
-    const hrefs: string[] = [];
-    runInNewContext(preloadScript(PLAN), {
+    const hrefs = preloads(PLAN, {
       navigator: { serviceWorker: { controller: null }, languages: ['en-US'] },
       location: { href: 'https://trekhleb.dev/bible-cross-references/' },
       localStorage: {
@@ -382,12 +391,37 @@ describe('the inline preload script', () => {
           throw new Error('storage is disabled');
         },
       },
-      document: {
-        createElement: () => ({ rel: '', as: '', crossOrigin: '', href: '' }),
-        head: { append: (link: { href: string }) => hrefs.push(link.href) },
-      },
       URL,
     });
     expect(hrefs).toEqual([PLAN.shared, PLAN.fallback]);
+  });
+
+  it('preloads only the links where the first screen is drawn from them', () => {
+    // The text would take half of a slow connection from the download the picture waits for;
+    // the app asks for it once the links are in.
+    const hrefs = preloads(
+      { ...PLAN, withText: false },
+      {
+        navigator: { serviceWorker: { controller: null }, languages: ['pt-BR'] },
+        location: { href: 'https://trekhleb.dev/bible-cross-references/?t=kjv' },
+        localStorage: { getItem: () => null },
+        URL,
+      },
+    );
+    expect(hrefs).toEqual([PLAN.shared]);
+  });
+
+  // The views that draw before the text has arrived (`drawsBeforeText`: Arcs and Clusters, which
+  // src/app/app-shell.test.tsx pins on its side) are the pages that leave the text to the app.
+  it.each([
+    ['index.html', false],
+    ['clusters/index.html', false],
+    ['threads/index.html', true],
+    ['debug/index.html', true],
+  ])('decides on %s whether to preload the text: %s', (entry, withText) => {
+    const plugin = siteHead();
+    resolveConfig(plugin, 'build', '/');
+    const tags = JSON.stringify(hook(plugin, 'transformIndexHtml')(HTML, { path: `/${entry}` }));
+    expect(tags).toContain(`\\"withText\\":${String(withText)}`);
   });
 });

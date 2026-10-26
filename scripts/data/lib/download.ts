@@ -12,6 +12,19 @@ export async function download(url: string): Promise<Buffer> {
 }
 
 /**
+ * Why a source the repository carries cannot be used, and the two ways out: the committed copy,
+ * or a deliberate update. Downloading it here instead would make the build depend on upstream
+ * again, and would fail on the first revision there anyway.
+ */
+export function unpackedSourceUnavailable(source: RawSource, problem: string): string {
+  return (
+    `${source.id}: data/raw/${source.fileName} ${problem}. The repository carries its pinned ` +
+    `copy, so restore that with \`git checkout -- data/raw/${source.fileName}\`, or adopt the ` +
+    `upstream version with \`npm run data:fetch -- --update ${source.id}\`.`
+  );
+}
+
+/**
  * Downloads a source, checks it against its pinned checksum and saves it to `data/raw/`.
  *
  * Used for the sources too large to keep in the repository: the pin in `data/sources.json` is
@@ -24,6 +37,9 @@ export async function downloadPinnedSource(source: RawSource): Promise<Buffer> {
       `${source.id}: data/raw/${source.fileName} is missing. It is not downloaded: make it with ` +
         `\`node ${source.extractedBy}\`.`,
     );
+  }
+  if (source.unpacked === true) {
+    throw new Error(unpackedSourceUnavailable(source, 'is missing'));
   }
   const content = await download(source.url);
   const sha256 = pinnedDigest(source, content);

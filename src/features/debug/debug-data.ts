@@ -16,7 +16,7 @@ export interface DebugData {
 export const debugDataLoader = createCachedLoader(async (): Promise<DebugData> => {
   const [translation, crossReferences] = await Promise.all([
     loadTranslation(getTranslationManifest(DEFAULT_TRANSLATION_ID)),
-    Promise.all(CROSS_REFERENCE_SOURCE_MANIFESTS.map(loadCrossReferences)),
+    Promise.all(CROSS_REFERENCE_SOURCE_MANIFESTS.map((manifest) => loadCrossReferences(manifest))),
   ]);
   return { translation, crossReferences };
 });

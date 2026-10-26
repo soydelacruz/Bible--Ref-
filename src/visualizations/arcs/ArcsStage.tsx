@@ -13,13 +13,13 @@ import { useLocalization } from '../../i18n/use-locale.tsx';
 import { collectConnections, connectionLinkIds, type Connection } from '../shared/connections.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
-import type { VizData } from '../shared/viz-data.ts';
+import type { VizCore } from '../shared/viz-data.ts';
 import { buildArcInstances } from './arc-instances.ts';
 import { ArcsController, type ArcHover } from './arcs-controller.ts';
 import styles from './ArcsStage.module.css';
 
 interface ArcsStageProps {
-  readonly data: VizData;
+  readonly data: VizCore;
   /** Whether it's on screen; hidden, it doesn't draw. */
   readonly active: boolean;
   /** Links that pass the filter, drawn as the background. */
@@ -210,7 +210,7 @@ function HoverTooltip({
   size,
 }: {
   readonly hover: ArcHover;
-  readonly data: VizData;
+  readonly data: VizCore;
   readonly filter: LinkFilter;
   readonly size: Size;
 }) {

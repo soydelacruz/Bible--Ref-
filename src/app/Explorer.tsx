@@ -1,4 +1,5 @@
 import {
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -7,21 +8,22 @@ import {
   useRef,
   useState,
   useTransition,
-  use,
 } from 'react';
 import { formatPassage, type Passage } from '../core/bible/passage.ts';
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx';
 import { getTranslationManifest } from '../translations/registry.ts';
 import controls from '../visualizations/shared/components/controls.module.css';
-import { DEFAULT_LINK_FILTER } from '../visualizations/shared/link-filter.ts';
+import { DEFAULT_LINK_FILTER, type LinkFilter } from '../visualizations/shared/link-filter.ts';
 import { Credits } from '../visualizations/shared/components/Credits.tsx';
+import { TextPending } from '../visualizations/shared/components/TextPending.tsx';
 import { TranslationMenu } from '../visualizations/shared/components/TranslationMenu.tsx';
 import { VizPage } from '../visualizations/shared/components/VizPage.tsx';
+import { useCompleteData, useTextStatus } from '../visualizations/shared/use-text-status.ts';
 import {
   resetTranslation,
   translationLoader,
+  type EarlyVizData,
   type VizCore,
-  type VizData,
 } from '../visualizations/shared/viz-data.ts';
 import styles from './Explorer.module.css';
 import { explorerUrl, plainLocaleFor, plainTranslationFor } from './explorer-location.ts';
@@ -76,10 +78,17 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // was created with, so returning to it returns to that language.
   const localeId = location.locale;
   const { passage, filter } = location;
-  // Suspends until the chosen text is here. Switching happens in a transition, so the previous
-  // text stays on screen while the next one downloads instead of the page emptying.
-  const translation = use(translationLoader(location.translation).load());
-  const data = useMemo<VizData>(() => ({ ...core, translation }), [core, translation]);
+  // Nothing waits for the text as a whole. The views drawn from the links show at once, and only
+  // what shows words waits for them, in place — on a phone the text lands seconds after the
+  // links. Switching happens in a transition, so the previous text stays on screen while the
+  // next one downloads instead of the words emptying.
+  const text = useTextStatus(location.translation);
+  const translationManifest = getTranslationManifest(location.translation);
+  const early = useMemo<EarlyVizData>(
+    () => ({ ...core, translationManifest, text }),
+    [core, translationManifest, text],
+  );
+  const complete = useCompleteData(early);
   const [isSwitchingTranslation, switchTranslation] = useTransition();
   // Where the reader is by the time a text arrives, which is not where they were when they asked
   // for it: a download takes a second or two, and they can read on meanwhile.
@@ -233,8 +242,71 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     </>
   );
 
+  const credits = <Credits translation={translationManifest} />;
+  // A view made of words waits for them inside its own frame: the masthead stays, so the views
+  // already drawn are one switch away, and so does the translation picker.
+  const waitingFrame = (
+    <VizPage masthead={masthead} credits={credits} tools={translationMenu}>
+      {text.state !== 'loaded' && (
+        <TextPending
+          status={text}
+          onRetry={() => {
+            resetTranslation(location.translation);
+          }}
+        />
+      )}
+    </VizPage>
+  );
+
   return VIEWS.map((view) => {
     const isActive = view === active;
+    const props = {
+      active: isActive,
+      passage,
+      onNavigate: (target: Passage | null, options?: { readonly replace?: boolean }) => {
+        navigate({ ...location, view: view.id, passage: target }, options);
+      },
+      filter,
+      onFilterChange: (next: LinkFilter) => {
+        // A filter tweak replaces the history entry: Back returns to the previous passage.
+        navigate({ ...location, filter: next }, { replace: true });
+      },
+      masthead,
+      translationMenu,
+      shareUrl: (target: Passage) =>
+        new URL(
+          explorerUrl(
+            HOME,
+            {
+              passage: target,
+              filter: DEFAULT_LINK_FILTER,
+              translation: location.translation,
+              locale: localeId,
+            },
+            '',
+            versification,
+            // A quote carries the name of the text it is in, so its link always names it too:
+            // whoever opens it reads the words that were quoted, not their own translation of
+            // them.
+            null,
+          ),
+          import.meta.env.SITE_URL,
+        ).href,
+      passageLinks: (target: Passage) =>
+        VIEWS.filter((other) => other !== view).map((other) => (
+          <InAppLink
+            key={other.id}
+            href={hrefOf(other, target)}
+            className={controls.button}
+            onFollow={() => {
+              navigate({ ...location, view: other.id, passage: target });
+            }}
+          >
+            <other.icon />
+            {t(other.openLabelKey)}
+          </InAppLink>
+        )),
+    };
     return (
       <div
         key={`${view.id}:${String(generation)}`}
@@ -247,63 +319,22 @@ export function Explorer({ core }: { readonly core: VizCore }) {
             switch away. */}
         <ErrorBoundary
           fallback={(error) => (
-            <VizPage masthead={masthead} credits={<Credits translation={translation.manifest} />}>
+            <VizPage masthead={masthead} credits={credits}>
               <p role="alert" className={styles.error}>
                 {t('error.viewFailed')(t(view.titleKey), error.message)}
               </p>
             </VizPage>
           )}
         >
-          <view.Component
-            data={data}
-            active={isActive}
-            passage={passage}
-            onNavigate={(target, options) => {
-              navigate({ ...location, view: view.id, passage: target }, options);
-            }}
-            filter={filter}
-            onFilterChange={(next) => {
-              // A filter tweak replaces the history entry: Back returns to the previous passage.
-              navigate({ ...location, filter: next }, { replace: true });
-            }}
-            masthead={masthead}
-            translationMenu={translationMenu}
-            shareUrl={(target) =>
-              new URL(
-                explorerUrl(
-                  HOME,
-                  {
-                    passage: target,
-                    filter: DEFAULT_LINK_FILTER,
-                    translation: location.translation,
-                    locale: localeId,
-                  },
-                  '',
-                  versification,
-                  // A quote carries the name of the text it is in, so its link always names it
-                  // too: whoever opens it reads the words that were quoted, not their own
-                  // translation of them.
-                  null,
-                ),
-                import.meta.env.SITE_URL,
-              ).href
-            }
-            passageLinks={(target) =>
-              VIEWS.filter((other) => other !== view).map((other) => (
-                <InAppLink
-                  key={other.id}
-                  href={hrefOf(other, target)}
-                  className={controls.button}
-                  onFollow={() => {
-                    navigate({ ...location, view: other.id, passage: target });
-                  }}
-                >
-                  <other.icon />
-                  {t(other.openLabelKey)}
-                </InAppLink>
-              ))
-            }
-          />
+          {'drawsBeforeText' in view ? (
+            <view.Component data={early} {...props} />
+          ) : (
+            // A boundary of its own: such a view is first drawn when the words arrive, and the
+            // moment its code takes to start must not blank the views already on screen.
+            <Suspense fallback={waitingFrame}>
+              {complete === null ? waitingFrame : <view.Component data={complete} {...props} />}
+            </Suspense>
+          )}
         </ErrorBoundary>
       </div>
     );

@@ -275,6 +275,9 @@ export const en = {
 
   'loading.data': (verses: string, links: string) =>
     `Loading ${verses} verses and ${links} cross-references…`,
+  // In place of a verse's words while the text downloads: the links, and every drawing, are
+  // already there.
+  'loading.text': 'Loading the text…',
   // What a reader meets when a dataset will not load: almost always the network, and almost
   // always on a device that is offline rather than a machine missing a build step.
   'error.datasetUnavailable':

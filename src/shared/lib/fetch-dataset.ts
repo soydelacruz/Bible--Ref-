@@ -38,8 +38,19 @@ export interface FetchedDataset {
   readonly report: Omit<DatasetLoadReport, 'processMs'>;
 }
 
+export interface FetchDatasetOptions {
+  /**
+   * Called once the file's bytes are in, before they are read. Reading a large file keeps the
+   * page busy for a while; a download started here uses the connection meanwhile.
+   */
+  readonly onDownloaded?: () => void;
+}
+
 /** Fetches a generated dataset file (a path relative to the site root) and parses its JSON. */
-export async function fetchDataset(path: string): Promise<FetchedDataset> {
+export async function fetchDataset(
+  path: string,
+  { onDownloaded }: FetchDatasetOptions = {},
+): Promise<FetchedDataset> {
   const url = `${import.meta.env.BASE_URL}${path}`;
   const downloadStart = performance.now();
   let response: Response;
@@ -56,6 +67,7 @@ export async function fetchDataset(path: string): Promise<FetchedDataset> {
     throw new DatasetUnavailableError(path, `HTTP ${response.status}`);
   }
   const buffer = await response.arrayBuffer();
+  onDownloaded?.();
   const text = new TextDecoder().decode(buffer);
   const downloadMs = performance.now() - downloadStart;
 
@@ -132,8 +144,9 @@ async function restoreCachedDataset(url: string, copy: CachedCopy | null): Promi
 export async function loadDataset<T>(
   path: string,
   parse: (json: unknown) => T,
+  options: FetchDatasetOptions = {},
 ): Promise<{ readonly value: T; readonly report: DatasetLoadReport }> {
-  const fetched = await fetchDataset(path);
+  const fetched = await fetchDataset(path, options);
   try {
     const { value, ms } = measure(() => parse(fetched.json));
     return { value, report: { ...fetched.report, processMs: ms } };

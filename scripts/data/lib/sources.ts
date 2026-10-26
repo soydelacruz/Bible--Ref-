@@ -31,6 +31,16 @@ export interface RawSource {
    */
   readonly member?: string;
   /**
+   * Whether `data/raw/` keeps the entry `member` names, unpacked, rather than the archive around
+   * it — and the repository commits it, so the build reads that copy and never downloads one.
+   *
+   * For a text its publisher keeps revising, like the World English Bible. Downloaded at build
+   * time, every revision upstream failed every build until someone re-pinned it by hand; committed,
+   * a revision changes nothing until someone adopts it, on purpose, with
+   * `npm run data:fetch -- --update`, which is also the only thing that downloads it.
+   */
+  readonly unpacked?: boolean;
+  /**
    * The script that makes the file, for a source no URL serves as it is: an extract from a local
    * copy of the upstream material. Its `url` then says where that material lives, not where the
    * file can be downloaded, so the pipeline never downloads it: it checks the file, and re-pins
@@ -57,8 +67,18 @@ function expectMatch(value: unknown, pattern: RegExp, path: string): string {
   return text;
 }
 
+function expectBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new ValidationError(path, `expected true or false, got ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
 function parseRawSource(value: unknown, path: string): RawSource {
   const record = expectRecord(value, path);
+  if (record['unpacked'] === true && record['member'] === undefined) {
+    throw new ValidationError(`${path}.unpacked`, 'names no member to unpack');
+  }
   return {
     id: expectString(record['id'], `${path}.id`),
     description: expectString(record['description'], `${path}.description`),
@@ -68,6 +88,9 @@ function parseRawSource(value: unknown, path: string): RawSource {
     ...(record['member'] === undefined
       ? {}
       : { member: expectMatch(record['member'], FILE_NAME_PATTERN, `${path}.member`) }),
+    ...(record['unpacked'] === undefined
+      ? {}
+      : { unpacked: expectBoolean(record['unpacked'], `${path}.unpacked`) }),
     ...(record['extractedBy'] === undefined
       ? {}
       : {
@@ -106,10 +129,18 @@ export function findSource(sources: readonly RawSource[], id: string): RawSource
 }
 
 /**
- * The bytes a source's pin covers: the whole file, or the archive entry it names.
+ * The bytes a source's pin covers in its file under `data/raw/`: the whole file, or the archive
+ * entry it names — unless that entry is what the file is.
  */
 export function pinnedContent(source: RawSource, content: Uint8Array): Uint8Array {
-  return source.member === undefined ? content : extractZipEntry(content, source.member);
+  return source.member === undefined || source.unpacked === true
+    ? content
+    : extractZipEntry(content, source.member);
+}
+
+/** What `data/raw/` keeps of a download: the file as served, or the entry an `unpacked` source pins. */
+export function rawFileContent(source: RawSource, downloaded: Uint8Array): Uint8Array {
+  return source.unpacked === true ? extractZipEntry(downloaded, expectMember(source)) : downloaded;
 }
 
 /** Whether a file matches its pin, by the digest of whatever the pin covers. */

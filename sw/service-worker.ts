@@ -8,8 +8,9 @@
  *   never those of other sites on the origin.
  *
  * Strategies: the app's code and pages are cached per version and served from the cache
- * (pages network-first, so a new version shows up at once); the datasets are served from the cache
- * and refreshed in the background (stale-while-revalidate).
+ * (pages network-first, so a new version shows up at once, but not for longer than 1.5 s, so a
+ * weak signal doesn't hold the app back); the datasets are served from the cache and refreshed in
+ * the background (stale-while-revalidate).
  */
 
 declare const self: ServiceWorkerGlobalScope;
@@ -167,7 +168,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (request.mode === 'navigate') {
-    event.respondWith(page(request));
+    event.respondWith(page(event, request));
   } else if (url.pathname.startsWith(dataPath)) {
     event.respondWith(dataset(event, request));
   } else {
@@ -175,16 +176,43 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-/** Pages: the network first, so a new version shows at once; this version's copy offline. */
-async function page(request: Request): Promise<Response> {
-  try {
-    return await fetch(request);
-  } catch {
-    const shell = await caches.open(SHELL_CACHE);
-    // `?ref=…` only selects a passage: every passage of a page is the same file.
-    const cached = await shell.match(request, { ...LOOKUP, ignoreSearch: true });
-    return cached ?? Response.error();
+/**
+ * How long a page waits for the network before this version's copy is shown instead. Long enough
+ * for any working connection to answer (a new version then shows at once), short enough that a
+ * weak signal doesn't hold an app that is already on the device: answered after 5 s, the page
+ * took 7.1 s to appear instead of 1.8 s.
+ */
+const PAGE_NETWORK_TIMEOUT_MS = 1500;
+
+/**
+ * Pages: the network first, so a new version shows at once; this version's copy offline, or when
+ * the network is slow to answer.
+ *
+ * The late answer is not stored. The stored page belongs with this version's files, which are what
+ * it loads; a newer page is the next version's, and its worker stores it when it installs — which
+ * the same visit starts, since the browser checks for a new worker on every navigation.
+ */
+async function page(event: FetchEvent, request: Request): Promise<Response> {
+  const network = fetch(request);
+  const shell = await caches.open(SHELL_CACHE);
+  // `?ref=…` only selects a passage: every passage of a page is the same file.
+  const cached = await shell.match(request, { ...LOOKUP, ignoreSearch: true });
+  if (cached === undefined) {
+    return network.catch(() => Response.error());
   }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<undefined>((resolve) => {
+    timer = setTimeout(resolve, PAGE_NETWORK_TIMEOUT_MS, undefined);
+  });
+  const answered = network.catch(() => undefined);
+  const first = await Promise.race([answered, late]);
+  clearTimeout(timer);
+  if (first === undefined) {
+    // Offline or slow: the copy now. A slow answer still completes, rather than being cut off.
+    event.waitUntil(answered);
+    return cached;
+  }
+  return first;
 }
 
 /**
