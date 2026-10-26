@@ -75,9 +75,27 @@
   max-inline-size: 12rem;
 }
 
-@media (hover: none) {
-  .hint {
+/* The tour button's word. Below 66rem it would push the header's controls onto a row of their
+   own sooner (Spanish's "Recorrido", the longest, needs about 1,050px), so there the button
+   stands on its icon, still named in full to screen readers and in its tooltip. */
+@media (max-width: 65.99rem) {
+  .tourLabel {
     display: none;
+  }
+}
+
+.touchHint {
+  display: none;
+}
+
+/* A touch screen has nothing to point with: its hint is about the tap alone. */
+@media (hover: none) {
+  .pointerHint {
+    display: none;
+  }
+
+  .touchHint {
+    display: block;
   }
 }
 

@@ -8,7 +8,7 @@ test.describe('reading the Bible', () => {
     await waitForApp(page);
     await expect(page.locator(`${ACTIVE} canvas`).first()).toBeVisible();
     await expect(page.getByText(/31,102 verses/)).toBeVisible();
-    await expect(page.getByText(/of 344,799 links shown/)).toBeVisible();
+    await expect(page.getByText(/best-rated of 344,799 cross-references/)).toBeVisible();
     expect(errors).toEqual([]);
   });
 

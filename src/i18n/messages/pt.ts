@@ -11,7 +11,7 @@ export const pt: LocaleMessages = {
   'view.arcs.open': 'Ver nos Arcos',
   'view.threads': 'Fios',
   'view.threads.short': 'Fios',
-  'view.threads.open': 'Ler no contexto',
+  'view.threads.open': 'Ler nos Fios',
   'view.clusters': 'Aglomerados',
   'view.clusters.short': 'Aglomerados',
   'view.clusters.open': 'Ver em Aglomerados',
@@ -19,8 +19,9 @@ export const pt: LocaleMessages = {
 
   'search.label': 'Ir para uma referência bíblica, ou buscar palavras no texto',
   'search.placeholder': 'João 3:16, Sl 23 ou palavras…',
+  'search.placeholder.short': 'Buscar',
   'search.noResults': (query) =>
-    `Nenhum versículo contém “${query}”. Para abrir uma passagem, digite uma referência como ` +
+    `Nenhum versículo contém “${query}”. Tente outras palavras, ou uma referência como ` +
     `“João 3:16”.`,
   'search.results': (count, plural, query) =>
     plural === 1 ? `1 versículo contém “${query}”.` : `${count} versículos contêm “${query}”.`,
@@ -30,7 +31,8 @@ export const pt: LocaleMessages = {
   'search.results.close': 'Fechar os resultados',
 
   'reference.unreadable': 'Digite uma referência como “João 3:16” ou “Sl 23”.',
-  'reference.unknownBook': (query) => `Livro desconhecido “${query}”.`,
+  'reference.unknownBook': (query) =>
+    `Nenhum livro se chama “${query}”. Tente um nome ou uma abreviação, como “Ap 12:9”.`,
   'reference.ambiguous': (query, candidates) => `“${query}” pode ser ${candidates}.`,
   'reference.or': ' ou ',
   'reference.chapters': (book, count) => `${book} tem ${count} capítulos.`,
@@ -40,19 +42,19 @@ export const pt: LocaleMessages = {
   // Plural and masculine, agreeing with "Filtros".
   'menu.filtersChanged': 'Filtros (alterados)',
   'menu.filters': 'Filtros',
-  'menu.filters.votes': 'Votos da comunidade',
-  'menu.filters.votes.all': 'Todos',
-  'menu.filters.votes.atLeast': (votes) => `≥ ${String(votes)}`,
+  'menu.filters.votes': 'Mostrar ligações com',
+  'menu.filters.votes.all': 'Qualquer número de votos',
+  'menu.filters.votes.atLeast': (votes) => `${String(votes)} ou mais votos`,
   'menu.filters.note': (shown, total, threshold, hidden) =>
-    `Os votos indicam o quanto os leitores do OpenBible.info acharam uma ligação útil; não ` +
-    `provam que ela esteja certa ou errada. Exibindo ${shown} de ${total} ligações ` +
+    `Os votos indicam o quanto os leitores do OpenBible.info acharam uma referência cruzada ` +
+    `útil; não provam que ela esteja certa ou errada. Exibindo ${shown} de ${total} ligações ` +
     `(${threshold}${hidden}).`,
   'menu.filters.hiddenGenres': (count) =>
     count === 1 ? ', 1 gênero oculto' : `, ${String(count)} gêneros ocultos`,
   'filter.allLinks': 'todas as ligações',
   'filter.noDownvoted': 'ligações com votos negativos ficam ocultas',
-  'filter.atLeastVotes': (votes, plural) => (plural === 1 ? `≥ ${votes} voto` : `≥ ${votes} votos`),
-  'menu.filters.tip': 'Dica: toque num gênero na legenda para ocultá-lo ou exibi-lo.',
+  'filter.atLeastVotes': (votes) => `${votes} ou mais votos`,
+  'menu.filters.tip': 'Escolha um gênero na legenda para ocultá-lo ou exibi-lo.',
   'menu.filters.reset': 'Restaurar filtros',
 
   'attribution.bsb': 'Texto bíblico: Berean Standard Bible (BSB), dedicada ao domínio público.',
@@ -95,14 +97,21 @@ export const pt: LocaleMessages = {
   'stats.verses': (count) => [{ strong: count }, ' versículos'],
   'stats.links': (shown, total) =>
     total === null
-      ? [{ strong: shown }, ' ligações exibidas']
-      : [{ strong: shown }, ` de ${total} ligações exibidas`],
-  // "dos versículos conectados" would read as "of the connected verses"; this says that they are.
-  'stats.connected': (share) => [{ strong: share }, ' dos versículos estão conectados'],
+      ? [{ strong: shown }, ' referências cruzadas exibidas']
+      : [{ strong: shown }, ` de ${total} referências cruzadas exibidas`],
+  // With its article, as Portuguese wants a selection named: "as 153.419 mais bem avaliadas".
+  'stats.links.bestRated': (shown, total) => [
+    'as ',
+    { strong: shown },
+    ` mais bem avaliadas de ${total} referências cruzadas`,
+  ],
+  // A clause, not an adjective: "dos versículos com ligações" would read as "of the verses with
+  // links"; this says how many have them.
+  'stats.connected': (share) => [{ strong: share }, ' dos versículos têm ligações'],
   'stats.crossTestament': (count) => [{ strong: count }, ' ligações entre os testamentos'],
   'hint.zoom': 'para ampliar',
   'hint.pan': 'para mover',
-  'hint.focus': 'para focar',
+  'hint.focus': 'para ler',
   'hint.hold': 'segure para pré-visualizar',
 
   'panel.details': 'Detalhes',
@@ -183,8 +192,8 @@ export const pt: LocaleMessages = {
   'path.title': 'Caminho',
   'path.note': 'a cadeia de ligações até outra passagem',
   'path.label': 'Passagem até a qual encontrar um caminho',
-  'path.placeholder': 'Até…  Ap 12:9',
-  'path.find': 'Buscar',
+  'path.placeholder': 'Outra passagem, p. ex. Ap 12:9',
+  'path.find': 'Buscar caminho',
   'path.clear': 'Limpar caminho',
   'path.summary': (from, to, count, plural) =>
     plural === 1
@@ -271,21 +280,25 @@ export const pt: LocaleMessages = {
   'clusters.openBook': 'clique para abri-lo',
   'clusters.hint':
     'Aponte para um versículo para iluminar suas ligações, ou para o nome ou a borda de um ' +
-    'livro para todas elas · clique no nome de um livro para abri-lo',
+    'livro para todas elas · clique num versículo para lê-lo, ou no nome de um livro para abri-lo',
+  'clusters.hint.touch': 'Toque num versículo para lê-lo, ou no nome de um livro para abri-lo',
+  'clusters.tour.label': 'Passeio',
   'clusters.tour.start': 'Ver um passeio por versículos conhecidos',
   'clusters.tour.stop': 'Parar o passeio',
   'clusters.stage':
     'Cada versículo com referências cruzadas é um ponto, reunido em um aglomerado por livro: o ' +
     'Antigo Testamento de um lado, o Novo do outro, com as ligações entre eles em traço leve. ' +
     'Aponte para um livro ou versículo para iluminar suas ligações, clique em um versículo para ' +
-    'focá-lo e em um livro para abri-lo capítulo por capítulo.',
-  'arcs.connections': (count, plural) => (plural === 1 ? `${count} conexão` : `${count} conexões`),
+    'lê-lo e em um livro para abri-lo capítulo por capítulo.',
+  'arcs.connections': (count, plural) =>
+    plural === 1 ? `${count} referência cruzada` : `${count} referências cruzadas`,
   'arcs.stage':
     'Diagrama em arcos das referências cruzadas. Arraste ou use as setas para mover, role ou ' +
-    '+/- para ampliar, clique para focar uma passagem, Esc para limpar. Numa tela sensível ao ' +
+    '+/- para ampliar, clique numa passagem para lê-la, Esc para limpar. Numa tela sensível ao ' +
     'toque, toque e segure para pré-visualizar uma passagem.',
 
-  'credits.links': 'Ligações:',
+  // Feminine plural, as "reindexadas" below agrees with it.
+  'credits.links': 'Referências cruzadas:',
   'credits.fromTsk': ', do Treasury of Scripture Knowledge',
   'credits.reindexed': ', reindexadas',
   'credits.toKjv': ' para a numeração de versículos da KJV',

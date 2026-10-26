@@ -23,6 +23,31 @@
   font-weight: 600;
 }
 
+/* Words in the line that open the Filters menu: a link in look, a button in kind. The block is
+   pointer-transparent so the arcs beneath stay reachable; this one word takes the pointer back,
+   with a padded hit area that stays clear of the next line. */
+.filtersLink {
+  margin: -0.25rem -0.125rem;
+  padding: 0.25rem 0.125rem;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-muted);
+  text-underline-offset: 0.2em;
+  pointer-events: auto;
+}
+
+/* Only where there is a pointer to hover with: a touch screen would keep the colour after a tap. */
+@media (hover: hover) {
+  .filtersLink:hover {
+    color: var(--color-accent);
+    text-decoration-color: currentcolor;
+  }
+}
+
 /* Words and gesture icons, as in the arcs' tooltip. */
 .hint {
   display: flex;

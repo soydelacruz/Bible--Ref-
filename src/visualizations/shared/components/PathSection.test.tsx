@@ -52,7 +52,7 @@ async function findPathTo(reference: string) {
     screen.getByRole('textbox', { name: 'Passage to find a path to' }),
     reference,
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Find' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Find path' }));
 }
 
 describe('PathSection', () => {
@@ -114,10 +114,25 @@ describe('PathSection', () => {
   it('explains a reference it cannot read, and finds nothing', async () => {
     render(panelFor(versePassage(GEN_3_15)));
     await findPathTo('Hesitations 4:4');
-    expect(screen.getByRole('alert').textContent).toBe('Unknown book “Hesitations”.');
+    expect(screen.getByRole('alert').textContent).toBe(
+      'No book is called “Hesitations”. Try a name or abbreviation, like “Rev 12:9”.',
+    );
     expect(pathSection().queryByRole('status')).toBeNull();
     await userEvent.type(screen.getByRole('textbox', { name: 'Passage to find a path to' }), 'x');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('clears the last path when the next entry cannot be read', async () => {
+    render(panelFor(versePassage(GEN_3_15)));
+    await findPathTo('Rev 12:9');
+    expect(pathSection().getByRole('list')).toBeDefined();
+    const input = screen.getByRole('textbox', { name: 'Passage to find a path to' });
+    await userEvent.clear(input);
+    await findPathTo('Hesitations 4:4');
+    expect(screen.getByRole('alert')).toBeDefined();
+    // No path left under the message, to be read as the answer to it.
+    expect(pathSection().queryByRole('status')).toBeNull();
+    expect(pathSection().queryByRole('list')).toBeNull();
   });
 
   it('can be cleared', async () => {

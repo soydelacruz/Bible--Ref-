@@ -141,6 +141,8 @@ export function ClustersExplorer({
             }}
           >
             {touring ? <StopIcon /> : <PlayIcon />}
+            {/* A bare ▷ says nothing about what it plays; where there is no room, the icon alone. */}
+            <span className={stageStyles.tourLabel}>{t('clusters.tour.label')}</span>
           </button>
           <GenreMenu
             hiddenGenres={filter.hiddenGenres}

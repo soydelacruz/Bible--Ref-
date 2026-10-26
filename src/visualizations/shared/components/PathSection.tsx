@@ -69,6 +69,9 @@ export function PathSection({
     const result = parseReference(typeof input === 'string' ? input : '', versification, books);
     if (!result.ok) {
       setError(describeReferenceError(result.error, localization));
+      // The path below would otherwise still answer the last question, under a message about
+      // this one, and read as the answer to it.
+      onDestinationChange(null);
       return;
     }
     setError(null);
