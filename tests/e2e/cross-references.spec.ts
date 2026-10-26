@@ -42,6 +42,34 @@ test.describe('cross-references', () => {
     expect(stuck.length).toBe(1);
   });
 
+  test('the summary jumps to a folded section, even the last, and puts it at the top', async ({
+    page,
+  }) => {
+    await openPassage(page, 'John.3.16');
+    const panel = page.locator(PANEL);
+    const notes = panel.getByRole('button', { name: /^NET notes/ });
+    const words = panel.getByRole('button', { name: /^Same Greek word/ });
+    await expect(notes).toBeVisible();
+    await expect(words).toBeVisible();
+    // Everything from the notes down folded: the panel is then as short as it gets, and a scroll
+    // measured before the notes open would stop short of them.
+    for (const band of [notes, words, panel.getByRole('button', { name: /^Study elsewhere/ })]) {
+      if ((await band.getAttribute('aria-expanded')) === 'true') {
+        await band.click();
+      }
+    }
+    await panel.locator('[class*="summaryLink"]', { hasText: /notes?$/ }).click();
+    await expect(notes).toHaveAttribute('aria-expanded', 'true');
+    await expect(notes).toBeFocused();
+    const offset = await page.locator(`${PANEL} [class*="scroll"]`).evaluate((scroll) => {
+      const section = scroll.querySelector('section[data-section="net-notes"]');
+      return (
+        (section?.getBoundingClientRect().top ?? Infinity) - scroll.getBoundingClientRect().top
+      );
+    });
+    expect(Math.abs(offset)).toBeLessThanOrEqual(2);
+  });
+
   test('the genre breakdown opens', async ({ page }) => {
     await openPassage(page, 'John.3.16');
     const band = page.locator(PANEL).getByRole('button', { name: /Links by genre/ });

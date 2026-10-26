@@ -284,6 +284,26 @@ describe('PassagePanel summary', () => {
     expect(document.activeElement).toBe(band);
   });
 
+  it('opens a folded section before measuring where to scroll it to', async () => {
+    renderPanel();
+    const band = screen.getByRole('button', { name: /^Referenced by/ });
+    if (band.getAttribute('aria-expanded') === 'true') {
+      await userEvent.click(band);
+    }
+    const section = band.closest('section');
+    if (!section) {
+      throw new Error('The band has no section.');
+    }
+    // Measured while still folded, the scroll would be clamped to the shorter panel.
+    const openWhenMeasured: (string | null)[] = [];
+    vi.spyOn(section, 'getBoundingClientRect').mockImplementation(() => {
+      openWhenMeasured.push(band.getAttribute('aria-expanded'));
+      return new DOMRect();
+    });
+    await userEvent.click(screen.getByRole('button', { name: '1 referenced by' }));
+    expect(openWhenMeasured).toEqual(['true']);
+  });
+
   it('counts the notes too, once they arrive, and opens them from there', async () => {
     resetStudyNotes();
     const notes = createStudyNotesFile('John', [

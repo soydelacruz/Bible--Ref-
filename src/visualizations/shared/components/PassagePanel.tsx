@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { GENRES, getBookGenre } from '../../../core/bible/genres.ts';
 import {
   chapterPassageOf,
@@ -383,7 +384,11 @@ export function PassagePanel({
   };
 
   const jumpTo = (section: string) => {
-    openPanelSection(section);
+    // Opened and on the page before anything is measured: a section opened after the scroll
+    // would leave the scroll clamped to the shorter, folded panel, and the section below the top.
+    flushSync(() => {
+      openPanelSection(section);
+    });
     const scroll = scrollRef.current;
     const target = scroll?.querySelector<HTMLElement>(`[${PANEL_SECTION_ATTRIBUTE}="${section}"]`);
     if (!scroll || !target) {
