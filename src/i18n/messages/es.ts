@@ -239,10 +239,17 @@ export const es: LocaleMessages = {
   'error.viewFailed': (view, message) => `No se pudo iniciar ${view}: ${message}`,
 
   'threads.direction': 'Dirección de los hilos',
-  'threads.outgoing': 'Apunta a',
-  'threads.incoming': 'Apuntado desde',
+  'threads.outgoing': 'Adónde apunta',
+  'threads.incoming': 'Qué apunta aquí',
   'threads.both': 'Ambos',
-  'threads.verse': (number) => `Versículo ${number}: ver sus conexiones`,
+  'threads.verse': (number) => `Versículo ${number}: ver sus referencias cruzadas`,
+  'threads.hint':
+    'Los hilos van de cada versículo a donde llegan sus referencias cruzadas · el número a la ' +
+    'derecha dice cuántas son · haz clic en un versículo para verlas',
+  'threads.hint.touch':
+    'Los hilos van de cada versículo a donde llegan sus referencias cruzadas · el número a la ' +
+    'derecha dice cuántas son · toca un versículo para verlas',
+  'threads.links': (plural) => (plural === 1 ? 'enlace' : 'enlaces'),
   'threads.omitted': (abbreviation) =>
     `Omitido en la ${abbreviation} (no está en los manuscritos más antiguos).`,
   'threads.spineHover': (count, plural) =>
