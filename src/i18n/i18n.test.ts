@@ -72,6 +72,16 @@ describe('the message catalogues', () => {
     }
   });
 
+  it('tells a touch screen to tap a verse where it tells a mouse to click one', () => {
+    for (const locale of LOCALE_LIST) {
+      expect(message(locale, 'threads.hint.touch'), locale.id).not.toBe(
+        message(locale, 'threads.hint'),
+      );
+    }
+    expect(message(getLocale('en'), 'threads.hint.touch')).toContain('tap a verse');
+    expect(message(getLocale('en'), 'threads.hint')).toContain('click a verse');
+  });
+
   it('counts in the language’s own way, singular and plural', () => {
     const more = message(getLocale('pt'), 'panel.moreVerses');
     expect(more('1', 1)).toContain('1 versículo');

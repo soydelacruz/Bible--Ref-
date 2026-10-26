@@ -245,10 +245,17 @@ export const pt: LocaleMessages = {
   'error.viewFailed': (view, message) => `Não foi possível iniciar ${view}: ${message}`,
 
   'threads.direction': 'Direção dos fios',
-  'threads.outgoing': 'Aponta para',
-  'threads.incoming': 'Apontado de',
+  'threads.outgoing': 'Para onde aponta',
+  'threads.incoming': 'O que aponta para cá',
   'threads.both': 'Ambos',
-  'threads.verse': (number) => `Versículo ${number}: ver suas conexões`,
+  'threads.verse': (number) => `Versículo ${number}: ver suas referências cruzadas`,
+  'threads.hint':
+    'Os fios vão de cada versículo até onde suas referências cruzadas chegam · o número à ' +
+    'direita diz quantas são · clique em um versículo para vê-las',
+  'threads.hint.touch':
+    'Os fios vão de cada versículo até onde suas referências cruzadas chegam · o número à ' +
+    'direita diz quantas são · toque em um versículo para vê-las',
+  'threads.links': (plural) => (plural === 1 ? 'ligação' : 'ligações'),
   'threads.omitted': (abbreviation) =>
     `Omitido na ${abbreviation} (não consta nos manuscritos mais antigos).`,
   'threads.spineHover': (count, plural) =>

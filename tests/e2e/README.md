@@ -17,6 +17,16 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Close the details and return to the whole picture       | `reading.spec.ts` |
 | Switch between Arcs and Threads, keeping the passage    | `reading.spec.ts` |
 
+## Reading in Threads
+
+| Flow                                                             | Covered by        |
+| ---------------------------------------------------------------- | ----------------- |
+| The chapter bar settles wherever the reading stops               | `threads.spec.ts` |
+| A verse chosen while under the chapter bar is brought out        | `threads.spec.ts` |
+| The selected verse stays in view when the pane gets shorter      | `threads.spec.ts` |
+| The view says what its threads and numbers are, tap or click     | `threads.spec.ts` |
+| The verses are marked as the translation’s language, for readers | `threads.spec.ts` |
+
 ## Cross-references — the reason the app exists
 
 | Flow                                                     | Covered by                 |
