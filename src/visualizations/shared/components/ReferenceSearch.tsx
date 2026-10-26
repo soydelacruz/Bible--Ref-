@@ -179,6 +179,11 @@ export function ReferenceSearch({
     setMessage(null);
     showMatches(waiting, translation);
   }
+  // Or it never will: the wait gives way to the reason, as a search made after the failure would.
+  if (waiting !== null && translation === undefined && textUnavailable === 'failed') {
+    setWaiting(null);
+    setMessage({ text: t('error.datasetUnavailable'), tone: 'error' });
+  }
 
   return (
     <form

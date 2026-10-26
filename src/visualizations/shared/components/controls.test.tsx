@@ -111,6 +111,28 @@ describe('ReferenceSearch, before the text has arrived', () => {
     expect(screen.getByRole('status').textContent).toBe('1 verse contains “living water”.');
   });
 
+  it('says why, rather than waiting on, a held search whose text then fails to arrive', async () => {
+    const { rerender } = render(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        textUnavailable="loading"
+        onSelect={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByRole('searchbox'), 'living water{Enter}');
+    expect(screen.getByRole('status').textContent).toBe('Loading the text…');
+
+    rerender(
+      <ReferenceSearch
+        versification={CANONICAL_VERSIFICATION}
+        textUnavailable="failed"
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('alert').textContent).toMatch(/could not be loaded/);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('forgets a held search once the reader types something else', async () => {
     render(
       <ReferenceSearch
