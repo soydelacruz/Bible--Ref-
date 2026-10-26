@@ -11,6 +11,7 @@ import { SavedMenu } from '../shared/components/SavedMenu.tsx';
 import { ReferenceSearch } from '../shared/components/ReferenceSearch.tsx';
 import { SegmentedControl } from '../shared/components/SegmentedControl.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
+import controls from '../shared/components/controls.module.css';
 import type { Connection } from '../shared/connections.ts';
 import { DEFAULT_LINK_FILTER, selectLinks } from '../shared/link-filter.ts';
 import type { VizData } from '../shared/viz-data.ts';
@@ -84,31 +85,36 @@ export function ThreadsExplorer({
     readonly connection: Connection;
   } | null>(null);
   const previewed = preview?.passage === passage ? preview.connection : null;
+  // Above the threads it steers, on the stage; in the More menu on phones.
+  const directionControl = (
+    <SegmentedControl
+      label={t('threads.direction')}
+      options={directions}
+      value={direction}
+      onChange={setDirection}
+      iconsOnlyWhenNarrow
+    />
+  );
 
   return (
     <VizPage
       masthead={masthead}
       credits={<Credits translation={data.translation.manifest} />}
       onPanelClose={closePanel}
-      controls={
+      search={
+        <ReferenceSearch
+          versification={data.versification}
+          translation={data.translation}
+          onSelect={onNavigate}
+        />
+      }
+      tools={
         <>
-          <ReferenceSearch
-            versification={data.versification}
-            translation={data.translation}
-            onSelect={onNavigate}
-          />
           {translationMenu}
           <SavedMenu
             versification={data.versification}
             translation={data.translation}
             onSelect={onNavigate}
-          />
-          <SegmentedControl
-            label={t('threads.direction')}
-            options={directions}
-            value={direction}
-            onChange={setDirection}
-            iconsOnlyWhenNarrow
           />
           <GenreMenu
             hiddenGenres={filter.hiddenGenres}
@@ -116,15 +122,19 @@ export function ThreadsExplorer({
               onFilterChange({ ...filter, hiddenGenres: toggleGenre(filter.hiddenGenres, genre) });
             }}
           />
-          <FiltersMenu
-            filter={filter}
-            defaults={DEFAULT_LINK_FILTER}
-            onChange={onFilterChange}
-            shownLinks={shownLinks}
-            totalLinks={index.linkCount}
-          />
         </>
       }
+      filters={
+        <FiltersMenu
+          filter={filter}
+          defaults={DEFAULT_LINK_FILTER}
+          onChange={onFilterChange}
+          shownLinks={shownLinks}
+          totalLinks={index.linkCount}
+        />
+      }
+      viewTools={directionControl}
+      moreChanged={filter.hiddenGenres.size > 0}
       panel={
         selectedVerse !== null && (
           <PassagePanel
@@ -151,6 +161,7 @@ export function ThreadsExplorer({
         direction={direction}
         preview={previewed}
         onSelect={onNavigate}
+        toolbar={<div className={controls.stageToolbar}>{directionControl}</div>}
       />
     </VizPage>
   );

@@ -246,7 +246,7 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // A view made of words waits for them inside its own frame: the masthead stays, so the views
   // already drawn are one switch away, and so does the translation picker.
   const waitingFrame = (
-    <VizPage masthead={masthead} credits={credits} controls={translationMenu}>
+    <VizPage masthead={masthead} credits={credits} tools={translationMenu}>
       {text.state !== 'loaded' && (
         <TextPending
           status={text}

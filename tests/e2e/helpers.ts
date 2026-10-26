@@ -1,8 +1,30 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 /** The panel of the view currently on screen (both views stay mounted). */
 export const PANEL = 'div[data-active="true"] aside';
 export const ACTIVE = 'div[data-active="true"]';
+
+/** The phone header's More button, in each language the app speaks. */
+const MORE = /^(More|Mais|Más)\b/;
+
+/**
+ * A button of the header's, wherever the header keeps it: on a desktop the translation, saved
+ * verses and genres are in the header's row; on a phone they are rows of the More menu, which is
+ * opened first if it is not open already.
+ */
+export async function headerButton(page: Page, name: RegExp): Promise<Locator> {
+  const active = page.locator(ACTIVE);
+  const more = active.getByRole('button', { name: MORE });
+  if ((await more.isVisible()) && (await more.getAttribute('aria-expanded')) !== 'true') {
+    await more.click();
+  }
+  return active.getByRole('button', { name });
+}
+
+/** Opens one of the header's menus (see `headerButton`). */
+export async function openHeaderMenu(page: Page, name: RegExp): Promise<void> {
+  await (await headerButton(page, name)).click();
+}
 
 /**
  * Waits for the app to have drawn: the data is loaded, the canvas is up, and the words are in.

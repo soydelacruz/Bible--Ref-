@@ -95,6 +95,11 @@ export const en = {
   'menu.translation.failed': (name: string) => `${name} could not be loaded.`,
   'menu.translation.error': (message: string) => `${message} Check your connection and try again.`,
   'menu.language': 'Language',
+  // The phone header's last button: the translation, saved verses, genres and the view's own
+  // controls, which have no room of their own there.
+  'menu.more': 'More',
+  // Said while some genres are hidden, since the Genres button that would say so is inside.
+  'menu.moreChanged': 'More (genres hidden)',
 
   'genres.label': 'Genres',
   'genres.labelChanged': 'Genres (changed)',

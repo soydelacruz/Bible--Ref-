@@ -13,7 +13,10 @@ interface SegmentedControlProps<Value extends string> {
   readonly options: readonly SegmentedOption<Value>[];
   readonly value: Value;
   readonly onChange: (value: Value) => void;
-  /** Below 64rem, show only the options' icons, where header space is tight. */
+  /**
+   * In a stage toolbar too narrow for the options' words (`controls.stageToolbar`, e.g. beside
+   * the open details panel), show only their icons.
+   */
   readonly iconsOnlyWhenNarrow?: boolean;
 }
 

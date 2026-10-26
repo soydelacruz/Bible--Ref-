@@ -15,6 +15,7 @@ import {
   LuChevronRight,
   LuCopy,
   LuDownload,
+  LuEllipsis,
   LuEllipsisVertical,
   LuExternalLink,
   LuGithub,
@@ -112,6 +113,8 @@ export const NotesIcon = decorative(LuNotebookText);
 // Settings
 export const FiltersIcon = decorative(LuSlidersHorizontal);
 export const GenresIcon = decorative(LuPalette);
+// The phone header's overflow: the controls that have no room of their own there.
+export const MoreIcon = decorative(LuEllipsis);
 
 // Link direction: a passage points to others, others point to it, or both. The arrows follow the
 // reading-threads layout, where the text is on the left and the rest of the Bible on the right.

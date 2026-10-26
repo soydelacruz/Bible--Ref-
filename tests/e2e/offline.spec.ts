@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page, type BrowserContext } from '@playwright/test';
-import { ACTIVE, PANEL, waitForApp } from './helpers.ts';
+import { ACTIVE, PANEL, waitForApp, openHeaderMenu } from './helpers.ts';
 
 const WORKER = resolve(import.meta.dirname, '../../dist/sw.js');
 
@@ -91,10 +91,7 @@ test.describe('the offline cache', () => {
 
   test('a translation chosen while online is there offline too', async ({ page, context }) => {
     await installWorker(page);
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await page
       .locator(ACTIVE)
       .getByRole('radio', { name: /King James/ })
@@ -161,10 +158,7 @@ test.describe('the offline cache', () => {
     // deleted. They were fine until they went offline, and then the app was a dead screen until
     // they were next online. Carrying the old cache across costs nothing and avoids all of it.
     await installWorker(page);
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await page
       .locator(ACTIVE)
       .getByRole('radio', { name: /King James/ })

@@ -82,6 +82,8 @@ export const es: LocaleMessages = {
   'menu.translation.failed': (name) => `No se pudo cargar ${name}.`,
   'menu.translation.error': (message) => `${message} Revisa tu conexión e inténtalo de nuevo.`,
   'menu.language': 'Idioma',
+  'menu.more': 'Más',
+  'menu.moreChanged': 'Más (géneros ocultos)',
 
   'genres.label': 'Géneros',
   // Plural and masculine, agreeing with "Géneros".

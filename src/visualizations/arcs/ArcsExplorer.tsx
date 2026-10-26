@@ -107,25 +107,18 @@ export function ArcsExplorer({
       masthead={masthead}
       credits={<Credits translation={data.translationManifest} inspiration={INSPIRATION} />}
       onPanelClose={closePanel}
-      controls={
+      search={
+        <ReferenceSearch
+          versification={data.versification}
+          translation={text ?? undefined}
+          textUnavailable={data.text.state === 'loaded' ? undefined : data.text.state}
+          onSelect={onNavigate}
+        />
+      }
+      tools={
         <>
-          <ReferenceSearch
-            versification={data.versification}
-            translation={text ?? undefined}
-            textUnavailable={data.text.state === 'loaded' ? undefined : data.text.state}
-            onSelect={onNavigate}
-          />
           {translationMenu}
           <SavedMenu versification={data.versification} translation={text} onSelect={onNavigate} />
-          <FiltersMenu
-            filter={filter}
-            defaults={DEFAULT_LINK_FILTER}
-            onChange={onFilterChange}
-            shownLinks={linkIds.length}
-            totalLinks={index.linkCount}
-            open={filtersOpen}
-            onOpenChange={setFiltersOpen}
-          />
           <button
             type="button"
             className={controls.button}
@@ -134,8 +127,21 @@ export function ArcsExplorer({
             onClick={saveImage}
           >
             <SaveImageIcon />
+            {/* Its icon alone in the header; spelled out as a row of the phone's More menu. */}
+            <span className={controls.rowLabel}>{t('image.save')}</span>
           </button>
         </>
+      }
+      filters={
+        <FiltersMenu
+          filter={filter}
+          defaults={DEFAULT_LINK_FILTER}
+          onChange={onFilterChange}
+          shownLinks={linkIds.length}
+          totalLinks={index.linkCount}
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+        />
       }
       panel={
         passage && (

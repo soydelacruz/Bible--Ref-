@@ -27,11 +27,35 @@
   color: var(--color-text-muted);
 }
 
-/* The name is the one part of the header that can give way: below this the switch, the search
-   box and the menus all need their room, and the shorter name still says what the page is.
-   Portuguese needs the help sooner than English, so the rule is on width, not on language. */
+/* The name is the one part of the header that can give way, and the shorter one still says what
+   the page is. On a phone the switch needs the room beside it; between 64rem and the width where
+   the header's one row has room for the menus' names (80rem, 86rem in Portuguese and Spanish, as
+   in controls.module.css), the search box does. From 48rem to 64rem the name has a row of its own
+   with the switch, and is whole. */
 .shortName {
   display: none;
+}
+
+@media (max-width: 47.99rem), (min-width: 64rem) and (max-width: 79.99rem) {
+  .fullName {
+    display: none;
+  }
+
+  .shortName {
+    display: inline;
+  }
+}
+
+@media (min-width: 64rem) and (max-width: 85.99rem) {
+  :global(html[lang|='pt']) .fullName,
+  :global(html[lang|='es']) .fullName {
+    display: none;
+  }
+
+  :global(html[lang|='pt']) .shortName,
+  :global(html[lang|='es']) .shortName {
+    display: inline;
+  }
 }
 
 @media (max-width: 47.99rem) {
@@ -40,13 +64,12 @@
   }
 }
 
-@media (max-width: 26.99rem) {
-  .fullName {
-    display: none;
-  }
-
-  .shortName {
-    display: inline;
+/* The name is the way home, and a touch target like any other. */
+@media (pointer: coarse) {
+  .home {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
   }
 }
 

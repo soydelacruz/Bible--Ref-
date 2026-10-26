@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, waitForApp } from './helpers.ts';
+import { ACTIVE, PANEL, waitForApp, openHeaderMenu, headerButton } from './helpers.ts';
 
 /**
  * Back and Forward, which readers press far more often than any button this app draws.
@@ -17,10 +17,7 @@ function query(page: Page): string {
 
 /** The language picker lives inside the translation menu, so the menu has to be open first. */
 async function chooseLanguage(page: Page, value: string): Promise<void> {
-  await page
-    .locator(ACTIVE)
-    .getByRole('button', { name: /Translation|Tradução/ })
-    .click();
+  await openHeaderMenu(page, /Translation|Tradução/);
   await page
     .locator(ACTIVE)
     .getByRole('combobox', { name: /Language|Idioma/ })
@@ -45,9 +42,7 @@ test.describe('browser history', () => {
     // And the Bible comes back with the language. `html[lang]` and the words are set by two
     // different statements, and the Bible by a third — asserting only the first would pass on an
     // English-worded page claiming to be Portuguese, which is exactly what used to happen.
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Tradução/ })).toContainText(
-      'BLIVRE',
-    );
+    await expect(await headerButton(page, /Tradução/)).toContainText('BLIVRE');
   });
 
   test('Forward returns to the language that followed it', async ({ page }) => {
@@ -93,17 +88,12 @@ test.describe('browser history', () => {
     await page.locator(ACTIVE).getByRole('searchbox').press('Enter');
     await expect(page.locator(PANEL).getByRole('heading', { name: 'John 3:16' })).toBeVisible();
 
-    await page
-      .locator(ACTIVE)
-      .getByRole('button', { name: /Translation/ })
-      .click();
+    await openHeaderMenu(page, /Translation/);
     await page
       .locator(ACTIVE)
       .getByRole('radio', { name: /King James/ })
       .check();
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Translation/ })).toContainText(
-      'KJV',
-    );
+    await expect(await headerButton(page, /Translation/)).toContainText('KJV');
     // The picker moves the moment it is clicked; the address waits for the text to arrive, which
     // is a four-megabyte download. Pressing Back between the two would be a different test.
     await page.waitForURL(/t=kjv/);
