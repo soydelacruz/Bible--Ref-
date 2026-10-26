@@ -9,6 +9,16 @@
   }
 }
 
+/* "Cross-references:" names what the first link is the source of. It is the longest word in the
+   line, and at 768px it pushed the English footer onto a second row on Linux (where the line was
+   measured; Mac fonts run wider still), so it waits for 64rem. Below that, the link's own name
+   says whose the links are, and the licence and the note of the change stay as they were. */
+@media (max-width: 63.99rem) {
+  .label {
+    display: none;
+  }
+}
+
 /* The background only appears where the footer still fits on one line with it. The whole line
    measures about 80rem here; it waits for 92rem, because a font is not the same width everywhere
    (the system stack is wider on a Mac than on the Linux box this was measured on) and the line
