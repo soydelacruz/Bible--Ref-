@@ -18,7 +18,7 @@ import { PassagePanel } from '../shared/components/PassagePanel.tsx';
 import { SavedMenu } from '../shared/components/SavedMenu.tsx';
 import { ReferenceSearch } from '../shared/components/ReferenceSearch.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
-import { DEFAULT_LINK_FILTER, selectLinks } from '../shared/link-filter.ts';
+import { DEFAULT_LINK_FILTER, isDefaultFilter, selectLinks } from '../shared/link-filter.ts';
 import { summarizeLinks } from '../shared/link-summary.ts';
 import { formatPassage, type Passage } from '../../core/bible/passage.ts';
 import controls from '../shared/components/controls.module.css';
@@ -57,6 +57,8 @@ export function ArcsExplorer({
     () => summarizeLinks(index, linkIds, data.verseGenres),
     [index, linkIds, data.verseGenres],
   );
+  // The summary line can open the Filters menu too, so the menu's state lives here.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const closePanel = () => {
     onNavigate(null);
   };
@@ -119,6 +121,8 @@ export function ArcsExplorer({
             onChange={onFilterChange}
             shownLinks={linkIds.length}
             totalLinks={index.linkCount}
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
           />
           <button
             type="button"
@@ -160,6 +164,10 @@ export function ArcsExplorer({
       />
       <LinkStats
         summary={summary}
+        isFilterDefault={isDefaultFilter(filter, DEFAULT_LINK_FILTER)}
+        onShowFilters={() => {
+          setFiltersOpen(true);
+        }}
         hint={{
           pointer: (
             <>

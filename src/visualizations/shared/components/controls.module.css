@@ -17,6 +17,12 @@
   padding-inline-start: calc(var(--space-3) + 1.6em);
 }
 
+/* Chrome keeps room for its clear button even while the box is empty, with nothing to clear,
+   and on a phone that room is the end of the placeholder's word. */
+.search .input:placeholder-shown::-webkit-search-cancel-button {
+  display: none;
+}
+
 /* Where the controls get a row of their own, the search box starts narrower and grows into the
    room left by the busiest view's controls. The two thresholds match VizPage.module.css: 80rem
    for English, and 86rem for a language whose controls need the second row sooner. */
@@ -39,6 +45,16 @@
   .search {
     flex-basis: 4.5rem;
     max-inline-size: none;
+  }
+
+  /* Where the row leaves the box little room, a tighter inset keeps its one word whole. The box
+     itself is no wider, so the row around it does not move. */
+  .searchIcon {
+    inset-inline-start: var(--space-2);
+  }
+
+  .search .input {
+    padding-inline: calc(var(--space-2) + 1.4em) var(--space-2);
   }
 }
 
@@ -68,6 +84,23 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
   background: var(--color-danger-soft);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+}
+
+/* A search that found nothing: in the same place as `.error`, but in the results list's quiet
+   surface, since nothing went wrong. */
+.notice {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline: 0;
+  z-index: 5;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.5);
   color: var(--color-text);
   font-size: 0.8125rem;
 }

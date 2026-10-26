@@ -18,7 +18,7 @@ export const en = {
   'view.arcs.open': 'Show in Arcs',
   'view.threads': 'Threads',
   'view.threads.short': 'Threads',
-  'view.threads.open': 'Read in context',
+  'view.threads.open': 'Read in Threads',
   'view.clusters': 'Clusters',
   'view.clusters.short': 'Clusters',
   'view.clusters.open': 'Show in Clusters',
@@ -26,8 +26,12 @@ export const en = {
 
   'search.label': 'Go to a Bible reference, or search the text for words',
   'search.placeholder': 'John 3:16, Ps 23 or words…',
+  // On a phone, until the box is focused: the box starts too narrow for the example, which would
+  // be cut to "Joh".
+  'search.placeholder.short': 'Search',
+  // Finding nothing is an answer, not a mistake, so it says what to try next.
   'search.noResults': (query: string) =>
-    `No verse contains “${query}”. To open a passage, enter a reference like “John 3:16”.`,
+    `No verse contains “${query}”. Try other words, or a reference like “John 3:16”.`,
   'search.results': (count: string, plural: number, query: string) =>
     plural === 1 ? `1 verse contains “${query}”.` : `${count} verses contain “${query}”.`,
   'search.results.limited': (shown: string) =>
@@ -36,7 +40,8 @@ export const en = {
   'search.results.close': 'Close the results',
 
   'reference.unreadable': 'Enter a reference like “John 3:16” or “Ps 23”.',
-  'reference.unknownBook': (query: string) => `Unknown book “${query}”.`,
+  'reference.unknownBook': (query: string) =>
+    `No book is called “${query}”. Try a name or abbreviation, like “Rev 12:9”.`,
   'reference.ambiguous': (query: string, candidates: string) =>
     `“${query}” could be ${candidates}.`,
   'reference.or': ' or ',
@@ -46,22 +51,23 @@ export const en = {
 
   'menu.filtersChanged': 'Filters (changed)',
   'menu.filters': 'Filters',
-  'menu.filters.votes': 'Community votes',
-  'menu.filters.votes.all': 'All',
-  'menu.filters.votes.atLeast': (votes: number) => `≥ ${String(votes)}`,
+  // The label reads into the choice below it: "Show links with" / "4 or more votes".
+  'menu.filters.votes': 'Show links with',
+  'menu.filters.votes.all': 'Any number of votes',
+  'menu.filters.votes.atLeast': (votes: number) => `${String(votes)} or more votes`,
   // The parenthesis opens and closes inside the message: a sentence a translator cannot see the
   // end of is one they cannot punctuate, and not every language closes a clause the way English
   // does. `hidden` is the genre clause, or empty.
   'menu.filters.note': (shown: string, total: string, threshold: string, hidden: string) =>
-    `Votes rank how helpful OpenBible.info readers found a link; they don’t prove it right or ` +
-    `wrong. Showing ${shown} of ${total} links (${threshold}${hidden}).`,
+    `Votes rank how helpful OpenBible.info readers found a cross-reference; they don’t prove it ` +
+    `right or wrong. Showing ${shown} of ${total} links (${threshold}${hidden}).`,
   'menu.filters.hiddenGenres': (count: number) =>
     count === 1 ? ', 1 genre hidden' : `, ${String(count)} genres hidden`,
   'filter.allLinks': 'all links',
   'filter.noDownvoted': 'links voted down are hidden',
-  'filter.atLeastVotes': (votes: string, plural: number) =>
-    plural === 1 ? `≥ ${votes} vote` : `≥ ${votes} votes`,
-  'menu.filters.tip': 'Tip: tap a genre in the legend to hide or show it.',
+  // The same words as the choice in the menu, inside the note's parenthesis.
+  'filter.atLeastVotes': (votes: string) => `${votes} or more votes`,
+  'menu.filters.tip': 'Choose a genre in the legend to hide or show it.',
   'menu.filters.reset': 'Reset filters',
 
   'attribution.bsb': 'Scripture text: Berean Standard Bible (BSB), dedicated to the public domain.',
@@ -101,18 +107,28 @@ export const en = {
 
   'stats.label': 'Summary',
   'stats.verses': (count: string): Emphasized => [{ strong: count }, ' verses'],
+  // The summary is where a reader first meets the word, so it says "cross-references" in full;
+  // "links" is its short form everywhere after.
   'stats.links': (shown: string, total: string | null): Emphasized =>
     total === null
-      ? [{ strong: shown }, ' links shown']
-      : [{ strong: shown }, ` of ${total} links shown`],
-  'stats.connected': (share: string): Emphasized => [{ strong: share }, ' of verses connected'],
+      ? [{ strong: shown }, ' cross-references shown']
+      : [{ strong: shown }, ` of ${total} cross-references shown`],
+  // While the default filter is on. It hides more than half the links without the Filters menu
+  // showing it as changed, so the line says plainly that these are a selection; a link to the
+  // Filters menu follows it.
+  'stats.links.bestRated': (shown: string, total: string): Emphasized => [
+    { strong: shown },
+    ` best-rated of ${total} cross-references`,
+  ],
+  'stats.connected': (share: string): Emphasized => [{ strong: share }, ' of verses have links'],
   'stats.crossTestament': (count: string): Emphasized => [
     { strong: count },
     ' links between the testaments',
   ],
   'hint.zoom': 'to zoom',
   'hint.pan': 'to pan',
-  'hint.focus': 'to focus',
+  // A click or tap opens the passage in the panel, to read.
+  'hint.focus': 'to read',
   'hint.hold': 'hold to preview',
 
   'panel.details': 'Details',
@@ -175,13 +191,13 @@ export const en = {
     'Kept on this device only. Export a copy to keep it safe or to bring it to another device.',
 
   'image.save': 'Save as image',
-  'image.failed': 'The picture could not be saved.',
+  'image.failed': 'The image could not be saved.',
 
   'path.title': 'Path',
   'path.note': 'the chain of links to another passage',
   'path.label': 'Passage to find a path to',
-  'path.placeholder': 'To…  Rev 12:9',
-  'path.find': 'Find',
+  'path.placeholder': 'Another passage, e.g. Rev 12:9',
+  'path.find': 'Find path',
   'path.clear': 'Clear path',
   'path.summary': (from: string, to: string, count: string, plural: number) =>
     plural === 1 ? `${from} to ${to} in ${count} link:` : `${from} to ${to} in ${count} links:`,
@@ -267,22 +283,27 @@ export const en = {
   'clusters.openBook': 'click to open it',
   'clusters.hint':
     'Point at a verse to light up its links, or at a book’s name or edge for all of them · ' +
-    'click a book’s name to open it',
+    'click a verse to read it, or a book’s name to open it',
+  // A touch screen has nothing to point with, so its hint is about the tap alone.
+  'clusters.hint.touch': 'Tap a verse to read it, or a book’s name to open it',
+  // The button's visible word; the start and stop messages are its full name.
+  'clusters.tour.label': 'Tour',
   'clusters.tour.start': 'Play a tour of well-known verses',
   'clusters.tour.stop': 'Stop the tour',
   'clusters.stage':
     'Every verse with cross-references as a dot, gathered into one cluster per book: the Old ' +
     'Testament on one side, the New on the other, with the links between them drawn faintly. ' +
-    'Point at a book or a verse to light up its links, click a verse to focus it, and click a ' +
+    'Point at a book or a verse to light up its links, click a verse to read it, and click a ' +
     'book to open it chapter by chapter.',
+  // A count in a tooltip or beside a verse, in every view.
   'arcs.connections': (count: string, plural: number) =>
-    plural === 1 ? `${count} connection` : `${count} connections`,
+    plural === 1 ? `${count} cross-reference` : `${count} cross-references`,
   'arcs.stage':
     'Arc diagram of cross-references. Drag or use the arrow keys to pan, scroll or +/- to zoom, ' +
-    'click to focus a passage, Escape to clear. On a touch screen, touch and hold to preview a ' +
+    'click a passage to read it, Escape to clear. On a touch screen, touch and hold to preview a ' +
     'passage.',
 
-  'credits.links': 'Links:',
+  'credits.links': 'Cross-references:',
   'credits.fromTsk': ', from the Treasury of Scripture Knowledge',
   'credits.reindexed': ', re-indexed',
   'credits.toKjv': ' to KJV verse numbering',

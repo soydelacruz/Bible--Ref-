@@ -1,4 +1,12 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { ExpandIcon, type IconComponent } from '../../../shared/ui/icons.tsx';
 import styles from './controls.module.css';
 
@@ -23,6 +31,12 @@ interface MenuButtonProps {
   readonly changedLabel?: string;
   /** Marks the button busy while the choice is being applied (e.g. a text still downloading). */
   readonly busy?: boolean;
+  /**
+   * Whether the popover is open, for a menu that something else on the page can open too (the
+   * Filters link in the summary line). Left out, the menu keeps track of it by itself.
+   */
+  readonly open?: boolean | undefined;
+  readonly onOpenChange?: ((open: boolean) => void) | undefined;
   /** The popover's content. */
   readonly children: ReactNode;
 }
@@ -51,9 +65,16 @@ export function MenuButton({
   indicator = false,
   changedLabel,
   busy = false,
+  open: openProp,
+  onOpenChange,
   children,
 }: MenuButtonProps) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = openProp ?? ownOpen;
+  const setOpen = onOpenChange ?? setOwnOpen;
+  const close = useEffectEvent(() => {
+    setOpen(false);
+  });
   const name = value === undefined ? label : `${label}: ${value}`;
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -66,12 +87,12 @@ export function MenuButton({
     }
     const closeOnOutside = (event: PointerEvent) => {
       if (event.target instanceof Node && !menuRef.current?.contains(event.target)) {
-        setOpen(false);
+        close();
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setOpen(false);
+        close();
         // Escape is a keyboard gesture, so focus goes back to the button it came from rather
         // than to the top of the page.
         buttonRef.current?.focus();
@@ -114,7 +135,7 @@ export function MenuButton({
         aria-controls={popoverId}
         aria-busy={busy || undefined}
         onClick={() => {
-          setOpen((isOpen) => !isOpen);
+          setOpen(!open);
         }}
       >
         {Icon && <Icon />}

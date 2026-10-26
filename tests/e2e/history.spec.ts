@@ -117,10 +117,8 @@ test.describe('browser history', () => {
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
 
-    await page
-      .locator(ACTIVE)
-      .getByRole('link', { name: /Threads/i })
-      .click();
+    // The view switch's own link: the panel also offers "Read in Threads".
+    await page.locator(ACTIVE).getByRole('link', { name: 'Threads', exact: true }).click();
     await waitForApp(page);
     expect(new URL(page.url()).pathname).toContain('threads');
 

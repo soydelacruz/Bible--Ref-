@@ -16,6 +16,9 @@ interface FiltersMenuProps {
   /** Links currently shown, and in the whole dataset, so filtering is never hidden. */
   readonly shownLinks: number;
   readonly totalLinks: number;
+  /** For a view that opens the menu from elsewhere too (see `MenuButton`). */
+  readonly open?: boolean | undefined;
+  readonly onOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 /** Low-key link filters: a button that opens a small popover. */
@@ -25,17 +28,19 @@ export function FiltersMenu({
   onChange,
   shownLinks,
   totalLinks,
+  open,
+  onOpenChange,
 }: FiltersMenuProps) {
   const { t, n } = useLocalization();
   const isDefault = isDefaultFilter(filter, defaults);
-  // The minimum is included, hence ≥ (e.g. "≥ 4" keeps links with 4 votes).
+  // The minimum is included: "4 or more votes" keeps links with 4 votes.
   const threshold = describeThreshold(filter.minVotes);
   const thresholdText =
     threshold.kind === 'all'
       ? t('filter.allLinks')
       : threshold.kind === 'no-downvoted'
         ? t('filter.noDownvoted')
-        : t('filter.atLeastVotes')(n(threshold.votes), threshold.votes);
+        : t('filter.atLeastVotes')(n(threshold.votes));
   const thresholdLabel = (minVotes: number) =>
     minVotes === -Infinity
       ? t('menu.filters.votes.all')
@@ -46,6 +51,8 @@ export function FiltersMenu({
       changedLabel={t('menu.filtersChanged')}
       icon={FiltersIcon}
       indicator={!isDefault}
+      open={open}
+      onOpenChange={onOpenChange}
     >
       <label className={styles.field}>
         {t('menu.filters.votes')}

@@ -75,7 +75,7 @@ test.describe('reading in Portuguese', () => {
     const search = page.locator(ACTIVE).getByRole('searchbox');
     await search.fill('Hesitações 4:4');
     await search.press('Enter');
-    await expect(page.locator(ACTIVE).getByRole('alert')).toContainText('Livro desconhecido');
+    await expect(page.locator(ACTIVE).getByRole('alert')).toContainText('Nenhum livro se chama');
   });
 
   test('counts are written the way a Brazilian writes them', async ({ page }) => {
