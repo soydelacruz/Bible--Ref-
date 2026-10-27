@@ -33,6 +33,8 @@ interface ArcsStageProps {
   readonly onSelect: (passage: Passage | null) => void;
   /** Filled with a way to take a picture of the diagram as it is, once it can be drawn. */
   readonly snapshotRef?: RefObject<ArcsController['snapshot'] | null>;
+  /** Filled with the controller while the stage is up, for what moves the camera on its own (the tour). */
+  readonly controllerRef?: RefObject<ArcsController | null>;
 }
 
 /** The arc diagram: a WebGL layer for arcs, a 2D overlay for the axis, and a hover tooltip. */
@@ -45,6 +47,7 @@ export function ArcsStage({
   preview,
   onSelect,
   snapshotRef,
+  controllerRef: outsideControllerRef,
 }: ArcsStageProps) {
   const { t, books, locale } = useLocalization();
   const genres = locale.genres;
@@ -87,14 +90,20 @@ export function ArcsStage({
     if (snapshotRef) {
       snapshotRef.current = (compose) => controller.snapshot(compose);
     }
+    if (outsideControllerRef) {
+      outsideControllerRef.current = controller;
+    }
     return () => {
       controller.dispose();
       controllerRef.current = null;
       if (snapshotRef) {
         snapshotRef.current = null;
       }
+      if (outsideControllerRef) {
+        outsideControllerRef.current = null;
+      }
     };
-  }, [data.versification, snapshotRef]);
+  }, [data.versification, snapshotRef, outsideControllerRef]);
 
   useEffect(() => {
     namesRef.current = { books, genres };

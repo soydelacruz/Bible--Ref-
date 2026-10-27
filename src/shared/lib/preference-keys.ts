@@ -14,6 +14,8 @@ export function preferenceKey(name: string): string {
 
 export const LOCALE_PREFERENCE = 'locale';
 export const TRANSLATION_PREFERENCE = 'translation';
+/** Whether the arcs' tour has been offered: a first visit invites the reader to it, once. */
+export const ARCS_TOUR_PREFERENCE = 'arcs-tour-offered';
 
 export const LOCALE_STORAGE_KEY = preferenceKey(LOCALE_PREFERENCE);
 export const TRANSLATION_STORAGE_KEY = preferenceKey(TRANSLATION_PREFERENCE);

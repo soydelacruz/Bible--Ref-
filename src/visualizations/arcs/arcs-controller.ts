@@ -352,6 +352,27 @@ export class ArcsController {
     });
   }
 
+  /**
+   * For the guided tour (`tour/`), which frames each stop itself: focuses `range` as `setFocus`
+   * does, but flies to `view` rather than only bringing the passage into sight. Its links grow out
+   * of it as the camera lands — whatever key the reader pressed last, since it is the tour that
+   * moves them. Resolves `true` once landed, or `false` if the reader took over first.
+   */
+  showStop(range: VerseIndexRange, view: AxisView): Promise<boolean> {
+    const changed = range.start !== this.#focus?.start || range.end !== this.#focus.end;
+    this.#keyboard = false;
+    this.#focus = range;
+    this.#scene.setFocus(this.#linksOfRange(range));
+    this.#fadeDim(1);
+    return new Promise((resolve) => {
+      const arrival = this.#fly(view, 'flight', resolve);
+      if (changed) {
+        this.#ignite(range, arrival);
+      }
+      this.#scheduler.request();
+    });
+  }
+
   dispose(): void {
     this.#stopMotion();
     this.#cancelDim?.();
