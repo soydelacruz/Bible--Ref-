@@ -13,6 +13,7 @@ import {
   LuChevronDown,
   LuChevronLeft,
   LuChevronRight,
+  LuClapperboard,
   LuCopy,
   LuDownload,
   LuEllipsis,
@@ -129,8 +130,9 @@ export const NoHighlightIcon = decorative(LuBan);
 export const ExportIcon = decorative(LuDownload);
 export const ImportIcon = decorative(LuUpload);
 
-// A picture of the view, to keep or share.
+// A picture of the view, or a short video of a passage's links, to keep or share.
 export const SaveImageIcon = decorative(LuImageDown);
+export const SaveVideoIcon = decorative(LuClapperboard);
 
 // A chain of links from one passage to another.
 export const PathIcon = decorative(LuRoute);
