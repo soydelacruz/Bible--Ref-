@@ -11,7 +11,7 @@ import {
   verseIndex,
 } from '../test-utils/fixtures.ts';
 import { VizDataBoundary } from '../visualizations/shared/components/VizDataBoundary.tsx';
-import { VizPage } from '../visualizations/shared/components/VizPage.tsx';
+import { HeaderActions, VizPage } from '../visualizations/shared/components/VizPage.tsx';
 import { vizCoreLoader, resetTranslations } from '../visualizations/shared/viz-data.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
 import { VIEWS } from './views.ts';
@@ -180,6 +180,47 @@ describe('VizPage', () => {
     await userEvent.keyboard('{Escape}');
     expect(more.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(more);
+  });
+
+  it('puts what the host adds first among the controls, and first in More', async () => {
+    render(
+      <HeaderActions value={<button type="button">Wander</button>}>
+        <VizPage
+          tools={<button type="button">Saved</button>}
+          filters={<button type="button">Filter</button>}
+          credits={<span>Credits</span>}
+        >
+          <canvas />
+        </VizPage>
+      </HeaderActions>,
+    );
+    const names = (buttons: readonly HTMLElement[]) => buttons.map((button) => button.textContent);
+    const header = within(screen.getByRole('banner'));
+    // One copy at the end of the first row, for where the header is two rows, and one among the
+    // controls; the styles show one at a time, which this DOM does not apply.
+    expect(names(header.getAllByRole('button'))).toEqual([
+      'Wander',
+      'Wander',
+      'Saved',
+      'Filter',
+      'More',
+    ]);
+    const more = screen.getByRole('button', { name: 'More' });
+    await userEvent.click(more);
+    const popover = document.getElementById(more.getAttribute('aria-controls') ?? '');
+    if (!popover) throw new Error('More opened nothing');
+    expect(names(within(popover).getAllByRole('button'))).toEqual(['Wander', 'Saved']);
+  });
+
+  it('has a More menu for what the host adds, even with no controls of its own', () => {
+    render(
+      <HeaderActions value={<button type="button">Wander</button>}>
+        <VizPage credits={<span>Credits</span>}>
+          <canvas />
+        </VizPage>
+      </HeaderActions>,
+    );
+    expect(screen.getByRole('button', { name: 'More' })).toBeDefined();
   });
 
   it('says on the More button when something inside it hides part of the picture', () => {

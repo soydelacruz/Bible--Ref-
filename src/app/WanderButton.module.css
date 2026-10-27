@@ -1,0 +1,38 @@
+/* A press answers at once: the button gives a little under the finger and springs back as it is let
+   go. Only its scale moves, so nothing around it is laid out again. */
+.wander {
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wander:active {
+  transform: scale(0.97);
+}
+
+/* Named only where the header has room to spare: its name comes out of the search box, which it
+   took from 250px to 88px at 768px in Portuguese, and to 119px at 1376px. Narrower than 90rem (96rem
+   in Portuguese and Spanish, whose names run longer) it stands on its compass, named in its tooltip
+   and to screen readers. On phones it is a row of More, which spells it out (`rowLabel`). */
+@media (max-width: 89.99rem) {
+  .label {
+    display: none;
+  }
+}
+
+@media (max-width: 95.99rem) {
+  :global(html[lang|='pt']) .label,
+  :global(html[lang|='es']) .label {
+    display: none;
+  }
+}
+
+/* Without motion, the press still shows: the button dims while held, at once. */
+@media (prefers-reduced-motion: reduce) {
+  .wander {
+    transition: none;
+  }
+
+  .wander:active {
+    transform: none;
+    opacity: 0.7;
+  }
+}

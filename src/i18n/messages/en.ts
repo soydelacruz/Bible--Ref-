@@ -39,6 +39,14 @@ export const en = {
   'search.results.label': 'Verses that contain the words',
   'search.results.close': 'Close the results',
 
+  // Beside the search box: a jump to a verse with many links that the reader may not know.
+  'wander.label': 'Wander',
+  'wander.hint': 'Go to a richly linked verse you may not know',
+  // Said once it has gone, whether or not focus moved.
+  'wander.arrived': (passage: string) => `Wandered to ${passage}`,
+  // Every link hidden (every genre off, say): there is no verse to go to.
+  'wander.none': 'No verse has links under these filters.',
+
   'reference.unreadable': 'Enter a reference like “John 3:16” or “Ps 23”.',
   'reference.unknownBook': (query: string) =>
     `No book is called “${query}”. Try a name or abbreviation, like “Rev 12:9”.`,

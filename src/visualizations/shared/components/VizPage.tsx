@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, use, type ReactNode } from 'react';
 import { MoreIcon } from '../../../shared/ui/icons.tsx';
 import { SiteFooter } from '../../../shared/ui/SiteFooter.tsx';
 import { useLocalization } from '../../../i18n/use-locale.tsx';
@@ -6,6 +6,14 @@ import { useBottomSheet } from '../use-bottom-sheet.ts';
 import controls from './controls.module.css';
 import { MenuButton, MenuRows } from './MenuButton.tsx';
 import styles from './VizPage.module.css';
+
+/**
+ * What the host adds to every view's header (Wander): provided once, around all the views, rather
+ * than handed to each of them to pass on. First among the controls, beside the search box, since
+ * like the search it takes the reader to a passage; at the end of the first row where the header
+ * is two rows, since the second has no room to spare; in the More menu on phones.
+ */
+export const HeaderActions = createContext<ReactNode>(null);
 
 interface VizPageProps {
   /** The header's leading part, provided by the host app: the site's name and navigation. */
@@ -62,16 +70,24 @@ export function VizPage({
     hasPanel,
     onPanelClose,
   );
-  const hasMore = Boolean(tools) || Boolean(viewTools);
+  const actions = use(HeaderActions);
+  const hasMore = Boolean(actions) || Boolean(tools) || Boolean(viewTools);
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div className={styles.masthead}>{masthead}</div>
+        <div className={styles.masthead}>
+          {masthead}
+          {/* Shown only on two rows, in place of the copy among the controls: one at a time. */}
+          {Boolean(actions) && <div className={styles.mastheadActions}>{actions}</div>}
+        </div>
         <div className={styles.search}>{search}</div>
         <div className={styles.tools}>
           {/* The same controls are rendered again inside More, which only exists while open:
               there is never more than one of each on screen or to a screen reader. */}
-          <div className={styles.shared}>{tools}</div>
+          <div className={styles.shared}>
+            <div className={styles.rowActions}>{actions}</div>
+            {tools}
+          </div>
           {filters}
           {hasMore && (
             <div className={styles.more}>
@@ -84,7 +100,10 @@ export function VizPage({
                 closeOnAction
               >
                 <MenuRows value>
-                  <div className={controls.rows}>{tools}</div>
+                  <div className={controls.rows}>
+                    {actions}
+                    {tools}
+                  </div>
                   {Boolean(viewTools) && <div className={controls.rowsSection}>{viewTools}</div>}
                 </MenuRows>
               </MenuButton>

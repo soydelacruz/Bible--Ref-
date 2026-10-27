@@ -52,6 +52,15 @@
   display: contents;
 }
 
+/* What the host adds (Wander): among the controls, first, wherever the header is one row. */
+.rowActions {
+  display: contents;
+}
+
+.mastheadActions {
+  display: none;
+}
+
 /* The More menu is the phones' answer to a row with no room; anywhere wider, everything it holds
    is in the header or on the stage already. */
 .more {
@@ -66,6 +75,24 @@
       'masthead masthead'
       'search tools';
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* On two rows the first has room that the second lacks: what the host adds goes at its end, beside
+   the switch, and the second row keeps the search box and the controls as they were. Among them,
+   even on its icon alone, Wander took the box at 768px in Portuguese from 211px to 160px. */
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  .masthead > :first-child {
+    margin-inline-end: auto;
+  }
+
+  .mastheadActions {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .rowActions {
+    display: none;
   }
 }
 

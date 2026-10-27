@@ -270,6 +270,20 @@ test.describe('the header', () => {
   }
 
   /**
+   * Between a phone and a desktop, two rows: the second is the search box and the controls, by
+   * name in the language with the longest names (Wander stands on its compass), in the view with
+   * the most of them. The box keeps room for a reference.
+   */
+  test('768px, pt: the search box keeps its room beside the controls', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await page.goto('./threads/?lang=pt');
+    await waitForApp(page);
+    const search = page.locator(`${ACTIVE} header`).first().getByRole('searchbox');
+    const width = await search.evaluate((box) => box.getBoundingClientRect().width);
+    expect(width).toBeGreaterThanOrEqual(176);
+  });
+
+  /**
    * A phone, touch and all: two rows of 44px targets, and no taller than 105px in any view, in
    * the language with the longest names. The search box keeps most of its row.
    */
@@ -321,8 +335,10 @@ test.describe('the header', () => {
     const more = page.locator(ACTIVE).getByRole('button', { name: /^More/ });
     await more.click();
     await expect(more).toHaveAttribute('aria-expanded', 'true');
-    // Focus moves into it; the direction of the threads is there too, on a phone.
-    await expect(page.locator(ACTIVE).getByRole('button', { name: /Translation/ })).toBeFocused();
+    // Focus moves into it, to its first control as in the header's row (Wander); the direction of
+    // the threads is there too, on a phone.
+    await expect(page.locator(ACTIVE).getByRole('button', { name: 'Wander' })).toBeFocused();
+    await expect(page.locator(ACTIVE).getByRole('button', { name: /Translation/ })).toBeVisible();
     await expect(
       page.locator(ACTIVE).getByRole('group', { name: 'Thread direction' }),
     ).toBeVisible();

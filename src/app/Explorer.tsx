@@ -9,7 +9,7 @@ import {
   useState,
   useTransition,
 } from 'react';
-import { formatPassage, type Passage } from '../core/bible/passage.ts';
+import { formatPassage, versePassage, type Passage } from '../core/bible/passage.ts';
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx';
 import { getTranslationManifest } from '../translations/registry.ts';
 import controls from '../visualizations/shared/components/controls.module.css';
@@ -17,7 +17,8 @@ import { DEFAULT_LINK_FILTER, type LinkFilter } from '../visualizations/shared/l
 import { Credits } from '../visualizations/shared/components/Credits.tsx';
 import { TextPending } from '../visualizations/shared/components/TextPending.tsx';
 import { TranslationMenu } from '../visualizations/shared/components/TranslationMenu.tsx';
-import { VizPage } from '../visualizations/shared/components/VizPage.tsx';
+import { HeaderActions, VizPage } from '../visualizations/shared/components/VizPage.tsx';
+import { useAnnouncer } from '../visualizations/shared/use-announcer.ts';
 import { useCompleteData, useTextStatus } from '../visualizations/shared/use-text-status.ts';
 import {
   resetTranslation,
@@ -30,7 +31,9 @@ import { explorerUrl, plainLocaleFor, plainTranslationFor } from './explorer-loc
 import { InAppLink } from './InAppLink.tsx';
 import { readPreferredTranslation, useTranslationPreference } from './translation-choice.ts';
 import { useExplorerLocation } from './use-explorer-location.ts';
+import { useWander } from './use-wander.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
+import { WanderButton } from './WanderButton.tsx';
 import type { LocaleId } from '../i18n/locale-id.ts';
 import { translationDatasetPath } from '../core/datasets/paths.ts';
 import { cacheDatasets } from './register-offline-cache.ts';
@@ -108,6 +111,12 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // the element to focus there.
   const focusTarget = useRef<string | null>(null);
   const active = VIEWS.find((view) => view.id === location.view) ?? HOME;
+  const wander = useWander(core, filter, passage);
+  // The compass turns on the first press only.
+  const [hasWandered, setHasWandered] = useState(false);
+  // Says where Wander went. The views' panels describe a passage once it is open, but not every
+  // view has its panel up at once (Clusters waits for the words), and this region outlives them.
+  const [wanderStatus, announceWander] = useAnnouncer<HTMLParagraphElement>();
 
   const title = [
     passage && formatPassage(passage, versification, books),
@@ -242,6 +251,26 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     </>
   );
 
+  // In every view's header. The way there is the view's own, as for any passage it is handed: the
+  // arcs fly, the threads open the chapter at the verse, the clusters focus it.
+  const wanderButton = (
+    <WanderButton
+      flourish={!hasWandered}
+      onWander={() => {
+        const verse = wander();
+        if (verse === null) {
+          announceWander(t('wander.none'));
+          return;
+        }
+        const target = versePassage(verse);
+        // A history entry of its own, like any passage opened: Back returns to where they were.
+        navigate({ ...location, passage: target });
+        announceWander(t('wander.arrived')(formatPassage(target, versification, books)));
+        setHasWandered(true);
+      }}
+    />
+  );
+
   const credits = <Credits translation={translationManifest} />;
   // A view made of words waits for them inside its own frame: the masthead stays, so the views
   // already drawn are one switch away, and so does the translation picker.
@@ -258,7 +287,7 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     </VizPage>
   );
 
-  return VIEWS.map((view) => {
+  const views = VIEWS.map((view) => {
     const isActive = view === active;
     const props = {
       active: isActive,
@@ -339,4 +368,11 @@ export function Explorer({ core }: { readonly core: VizCore }) {
       </div>
     );
   });
+
+  return (
+    <HeaderActions value={wanderButton}>
+      {views}
+      <p ref={wanderStatus} className={styles.visuallyHidden} role="status" />
+    </HeaderActions>
+  );
 }
