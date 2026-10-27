@@ -10,30 +10,15 @@ interface CanonWindow {
 }
 
 /**
- * Reads the window off the overview strip the axis paints while zoomed in (a framed band along the
- * top, or down the right on a phone); `null` while the whole canon shows. The strip is drawn in 2D,
- * so it reads back the same whatever renders the arcs.
+ * Reads the window off the minimap beside the axis, which writes it down as shares of the canon
+ * each time the arcs are drawn; `null` while the whole canon shows.
  */
 function readWindow(stage: Element | null): CanonWindow | null {
-  const canvas = stage?.querySelectorAll('canvas')[1];
-  const context = canvas?.getContext('2d');
-  if (!canvas || !context || canvas.clientWidth === 0) return null;
-  const ratio = canvas.width / canvas.clientWidth;
-  const vertical = canvas.clientHeight > canvas.clientWidth * 1.15;
-  // The frame's first line, which runs the whole length of the window even where it goes off the
-  // canvas: along its top edge (2px down), or down its left edge on a phone (13.5px in).
-  const pixels = vertical
-    ? context.getImageData(Math.floor((canvas.clientWidth - 13.5) * ratio), 0, 1, canvas.height)
-    : context.getImageData(0, Math.floor(2.5 * ratio), canvas.width, 1);
-  const painted: number[] = [];
-  for (let i = 0; i < pixels.data.length / 4; i += 1) {
-    if ((pixels.data[i * 4 + 3] ?? 0) > 60) painted.push(i / ratio);
-  }
-  const first = painted[0];
-  const last = painted.at(-1);
-  if (first === undefined || last === undefined) return null;
-  const length = (vertical ? canvas.clientHeight : canvas.clientWidth) - 64;
-  return { start: (first + 1 - 32) / length, end: (last - 32) / length };
+  const strip = stage?.parentElement?.querySelector<HTMLElement>('[role="slider"]');
+  const start = Number(strip?.dataset['start']);
+  const end = Number(strip?.dataset['end']);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end - start > 0.999) return null;
+  return { start, end };
 }
 
 /** The page, with `readWindow` put in it so a flight can be watched frame by frame. */

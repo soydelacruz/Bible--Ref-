@@ -354,6 +354,15 @@ export const en = {
     'Arc diagram of cross-references. Drag or use the arrow keys to pan, scroll or +/- to zoom, ' +
     'click a passage to read it, Escape to clear. On a touch screen, touch and hold to preview a ' +
     'passage.',
+  // The strip of the whole Bible beside the arcs' axis, with a window over the part in view.
+  'arcs.minimap': 'Whole Bible',
+  'arcs.minimap.inView': (range: string) => `${range} in view`,
+  'arcs.minimap.help':
+    'Drag the window along the Bible, or its edges to zoom, and drag across books to light up ' +
+    'their cross-references. Arrow keys move the window, + and − zoom it, Enter lights up the ' +
+    'books in view and Escape clears them.',
+  'arcs.minimap.lit': (books: string, count: string) => `${books} lit up: ${count}`,
+  'arcs.minimap.cleared': 'The books are no longer lit up',
 
   'credits.links': 'Cross-references:',
   'credits.fromTsk': ', from the Treasury of Scripture Knowledge',

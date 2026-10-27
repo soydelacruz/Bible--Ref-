@@ -33,6 +33,24 @@ export function panView(view: AxisView, deltaVerses: number, total: number): Axi
   return clampView({ start: view.start + deltaVerses, end: view.end + deltaVerses }, total);
 }
 
+/**
+ * Moves one edge of the window to `position`, keeping the other where it is: dragging an edge of
+ * the minimap's window zooms. It stops short of the minimum span and of the ends of the axis.
+ */
+export function resizeView(
+  view: AxisView,
+  edge: 'start' | 'end',
+  position: number,
+  total: number,
+): AxisView {
+  const minSpan = Math.min(MIN_VIEW_SPAN, total);
+  const resized =
+    edge === 'start'
+      ? { start: Math.min(Math.max(position, 0), view.end - minSpan), end: view.end }
+      : { start: view.start, end: Math.max(Math.min(position, total), view.start + minSpan) };
+  return clampView(resized, total);
+}
+
 /** Moves the window (keeping its span) so that `[start, end]` is visible, centered if needed. */
 export function revealRange(view: AxisView, start: number, end: number, total: number): AxisView {
   if (start >= view.start && end <= view.end) {

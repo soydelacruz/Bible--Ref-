@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { clampView, fullView, MIN_VIEW_SPAN, panView, revealRange, zoomView } from './axis-view.ts';
+import {
+  clampView,
+  fullView,
+  MIN_VIEW_SPAN,
+  panView,
+  resizeView,
+  revealRange,
+  zoomView,
+} from './axis-view.ts';
 
 const TOTAL = 31102;
 
@@ -29,6 +37,23 @@ describe('axis view', () => {
   it('pans within bounds', () => {
     expect(panView({ start: 0, end: 1000 }, -500, TOTAL)).toEqual({ start: 0, end: 1000 });
     expect(panView({ start: 0, end: 1000 }, 250, TOTAL)).toEqual({ start: 250, end: 1250 });
+  });
+
+  it('moves one edge and keeps the other', () => {
+    const view = { start: 1000, end: 2000 };
+    expect(resizeView(view, 'start', 400, TOTAL)).toEqual({ start: 400, end: 2000 });
+    expect(resizeView(view, 'end', 5000, TOTAL)).toEqual({ start: 1000, end: 5000 });
+  });
+
+  it('stops an edge at the minimum span and at the ends of the axis', () => {
+    const view = { start: 1000, end: 2000 };
+    expect(resizeView(view, 'start', 1990, TOTAL)).toEqual({
+      start: 2000 - MIN_VIEW_SPAN,
+      end: 2000,
+    });
+    expect(resizeView(view, 'end', 0, TOTAL)).toEqual({ start: 1000, end: 1000 + MIN_VIEW_SPAN });
+    expect(resizeView(view, 'start', -300, TOTAL)).toEqual({ start: 0, end: 2000 });
+    expect(resizeView(view, 'end', TOTAL + 300, TOTAL)).toEqual({ start: 1000, end: TOTAL });
   });
 
   it('reveals a range only when it is not visible', () => {

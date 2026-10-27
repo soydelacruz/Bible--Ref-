@@ -314,6 +314,15 @@ export const pt: LocaleMessages = {
     'Diagrama em arcos das referências cruzadas. Arraste ou use as setas para mover, role ou ' +
     '+/- para ampliar, clique numa passagem para lê-la, Esc para limpar. Numa tela sensível ao ' +
     'toque, toque e segure para pré-visualizar uma passagem.',
+  'arcs.minimap': 'Bíblia inteira',
+  'arcs.minimap.inView': (range) => `${range} em vista`,
+  'arcs.minimap.help':
+    'Arraste a janela ao longo da Bíblia, ou as bordas dela para ampliar, e arraste sobre livros ' +
+    'para iluminar suas referências cruzadas. As setas movem a janela, + e − a ampliam, Enter ' +
+    'ilumina os livros em vista e Esc apaga a iluminação.',
+  // A gerund, so it reads the same for one book or many.
+  'arcs.minimap.lit': (books, count) => `Iluminando ${books}: ${count}`,
+  'arcs.minimap.cleared': 'Os livros não estão mais iluminados',
 
   // Feminine plural, as "reindexadas" below agrees with it.
   'credits.links': 'Referências cruzadas:',
