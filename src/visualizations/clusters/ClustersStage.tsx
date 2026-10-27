@@ -10,10 +10,25 @@ import type { VerseIndex } from '../../core/bible/verse-ref.ts';
 import { useLocalization } from '../../i18n/use-locale.tsx';
 import { PreviousIcon } from '../../shared/ui/icons.tsx';
 import controls from '../shared/components/controls.module.css';
-import { animate, MAX_PIXEL_RATIO } from '../shared/frames.ts';
+import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
+import {
+  blendLabels,
+  createGlideFrame,
+  easeOutCubic,
+  frameLayout,
+  FramePace,
+  GLIDE_MS,
+  glideEase,
+  HOVER_GROW_MS,
+  isStill,
+  planGlide,
+  playFrames,
+  writeGlideFrame,
+  type ShownScene,
+} from './cluster-glide.ts';
 import {
   drawnLinks,
   groupHighlight,
@@ -26,7 +41,15 @@ import {
   targetAt,
   type ClusterGroup,
 } from './cluster-layout.ts';
-import { drawBase, drawOverlay } from './clusters-drawing.ts';
+import {
+  drawBase,
+  drawGlideLabels,
+  drawOverlay,
+  GlideRenderer,
+  hazeAlpha,
+  placeLabels,
+  type BaseScene,
+} from './clusters-drawing.ts';
 import styles from './ClustersStage.module.css';
 
 interface ClustersStageProps {
@@ -53,14 +76,24 @@ interface Emphasis {
   readonly strength: 'strong' | 'soft';
 }
 
-/** How long a passage's links take to grow out from it; a book's appear at once. */
+/** How long a passage's links take to grow out from it; a book's only swell in (`HOVER_GROW_MS`). */
 const GROW_MS = 650;
+
+/** A reader who asked for less motion sees each picture at once: no glide, no growing links. */
+function reducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Device pixels per CSS pixel the canvases draw at. */
+function pixelRatio(): number {
+  return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+}
 
 /** Sizes a canvas's backing store to its box, for crisp lines on high-density screens. */
 function prepare(canvas: HTMLCanvasElement | null, width: number, height: number) {
   const context = canvas?.getContext('2d');
   if (!canvas || !context) return null;
-  const ratio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+  const ratio = pixelRatio();
   canvas.width = Math.round(width * ratio);
   canvas.height = Math.round(height * ratio);
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -81,10 +114,26 @@ export function ClustersStage({
   const { versification, crossReferences, verseGenres } = data;
   const { index } = crossReferences;
   const hostRef = useRef<HTMLDivElement>(null);
+  const glideRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const size = useElementSize(hostRef);
   const [hover, setHover] = useState<Hover | null>(null);
+  // What the base canvas shows now, at rest or mid-glide: where the next glide sets off from, and
+  // where what stands out is drawn.
+  const shownRef = useRef<ShownScene | null>(null);
+  // Repaints what stands out, for a glide to call as the dots move under it.
+  const repaintOverlayRef = useRef<(() => void) | null>(null);
+  // Draws the gliding dots and links; made at the first glide, `null` until then or without WebGL.
+  const rendererRef = useRef<GlideRenderer | null | undefined>(undefined);
+
+  useEffect(
+    () => () => {
+      rendererRef.current?.dispose();
+      rendererRef.current = undefined;
+    },
+    [],
+  );
 
   // The host keeps every view mounted, and a hidden one keeps its size: nothing is worked out
   // until the view is on screen, so the other views pay nothing for it.
@@ -140,16 +189,21 @@ export function ClustersStage({
     focusEnd,
   ]);
 
-  // The picture at rest: redrawn only when the layout or the language of its labels changes.
+  // The picture: drawn at rest, or, when the layout changes under it (a book opened or closed, a
+  // filter, a new size), glided there from where its dots are now, each verse moving as itself.
   useEffect(() => {
-    if (!active || !layout || !graph) return;
+    if (!active || !layout || !graph) {
+      // A view coming back is drawn as it is, not glided into from how it was when it left.
+      shownRef.current = null;
+      return undefined;
+    }
     const context = prepare(baseRef.current, layout.width, layout.height);
-    if (!context) return;
+    if (!context) return undefined;
     const label = (group: ClusterGroup) =>
       group.chapter === null
         ? { full: books[group.book].name, short: books[group.book].abbreviation ?? group.book }
         : { full: String(group.chapter), short: String(group.chapter) };
-    drawBase(context, {
+    const scene: BaseScene = {
       layout,
       index,
       linkIds: graph.linkIds,
@@ -161,10 +215,80 @@ export function ClustersStage({
         ...(openBook && { center: books[openBook].name }),
       },
       fontFamily: getComputedStyle(document.body).fontFamily,
-    });
+    };
+    const target: ShownScene = {
+      layout,
+      linkIds: graph.linkIds,
+      labels: placeLabels(context, scene),
+    };
+    // The picture at rest, drawn on this canvas alone once the glide (if any) has landed.
+    const glideCanvas = glideRef.current;
+    const rest = () => {
+      rendererRef.current?.clear();
+      glideCanvas?.removeAttribute('data-gliding');
+      drawBase(context, scene, target.labels);
+      shownRef.current = target;
+      repaintOverlayRef.current?.();
+    };
+    const from = shownRef.current;
+    if (!from || from.layout === layout || !glideCanvas || reducedMotion()) {
+      rest();
+      return undefined;
+    }
+    const plan = planGlide(from, target, index);
+    if (isStill(plan, layout)) {
+      rest();
+      return undefined;
+    }
+    rendererRef.current ??= GlideRenderer.create(glideCanvas);
+    const renderer = rendererRef.current;
+    if (!renderer) {
+      rest();
+      return undefined;
+    }
+    renderer.load(plan, layout, verseGenres, pixelRatio());
+    glideCanvas.setAttribute('data-gliding', '');
+    const frame = createGlideFrame(plan);
+    const haze = { from: hazeAlpha(from.linkIds.length), to: hazeAlpha(graph.linkIds.length) };
+    let landed = false;
+    let landing: number | null = null;
+    const pace = new FramePace(performance.now());
+    const paint = (linear: number) => {
+      if (landed) return;
+      const progress = glideEase(linear);
+      const keepingUp = linear === 0 || !pace.tooSlow(performance.now());
+      if (!keepingUp || !renderer.draw(progress, haze)) {
+        landed = true;
+        rest();
+        return;
+      }
+      writeGlideFrame(plan, layout, progress, frame);
+      const labels = blendLabels(from.labels, target.labels, progress);
+      drawGlideLabels(context, layout, labels, scene.fontFamily);
+      shownRef.current = { ...target, layout: frameLayout(plan, layout, frame, progress) };
+      repaintOverlayRef.current?.();
+      // The glide lands on the picture at rest, drawn a frame after its last: tracing every link
+      // and dot again can hold a phone up for a while, and this way it holds up a still picture.
+      if (linear >= 1) {
+        landed = true;
+        landing = requestAnimationFrame(rest);
+      }
+    };
+    // Sizing the canvas cleared it: the first frame is drawn now, not after a blank one.
+    paint(0);
+    const stop = playFrames(GLIDE_MS, paint);
+    return () => {
+      stop();
+      if (landing !== null) cancelAnimationFrame(landing);
+      // Whatever comes next (another glide, the picture at rest, or nothing while the view is
+      // away) is drawn from scratch, so a glide cut short leaves nothing behind.
+      rendererRef.current?.clear();
+      glideCanvas.removeAttribute('data-gliding');
+    };
   }, [active, layout, index, graph, verseGenres, books, t, openBook]);
 
-  // What stands out: a passage's links grow out from it; a book's appear at once.
+  // What stands out: a passage's links grow out from it; a book's appear at once. Either swells
+  // in quickly under the pointer, and follows the dots while they glide.
   useEffect(() => {
     if (!active || !layout) return undefined;
     const context = prepare(overlayRef.current, layout.width, layout.height);
@@ -173,24 +297,40 @@ export function ClustersStage({
       context.clearRect(0, 0, layout.width, layout.height);
       return undefined;
     }
-    const paint = (progress: number) => {
+    const still = reducedMotion();
+    const soft = emphasis.strength === 'soft';
+    let progress = still || soft ? 1 : 0;
+    let grow = still ? 1 : 0;
+    const paint = () => {
+      // Mid-glide the dots are not yet where the layout puts them; this is drawn where they are.
+      const shown = shownRef.current?.layout;
       drawOverlay(context, {
-        layout,
+        layout: shown?.nodes === layout.nodes ? shown : layout,
         verseGenres,
         segments: emphasis.highlight.segments,
         marked: emphasis.highlight.marked,
         ringed: emphasis.highlight.ringed,
         strength: emphasis.strength,
         progress,
+        grow,
       });
     };
-    const still =
-      emphasis.strength === 'soft' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (still) {
-      paint(1);
-      return undefined;
-    }
-    return animate(GROW_MS, paint);
+    repaintOverlayRef.current = paint;
+    const forget = () => {
+      if (repaintOverlayRef.current === paint) repaintOverlayRef.current = null;
+    };
+    paint();
+    if (still) return forget;
+    const duration = soft ? HOVER_GROW_MS : GROW_MS;
+    const stop = playFrames(duration, (linear) => {
+      if (!soft) progress = easeOutCubic(linear);
+      grow = easeOutCubic(Math.min(1, (linear * duration) / HOVER_GROW_MS));
+      paint();
+    });
+    return () => {
+      stop();
+      forget();
+    };
   }, [active, layout, emphasis, verseGenres]);
 
   const point = (event: MouseEvent<HTMLElement>) => {
@@ -256,6 +396,12 @@ export function ClustersStage({
       }}
       onClick={onClick}
     >
+      <canvas
+        ref={glideRef}
+        className={`${styles.canvas} ${styles.base} ${styles.glide}`}
+        data-dimmed={emphasis !== null}
+        aria-hidden="true"
+      />
       <canvas
         ref={baseRef}
         className={`${styles.canvas} ${styles.base}`}
