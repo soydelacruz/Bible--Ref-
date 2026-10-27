@@ -2,6 +2,7 @@ import { BOOKS } from '../../core/bible/books.ts';
 import { getBookGenre } from '../../core/bible/genres.ts';
 import type { Versification } from '../../core/bible/versification.ts';
 import { elementAt } from '../../core/lib/array.ts';
+import { easeInOutCubic } from './frames.ts';
 
 /**
  * The model of the loading animation: arcs of light that grow from one verse to another along the
@@ -51,7 +52,6 @@ const HEAD_SHARE = 0.7;
 const MIN_DISTANCE = 0.03;
 
 const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
-const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 
 /**
  * Launches an arc between two random verses. Short hops are likelier than long ones, as in the

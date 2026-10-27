@@ -10,8 +10,10 @@ import {
   Scene,
   Vector2,
   type Blending,
+  type IUniform,
   type WebGLRenderer,
 } from 'three';
+import type { VerseIndexRange } from '../../core/bible/versification.ts';
 import { GlowCompositor } from '../shared/glow.ts';
 import { createCurveGeometry, type CurveKind } from '../shared/instanced-templates.ts';
 import { createRenderer, genrePaletteUniform } from '../shared/webgl.ts';
@@ -28,7 +30,11 @@ import type { AxisView } from './axis-view.ts';
 const LINE_SEGMENTS = 48;
 const RIBBON_SEGMENTS = 64;
 
-function createGeometry(kind: CurveKind, instances: ArcInstances): InstancedBufferGeometry {
+function createGeometry(
+  kind: CurveKind,
+  instances: ArcInstances,
+  states?: Float32Array,
+): InstancedBufferGeometry {
   return createCurveGeometry(
     kind,
     kind === 'line' ? LINE_SEGMENTS : RIBBON_SEGMENTS,
@@ -37,6 +43,10 @@ function createGeometry(kind: CurveKind, instances: ArcInstances): InstancedBuff
       a_ends: { array: instances.endpoints, itemSize: 2 },
       a_genres: { array: instances.genres, itemSize: 2 },
       a_weight: { array: instances.weights, itemSize: 1 },
+      // Hairlines also say whether each link stays through a change of filter (all do, at rest).
+      ...(kind === 'line' && {
+        a_state: { array: states ?? new Float32Array(instances.count), itemSize: 1 },
+      }),
     },
   );
 }
@@ -57,6 +67,8 @@ const DIMMED_GLOW = 0.28;
 /** The focused passage's links; faded while one link is previewed on its own. */
 const FOCUS_ALPHA = 0.95;
 const FOCUS_ALPHA_UNDER_PREVIEW = 0.22;
+/** Where arcs grow out of when nothing is focused: nowhere, so they grow from their sources. */
+const NO_ORIGIN = -1;
 
 /**
  * The WebGL part of the arc diagram, drawn in three passes:
@@ -80,8 +92,18 @@ export class ArcScene {
     u_maxHeight: { value: 0 },
     u_vertical: { value: 0 },
     u_reveal: { value: 1 },
+    u_origin: { value: new Vector2(NO_ORIGIN, NO_ORIGIN) },
     u_palette: { value: genrePaletteUniform() },
   };
+  /** A change of filter, shared by the hairlines (see `setMorph`). */
+  readonly #morph = { u_morph: { value: 1 }, u_morphRise: { value: 1 } };
+  /** The focused links grow on their own, out of the focused passage (see `setFocusGrowth`). */
+  readonly #focusGrowth = {
+    u_reveal: { value: 1 },
+    u_origin: { value: new Vector2(NO_ORIGIN, NO_ORIGIN) },
+  };
+  #focusFade = 1;
+  #previewing = false;
   readonly #lines: ArcObject;
   readonly #hover: ArcObject;
   readonly #focus: ArcObject;
@@ -92,7 +114,7 @@ export class ArcScene {
     this.#renderer.autoClear = false;
     this.#glow = new GlowCompositor(this.#renderer);
 
-    this.#lines = this.#createObject(this.#glowScene, 'line', AdditiveBlending, 1, 1);
+    this.#lines = this.#createObject(this.#glowScene, 'line', AdditiveBlending, 1, 1, this.#morph);
     this.#hover = this.#createObject(this.#overlayScene, 'ribbon', NormalBlending, 0.85, 1.4);
     this.#focus = this.#createObject(
       this.#overlayScene,
@@ -100,6 +122,7 @@ export class ArcScene {
       NormalBlending,
       FOCUS_ALPHA,
       1.8,
+      this.#focusGrowth,
     );
     this.#preview = this.#createObject(this.#overlayScene, 'ribbon', NormalBlending, 1, 2);
     this.#hover.renderOrder = 1;
@@ -131,11 +154,26 @@ export class ArcScene {
 
   /**
    * All visible links as glowing hairlines. `ceiling` is the accumulated light at which the glow
-   * reaches full intensity (see the composite shader).
+   * reaches full intensity (see the composite shader). `states` marks, for a change of filter,
+   * which links leave and which join (see `ArcMorph`); without it, all of them stay.
    */
-  setLinks(instances: ArcInstances, ceiling: number): void {
-    this.#replace(this.#lines, instances);
+  setLinks(instances: ArcInstances, ceiling: number, states?: Float32Array): void {
+    this.#replace(this.#lines, instances, states);
+    this.setCeiling(ceiling);
+  }
+
+  setCeiling(ceiling: number): void {
     this.#glow.setCeiling(ceiling);
+    this.#glow.invalidate();
+  }
+
+  /**
+   * How far a change of filter has gone, from 0 (as it was) to 1 (as it is now). With `rise`, the
+   * links that go flatten into the axis and those that come rise out of it; without, they fade.
+   */
+  setMorph(progress: number, rise = true): void {
+    this.#morph.u_morph.value = progress;
+    this.#morph.u_morphRise.value = rise ? 1 : 0;
     this.#glow.invalidate();
   }
 
@@ -145,9 +183,9 @@ export class ArcScene {
     this.#glow.invalidate();
   }
 
-  /** Dims the glow while something is focused, so the focused links stand out. */
-  setDimmed(dimmed: boolean): void {
-    this.#glow.setDim(dimmed ? DIMMED_GLOW : 1);
+  /** Dims the glow while something is focused, from 0 (not at all) to 1 (fully dimmed). */
+  setDim(amount: number): void {
+    this.#glow.setDim(1 + (DIMMED_GLOW - 1) * amount);
   }
 
   setHover(instances: ArcInstances | null): void {
@@ -158,13 +196,29 @@ export class ArcScene {
     this.#replace(this.#focus, instances ?? EMPTY);
   }
 
+  /**
+   * How much of the focused links is drawn (0–1), growing out of `origin` (the focused passage):
+   * the links between its verses and elsewhere start in it, whichever way they point.
+   */
+  setFocusGrowth(reveal: number, origin: VerseIndexRange | null): void {
+    this.#focusGrowth.u_reveal.value = reveal;
+    this.#focusGrowth.u_origin.value.set(
+      origin ? origin.start : NO_ORIGIN,
+      origin ? origin.end + 1 : NO_ORIGIN,
+    );
+  }
+
+  /** How visible the focused links are (0–1), for a crossfade instead of growing them. */
+  setFocusFade(fade: number): void {
+    this.#focusFade = fade;
+    this.#updateFocusAlpha();
+  }
+
   /** One link on its own, on top; the focused passage's links fade meanwhile. */
   setPreview(instances: ArcInstances | null): void {
     this.#replace(this.#preview, instances ?? EMPTY);
-    const alpha = this.#focus.material.uniforms['u_alpha'];
-    if (alpha) {
-      alpha.value = instances ? FOCUS_ALPHA_UNDER_PREVIEW : FOCUS_ALPHA;
-    }
+    this.#previewing = instances !== null;
+    this.#updateFocusAlpha();
   }
 
   render(): void {
@@ -184,18 +238,31 @@ export class ArcScene {
     this.#renderer.dispose();
   }
 
+  #updateFocusAlpha(): void {
+    const alpha = this.#focus.material.uniforms['u_alpha'];
+    if (alpha) {
+      alpha.value = (this.#previewing ? FOCUS_ALPHA_UNDER_PREVIEW : FOCUS_ALPHA) * this.#focusFade;
+    }
+  }
+
   #createObject(
     scene: Scene,
     kind: CurveKind,
     blending: Blending,
     alpha: number,
     width: number,
+    own: Readonly<Record<string, IUniform>> = {},
   ): ArcObject {
     const material = new RawShaderMaterial({
       glslVersion: GLSL3,
       vertexShader: kind === 'line' ? LINE_VERTEX_SHADER : RIBBON_VERTEX_SHADER,
       fragmentShader: kind === 'line' ? LINE_FRAGMENT_SHADER : RIBBON_FRAGMENT_SHADER,
-      uniforms: { ...this.#common, u_alpha: { value: alpha }, u_width: { value: width } },
+      uniforms: {
+        ...this.#common,
+        u_alpha: { value: alpha },
+        u_width: { value: width },
+        ...own,
+      },
       transparent: true,
       depthTest: false,
       depthWrite: false,
@@ -210,10 +277,13 @@ export class ArcScene {
     return object;
   }
 
-  #replace(object: ArcObject, instances: ArcInstances): void {
+  #replace(object: ArcObject, instances: ArcInstances, states?: Float32Array): void {
     const kind = object instanceof LineSegments ? 'line' : 'ribbon';
     object.geometry.dispose();
-    object.geometry = createGeometry(kind, instances);
+    object.geometry = createGeometry(kind, instances, states);
     object.visible = instances.count > 0;
+    if (kind === 'line') {
+      this.#glow.invalidate();
+    }
   }
 }

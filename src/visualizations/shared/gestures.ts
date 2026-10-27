@@ -7,11 +7,32 @@ export interface GesturePoint {
 /** What previews a point: a hovering mouse, or a finger (or pen) resting on the screen. */
 export type PreviewInput = 'mouse' | 'touch';
 
+/**
+ * What zooms: a mouse wheel, in notches a view may smooth out; or a pinch (two fingers, or a
+ * trackpad's), which follows the fingers exactly.
+ */
+export type ZoomInput = 'wheel' | 'pinch';
+
+/** How fast a drag was moving, in px/ms. */
+export interface GestureVelocity {
+  readonly x: number;
+  readonly y: number;
+}
+
+export const AT_REST: GestureVelocity = { x: 0, y: 0 };
+
 export interface GestureHandlers {
   /** Drag (mouse, one finger) or the movement of a pinch's center. */
   readonly onPan?: (dx: number, dy: number) => void;
   /** Wheel or pinch. `factor > 1` zooms in, around `center`. */
-  readonly onZoom?: (factor: number, center: GesturePoint) => void;
+  readonly onZoom?: (factor: number, center: GesturePoint, input: ZoomInput) => void;
+  /** A finger or the mouse went down: whatever still moves on its own should stop at once. */
+  readonly onGrab?: () => void;
+  /**
+   * The last finger (or the mouse) lifted. `velocity` is how fast it was dragging as it let go:
+   * at rest unless it was flicked.
+   */
+  readonly onRelease?: (velocity: GestureVelocity) => void;
   /**
    * A point is previewed, not selected: the mouse moves over the element, or a finger that was
    * held still (or put down where `previewsAt` allows) slides.
@@ -51,6 +72,56 @@ export function wheelZoomFactor(deltaY: number, deltaMode: number, isPinch: bool
   const PAGE_PX = 400;
   const pixels = deltaMode === 1 ? deltaY * LINE_PX : deltaMode === 2 ? deltaY * PAGE_PX : deltaY;
   return Math.exp(-pixels * (isPinch ? 0.01 : 0.002));
+}
+
+/** A drag's speed is measured over its last this many ms, so no single jittery event decides it. */
+const VELOCITY_WINDOW_MS = 100;
+/** A drag held still this long before letting go was set down, not flicked. */
+const VELOCITY_PAUSE_MS = 50;
+
+/** Measures how fast a drag is moving from its latest movements. */
+export class VelocityTracker {
+  #samples: {
+    readonly time: number;
+    readonly elapsed: number;
+    readonly dx: number;
+    readonly dy: number;
+  }[] = [];
+  #last = 0;
+
+  /** Starts afresh, from a press at `time` (ms). */
+  reset(time: number): void {
+    this.#samples = [];
+    this.#last = time;
+  }
+
+  /** A movement by (`dx`, `dy`) px, at `time`. */
+  add(time: number, dx: number, dy: number): void {
+    // A long gap means it set off from rest: only the last moment of it counts as moving.
+    const elapsed = Math.min(Math.max(time - this.#last, 0), VELOCITY_PAUSE_MS);
+    this.#last = time;
+    this.#samples = this.#samples.filter((sample) => time - sample.time <= VELOCITY_WINDOW_MS);
+    this.#samples.push({ time, elapsed, dx, dy });
+  }
+
+  /** The speed at `time`: at rest if the drag had stopped. */
+  velocity(time: number): GestureVelocity {
+    const latest = this.#samples.at(-1);
+    if (!latest || time - latest.time > VELOCITY_PAUSE_MS) {
+      return AT_REST;
+    }
+    let elapsed = 0;
+    let dx = 0;
+    let dy = 0;
+    for (const sample of this.#samples) {
+      if (time - sample.time <= VELOCITY_WINDOW_MS) {
+        elapsed += sample.elapsed;
+        dx += sample.dx;
+        dy += sample.dy;
+      }
+    }
+    return elapsed > 0 ? { x: dx / elapsed, y: dy / elapsed } : AT_REST;
+  }
 }
 
 function distance(a: GesturePoint, b: GesturePoint): number {
@@ -94,6 +165,12 @@ export function attachGestures(element: GestureElement, handlers: GestureHandler
   let press: Press | null = null;
   let pinch: ReturnType<typeof pinchOf> | null = null;
   let lastTap: { readonly point: GesturePoint; readonly time: number } | null = null;
+  const tracker = new VelocityTracker();
+
+  const pan = (dx: number, dy: number) => {
+    tracker.add(performance.now(), dx, dy);
+    handlers.onPan?.(dx, dy);
+  };
 
   const toLocal = (event: MouseEvent): GesturePoint => {
     const rect = element.getBoundingClientRect();
@@ -122,7 +199,9 @@ export function attachGestures(element: GestureElement, handlers: GestureHandler
     element.setPointerCapture(event.pointerId);
     const point = toLocal(event);
     pointers.set(event.pointerId, point);
+    handlers.onGrab?.();
     if (pointers.size === 1) {
+      tracker.reset(performance.now());
       const current: Press = {
         start: point,
         time: performance.now(),
@@ -170,8 +249,8 @@ export function attachGestures(element: GestureElement, handlers: GestureHandler
     if (pointers.size >= 2) {
       const next = pinchOf(pointers);
       if (pinch) {
-        handlers.onZoom?.(next.spread / pinch.spread, next.center);
-        handlers.onPan?.(next.center.x - pinch.center.x, next.center.y - pinch.center.y);
+        handlers.onZoom?.(next.spread / pinch.spread, next.center, 'pinch');
+        pan(next.center.x - pinch.center.x, next.center.y - pinch.center.y);
       }
       pinch = next;
       return;
@@ -188,7 +267,7 @@ export function attachGestures(element: GestureElement, handlers: GestureHandler
     if (press.previewing) {
       handlers.onHover?.(point, 'touch');
     } else if (press.moved) {
-      handlers.onPan?.(point.x - previous.x, point.y - previous.y);
+      pan(point.x - previous.x, point.y - previous.y);
     }
   };
 
@@ -208,6 +287,9 @@ export function attachGestures(element: GestureElement, handlers: GestureHandler
     if (!ended) {
       return;
     }
+    // A cancelled drag, or a finger that was previewing rather than dragging, lets go at rest.
+    const flung = canTap && ended.moved && !ended.previewing;
+    handlers.onRelease?.(flung ? tracker.velocity(performance.now()) : AT_REST);
     stopPreview(ended);
     const maxTapMs = ended.touch ? HOLD_TO_PREVIEW_MS : CLICK_MAX_DURATION_MS;
     const isTap = canTap && !ended.moved && performance.now() - ended.time < maxTapMs;
@@ -254,6 +336,7 @@ export function attachGestures(element: GestureElement, handlers: GestureHandler
     handlers.onZoom?.(
       wheelZoomFactor(event.deltaY, event.deltaMode, event.ctrlKey),
       toLocal(event),
+      event.ctrlKey ? 'pinch' : 'wheel',
     );
   };
 

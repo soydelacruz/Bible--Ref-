@@ -28,12 +28,29 @@ export class FrameScheduler {
   }
 }
 
-/** Runs `onFrame(progress)` with an ease-out curve over `durationMs`; returns a cancel function. */
-export function animate(durationMs: number, onFrame: (progress: number) => void): () => void {
+/** The app's easing for things that respond to the reader: quick to start, gentle to land. */
+export function easeOutCubic(linear: number): number {
+  return 1 - (1 - linear) ** 3;
+}
+
+/** For things already on screen that travel: they start and land gently. */
+export function easeInOutCubic(linear: number): number {
+  return linear < 0.5 ? 4 * linear ** 3 : 1 - (-2 * linear + 2) ** 3 / 2;
+}
+
+/**
+ * Runs `onFrame(progress)` over `durationMs`, eased (ease-out unless told otherwise); returns a
+ * cancel function.
+ */
+export function animate(
+  durationMs: number,
+  onFrame: (progress: number) => void,
+  ease: (linear: number) => number = easeOutCubic,
+): () => void {
   const start = performance.now();
   let frame = requestAnimationFrame(function step(now) {
     const linear = Math.min((now - start) / durationMs, 1);
-    onFrame(1 - (1 - linear) ** 3);
+    onFrame(ease(linear));
     if (linear < 1) {
       frame = requestAnimationFrame(step);
     }
@@ -41,4 +58,34 @@ export function animate(durationMs: number, onFrame: (progress: number) => void)
   return () => {
     cancelAnimationFrame(frame);
   };
+}
+
+/**
+ * The longest step `simulate` hands over: after a stalled frame (or a tab coming back), motion
+ * resumes where it was instead of jumping.
+ */
+export const MAX_FRAME_MS = 50;
+
+/**
+ * Calls `step(elapsedMs)` every frame, with the time since the previous call, until it returns
+ * `false`: for motion with no fixed duration, such as a coast slowing down. Returns a cancel
+ * function.
+ */
+export function simulate(step: (elapsedMs: number) => boolean): () => void {
+  let last = performance.now();
+  let frame = requestAnimationFrame(function tick(now) {
+    const elapsed = Math.min(Math.max(now - last, 0), MAX_FRAME_MS);
+    last = now;
+    if (step(elapsed)) {
+      frame = requestAnimationFrame(tick);
+    }
+  });
+  return () => {
+    cancelAnimationFrame(frame);
+  };
+}
+
+/** Whether the reader asked for less motion; read each time, since it can change at any moment. */
+export function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

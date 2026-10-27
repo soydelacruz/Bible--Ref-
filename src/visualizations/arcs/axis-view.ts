@@ -42,11 +42,3 @@ export function revealRange(view: AxisView, start: number, end: number, total: n
   const center = (start + end) / 2;
   return clampView({ start: center - span / 2, end: center + span / 2 }, total);
 }
-
-/** Linear interpolation between two views, for animations. */
-export function interpolateView(from: AxisView, to: AxisView, progress: number): AxisView {
-  return {
-    start: from.start + (to.start - from.start) * progress,
-    end: from.end + (to.end - from.end) * progress,
-  };
-}

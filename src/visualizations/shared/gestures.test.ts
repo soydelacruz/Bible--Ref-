@@ -1,11 +1,50 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AT_REST,
   attachGestures,
   HOLD_TO_PREVIEW_MS,
+  VelocityTracker,
   wheelZoomFactor,
   type GestureElement,
   type GestureHandlers,
 } from './gestures.ts';
+
+describe('VelocityTracker', () => {
+  it('measures the latest movements', () => {
+    const tracker = new VelocityTracker();
+    tracker.reset(0);
+    tracker.add(10, 5, 0); // slow at first...
+    for (let time = 100; time <= 220; time += 20) {
+      tracker.add(time, 40, -20); // ...then fast: 2 and -1 px/ms
+    }
+    const velocity = tracker.velocity(220);
+    expect(velocity.x).toBeCloseTo(2);
+    expect(velocity.y).toBeCloseTo(-1);
+  });
+
+  it('is at rest before any movement, or once the drag has paused', () => {
+    const tracker = new VelocityTracker();
+    tracker.reset(0);
+    expect(tracker.velocity(0)).toBe(AT_REST);
+    tracker.add(16, 30, 0);
+    expect(tracker.velocity(16).x).toBeGreaterThan(0);
+    expect(tracker.velocity(200)).toBe(AT_REST);
+  });
+
+  it('counts a start after a long hold from the moment it moved, not from the press', () => {
+    const tracker = new VelocityTracker();
+    tracker.reset(0);
+    tracker.add(2000, 50, 0);
+    expect(tracker.velocity(2000).x).toBeCloseTo(1);
+  });
+
+  it('is at rest when the movements took no time', () => {
+    const tracker = new VelocityTracker();
+    tracker.reset(5);
+    tracker.add(5, 10, 0);
+    expect(tracker.velocity(5)).toBe(AT_REST);
+  });
+});
 
 describe('wheelZoomFactor', () => {
   it('zooms in when scrolling up and out when scrolling down', () => {
@@ -54,6 +93,8 @@ describe('attachGestures, with a finger', () => {
     previewsAt: vi.fn<NonNullable<GestureHandlers['previewsAt']>>(() => false),
     onTap: vi.fn<NonNullable<GestureHandlers['onTap']>>(),
     onDoubleTap: vi.fn<NonNullable<GestureHandlers['onDoubleTap']>>(),
+    onGrab: vi.fn<NonNullable<GestureHandlers['onGrab']>>(),
+    onRelease: vi.fn<NonNullable<GestureHandlers['onRelease']>>(),
   });
   let surface: Surface;
   let handlers: ReturnType<typeof createHandlers>;
@@ -267,6 +308,75 @@ describe('attachGestures, with a finger', () => {
     expect(handlers.onTap).not.toHaveBeenCalled();
   });
 
+  it('says a finger went down at once, so whatever still moves can stop', () => {
+    send('pointerdown', 1, 50, 50);
+    expect(handlers.onGrab).toHaveBeenCalledOnce();
+    send('pointerdown', 2, 150, 50);
+    expect(handlers.onGrab).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets go of a flick with its speed', () => {
+    send('pointerdown', 1, 100, 100);
+    for (let step = 1; step <= 5; step += 1) {
+      vi.advanceTimersByTime(16);
+      send('pointermove', 1, 100 + step * 32, 100);
+    }
+    send('pointerup', 1, 260, 100);
+    expect(handlers.onRelease).toHaveBeenCalledOnce();
+    const velocity = handlers.onRelease.mock.calls[0]?.[0];
+    expect(velocity?.x).toBeCloseTo(2); // 32px every 16ms
+    expect(velocity?.y).toBe(0);
+  });
+
+  it('lets go at rest when the finger stopped before lifting', () => {
+    send('pointerdown', 1, 100, 100);
+    vi.advanceTimersByTime(16);
+    send('pointermove', 1, 160, 100);
+    vi.advanceTimersByTime(200);
+    send('pointerup', 1, 160, 100);
+    expect(handlers.onRelease).toHaveBeenCalledWith(AT_REST);
+  });
+
+  it('lets go at rest after a tap, a preview or a cancelled drag', () => {
+    send('pointerdown', 1, 50, 50);
+    send('pointerup', 1, 50, 50);
+    expect(handlers.onRelease).toHaveBeenLastCalledWith(AT_REST);
+
+    vi.advanceTimersByTime(1000);
+    send('pointerdown', 1, 50, 50);
+    vi.advanceTimersByTime(HOLD_TO_PREVIEW_MS);
+    send('pointermove', 1, 50, 150);
+    send('pointerup', 1, 50, 150);
+    expect(handlers.onRelease).toHaveBeenLastCalledWith(AT_REST);
+
+    send('pointerdown', 1, 50, 50);
+    vi.advanceTimersByTime(16);
+    send('pointermove', 1, 90, 50);
+    send('pointercancel', 1, 90, 50);
+    expect(handlers.onRelease).toHaveBeenLastCalledWith(AT_REST);
+    expect(handlers.onRelease).toHaveBeenCalledTimes(3);
+  });
+
+  it('lets go only when the last finger of a pinch lifts, with the speed of its center', () => {
+    send('pointerdown', 1, 100, 100);
+    send('pointerdown', 2, 200, 100);
+    vi.advanceTimersByTime(16);
+    send('pointermove', 1, 116, 100);
+    send('pointermove', 2, 216, 100);
+    send('pointerup', 2, 216, 100);
+    expect(handlers.onRelease).not.toHaveBeenCalled();
+    send('pointerup', 1, 116, 100);
+    expect(handlers.onRelease).toHaveBeenCalledOnce();
+    expect(handlers.onRelease.mock.calls[0]?.[0].x).toBeGreaterThan(0);
+  });
+
+  it('tells a pinch from a wheel', () => {
+    send('pointerdown', 1, 100, 100);
+    send('pointerdown', 2, 200, 100);
+    send('pointermove', 2, 300, 100);
+    expect(handlers.onZoom.mock.calls[0]?.[2]).toBe('pinch');
+  });
+
   it('clears the hover when the mouse leaves the stage', () => {
     send('pointerleave', 1, 0, 0, 'mouse');
     expect(handlers.onLeave).toHaveBeenCalledOnce();
@@ -317,6 +427,7 @@ describe('attachGestures, with a wheel', () => {
     expect(handlers.onZoom).toHaveBeenCalledOnce();
     expect(handlers.onZoom.mock.calls[0]?.[0]).toBeGreaterThan(1);
     expect(handlers.onZoom.mock.calls[0]?.[1]).toEqual({ x: 100, y: 100 });
+    expect(handlers.onZoom.mock.calls[0]?.[2]).toBe('wheel');
   });
 
   it('pans sideways on a horizontal wheel, as a trackpad swipe does', () => {
@@ -328,6 +439,7 @@ describe('attachGestures, with a wheel', () => {
   it('zooms on a trackpad pinch, which arrives as a wheel with Ctrl held', () => {
     wheel(40, -10, true);
     expect(handlers.onZoom).toHaveBeenCalledOnce();
+    expect(handlers.onZoom.mock.calls[0]?.[2]).toBe('pinch');
   });
 
   it('never lets the page scroll instead', () => {
