@@ -14,18 +14,21 @@ import {
   GLIDE_ROLE,
   glideDotRadius,
   glideEase,
-  glideLinkIndices,
+  glideLineVertices,
   glideVertices,
   isStill,
+  LINE_FLOATS,
   MAX_FRAME_STEP_MS,
   planGlide,
   playFrames,
+  sceneMidGlide,
+  slotAlpha,
   SLOT_FLOATS,
   SLOW_FRAME_MS,
   SLOW_FRAMES_TO_LAND,
   writeGlideFrame,
   type GlidePlan,
-  type LinkSlots,
+  type LinkRun,
   type PlacedLabel,
   type ShownScene,
 } from './cluster-glide.ts';
@@ -56,6 +59,11 @@ const index = new CrossReferenceIndex(
 
 const SIZE = { width: 1200, height: 800 };
 
+/** How strong the links of the old picture and of the new are drawn at rest. */
+const HAZE = { from: 0.04, to: 0.02 };
+/** The same, for two pictures with as many links as each other. */
+const SAME_HAZE = { from: 0.02, to: 0.02 };
+
 /** The picture at rest for a book (or the whole Bible) and a filter. */
 function sceneOf(
   openBook: 'Gen' | null,
@@ -68,7 +76,7 @@ function sceneOf(
 }
 
 /** The verses a plan's link slots join, a slot being a new dot or a leaving one. */
-function linkVerses(plan: GlidePlan, to: ShownScene, slots: LinkSlots): [number, number][] {
+function linkVerses(plan: GlidePlan, to: ShownScene, slots: LinkRun): [number, number][] {
   const verseOf = (slot: number) =>
     slot < plan.count ? (to.layout.nodes[slot] ?? -1) : (plan.leaving[slot - plan.count] ?? -1);
   return [...slots.from].map((from, i) => [verseOf(from), verseOf(slots.to[i] ?? -1)]);
@@ -287,7 +295,7 @@ describe('planGlide', () => {
   describe('opening a book', () => {
     const from = sceneOf(null);
     const to = sceneOf('Gen');
-    const plan = planGlide(from, to, index);
+    const plan = planGlide(from, to, index, HAZE);
 
     it('keeps every verse that stays as the same dot, starting where it was', () => {
       expect(plan.count).toBe(to.layout.nodes.length);
@@ -308,13 +316,21 @@ describe('planGlide', () => {
     });
 
     it('sorts the links into those that stay and those that go, each joining its own dots', () => {
-      expect(linkVerses(plan, to, plan.links.kept)).toEqual([
+      expect(linkVerses(plan, to, plan.links)).toEqual([
         [GEN_1_1, JOHN_1_1],
         [GEN_3_15, ROM_16_20],
         [GEN_3_15, REV_12_9],
       ]);
-      expect(linkVerses(plan, to, plan.links.leaving)).toEqual([[PS_23_1, ISA_53_5]]);
-      expect(plan.links.arriving.from).toHaveLength(0);
+      expect(linkVerses(plan, to, plan.leavingLinks)).toEqual([[PS_23_1, ISA_53_5]]);
+      expect([...plan.leavingLinks.ids]).toEqual(
+        [...from.linkIds].filter((id) => !to.linkIds.includes(id)),
+      );
+    });
+
+    it('starts every link as strong as it was drawn, and ends those staying at the new strength', () => {
+      expect([...plan.links.start]).toEqual([HAZE.from, HAZE.from, HAZE.from].map(Math.fround));
+      expect([...plan.leavingLinks.start]).toEqual([Math.fround(HAZE.from)]);
+      expect(plan.linkStrength).toBe(HAZE.to);
     });
 
     it('grows the dots as there are fewer of them', () => {
@@ -326,7 +342,7 @@ describe('planGlide', () => {
   it('brings verses in when a book is closed, growing in where they land', () => {
     const from = sceneOf('Gen');
     const to = sceneOf(null);
-    const plan = planGlide(from, to, index);
+    const plan = planGlide(from, to, index, HAZE);
     const arriving = [...plan.arriving].map((slot) => to.layout.nodes[slot]);
     expect(arriving).toEqual([PS_23_1, ISA_53_5]);
     for (const slot of plan.arriving) {
@@ -334,27 +350,33 @@ describe('planGlide', () => {
       expect(plan.fromY[slot]).toBe(to.layout.y[slot]);
     }
     expect(plan.leaving).toHaveLength(0);
-    expect(linkVerses(plan, to, plan.links.arriving)).toEqual([[PS_23_1, ISA_53_5]]);
+    const links = linkVerses(plan, to, plan.links);
+    const arrivingLink = links.findIndex(([source]) => source === PS_23_1);
+    expect(links[arrivingLink]).toEqual([PS_23_1, ISA_53_5]);
+    // Not on screen yet: it starts at nothing, while the links already there start as they were.
+    expect(plan.links.start[arrivingLink]).toBe(0);
+    expect(plan.links.start.filter((start) => start > 0)).toHaveLength(links.length - 1);
+    expect(plan.leavingLinks.from).toHaveLength(0);
   });
 
   it('ties a leaving link to a dot that stays at one end and one that goes at the other', () => {
     // Raising the filter drops John 3:16 and its one link, which lands on a verse that stays.
     const from = sceneOf(null, createLinkFilter(-Infinity));
     const to = sceneOf(null);
-    const plan = planGlide(from, to, index);
+    const plan = planGlide(from, to, index, HAZE);
     expect([...plan.leaving]).toEqual([JOHN_3_16]);
-    const leaving = linkVerses(plan, to, plan.links.leaving);
+    const leaving = linkVerses(plan, to, plan.leavingLinks);
     expect(leaving).toContainEqual([JOHN_3_16, ISA_53_5]);
     expect(leaving).toContainEqual([JOHN_1_1, GEN_1_1]);
     const john = leaving.findIndex(([from]) => from === JOHN_3_16);
-    expect(plan.links.leaving.from[john]).toBe(plan.count);
-    expect(plan.links.leaving.to[john]).toBe(to.layout.nodeOf[ISA_53_5]);
+    expect(plan.leavingLinks.from[john]).toBe(plan.count);
+    expect(plan.leavingLinks.to[john]).toBe(to.layout.nodeOf[ISA_53_5]);
   });
 
   it('carries on from wherever a glide it interrupts had got to', () => {
     const start = sceneOf(null);
     const middle = sceneOf('Gen');
-    const first = planGlide(start, middle, index);
+    const first = planGlide(start, middle, index, HAZE);
     const frame = createGlideFrame(first);
     writeGlideFrame(first, middle.layout, 0.5, frame);
     const shown: ShownScene = {
@@ -362,7 +384,7 @@ describe('planGlide', () => {
       linkIds: middle.linkIds,
       labels: [],
     };
-    const second = planGlide(shown, start, index);
+    const second = planGlide(shown, start, index, HAZE);
     const slot = start.layout.nodeOf[GEN_1_1] ?? -1;
     const halfway = middle.layout.nodeOf[GEN_1_1] ?? -1;
     expect(second.fromX[slot]).toBe(frame.x[halfway]);
@@ -376,27 +398,32 @@ describe('planGlide', () => {
 describe('isStill', () => {
   it('sees nothing to move between a picture and itself', () => {
     const scene = sceneOf(null);
-    expect(isStill(planGlide(scene, scene, index), scene.layout)).toBe(true);
+    expect(isStill(planGlide(scene, scene, index, SAME_HAZE), scene.layout)).toBe(true);
+  });
+
+  it('sees a change in the same links drawn at another strength', () => {
+    const scene = sceneOf(null);
+    expect(isStill(planGlide(scene, scene, index, HAZE), scene.layout)).toBe(false);
   });
 
   it('sees motion when verses come or go, or the stage changes size', () => {
-    expect(isStill(planGlide(sceneOf(null), sceneOf('Gen'), index), sceneOf('Gen').layout)).toBe(
-      false,
-    );
+    expect(
+      isStill(planGlide(sceneOf(null), sceneOf('Gen'), index, HAZE), sceneOf('Gen').layout),
+    ).toBe(false);
     const wide = sceneOf(null);
     const narrow = sceneOf(null, DEFAULT_LINK_FILTER, { width: 900, height: 800 });
-    expect(isStill(planGlide(wide, narrow, index), narrow.layout)).toBe(false);
+    expect(isStill(planGlide(wide, narrow, index, HAZE), narrow.layout)).toBe(false);
   });
 
   it('sees motion in links alone, or in the size of the dots alone', () => {
     const scene = sceneOf(null);
     const fewer: ShownScene = { ...scene, linkIds: scene.linkIds.slice(1) };
-    expect(isStill(planGlide(scene, fewer, index), scene.layout)).toBe(false);
+    expect(isStill(planGlide(scene, fewer, index, SAME_HAZE), scene.layout)).toBe(false);
     const larger: ShownScene = {
       ...scene,
       layout: { ...scene.layout, dotRadius: scene.layout.dotRadius * 2 },
     };
-    expect(isStill(planGlide(scene, larger, index), larger.layout)).toBe(false);
+    expect(isStill(planGlide(scene, larger, index, SAME_HAZE), larger.layout)).toBe(false);
   });
 
   it('sees motion in a single dot moving down the page', () => {
@@ -404,14 +431,14 @@ describe('isStill', () => {
     const y = scene.layout.y.slice();
     y[0] = (y[0] ?? 0) + 1;
     const moved: ShownScene = { ...scene, layout: { ...scene.layout, y } };
-    expect(isStill(planGlide(scene, moved, index), moved.layout)).toBe(false);
+    expect(isStill(planGlide(scene, moved, index, SAME_HAZE), moved.layout)).toBe(false);
   });
 });
 
 describe('a glide frame', () => {
   const from = sceneOf(null);
   const to = sceneOf('Gen');
-  const plan = planGlide(from, to, index);
+  const plan = planGlide(from, to, index, HAZE);
 
   it('starts where the old picture was and ends where the new one is', () => {
     const frame = createGlideFrame(plan);
@@ -462,7 +489,7 @@ describe('glideVertices', () => {
   it('gives each dot of the new layout where it starts and ends, its genre and its role', () => {
     const from = sceneOf(null);
     const to = sceneOf('Gen');
-    const plan = planGlide(from, to, index);
+    const plan = planGlide(from, to, index, HAZE);
     const vertices = glideVertices(plan, to.layout, verseGenres);
     expect(vertices).toHaveLength((plan.count + plan.leaving.length) * SLOT_FLOATS);
     const slot = to.layout.nodeOf[JOHN_1_1] ?? -1;
@@ -473,11 +500,12 @@ describe('glideVertices', () => {
       to.layout.y[slot],
       verseGenres[JOHN_1_1],
       GLIDE_ROLE.kept,
+      1,
     ]);
   });
 
   it('holds a leaving dot still where it was, and marks it as leaving', () => {
-    const plan = planGlide(sceneOf(null), sceneOf('Gen'), index);
+    const plan = planGlide(sceneOf(null), sceneOf('Gen'), index, HAZE);
     const vertices = glideVertices(plan, sceneOf('Gen').layout, verseGenres);
     const x = plan.leavingX[1] ?? NaN;
     const y = plan.leavingY[1] ?? NaN;
@@ -488,40 +516,156 @@ describe('glideVertices', () => {
       y,
       verseGenres[ISA_53_5],
       GLIDE_ROLE.leaving,
+      1,
     ]);
   });
 
-  it('marks the dots arriving, which start where they land', () => {
+  it('marks the dots arriving, which start where they land, unseen', () => {
     const to = sceneOf(null);
-    const plan = planGlide(sceneOf('Gen'), to, index);
+    const plan = planGlide(sceneOf('Gen'), to, index, HAZE);
     const vertices = glideVertices(plan, to.layout, verseGenres);
     const slot = to.layout.nodeOf[PS_23_1] ?? -1;
-    const [x0, y0, x1, y1, , role] = slotOf(vertices, slot);
+    const [x0, y0, x1, y1, , role, fade] = slotOf(vertices, slot);
     expect([x0, y0]).toEqual([x1, y1]);
     expect(role).toBe(GLIDE_ROLE.arriving);
+    expect(fade).toBe(0);
   });
 });
 
-describe('glideLinkIndices', () => {
-  it('lists the links kept, then arriving, then leaving, as pairs of slots', () => {
-    const from = sceneOf(null, createLinkFilter(-Infinity));
-    const to = sceneOf('Gen');
-    const plan = planGlide(from, to, index);
-    const { indices, kept, arriving, leaving } = glideLinkIndices(plan);
-    expect(kept).toBe(plan.links.kept.from.length * 2);
-    expect(arriving).toBe(0);
-    expect(leaving).toBe(plan.links.leaving.from.length * 2);
-    expect(indices).toHaveLength(kept + arriving + leaving);
-    expect([indices[0], indices[1]]).toEqual([plan.links.kept.from[0], plan.links.kept.to[0]]);
-    expect([indices[kept], indices[kept + 1]]).toEqual([
-      plan.links.leaving.from[0],
-      plan.links.leaving.to[0],
+describe('slotAlpha', () => {
+  it('fades the dots arriving in, and the dots leaving out', () => {
+    const to = sceneOf(null);
+    const closing = planGlide(sceneOf('Gen'), to, index, HAZE);
+    const arriving = to.layout.nodeOf[PS_23_1] ?? -1;
+    expect(slotAlpha(closing, arriving, 0.25)).toBe(0.25);
+    expect(slotAlpha(closing, to.layout.nodeOf[GEN_1_1] ?? -1, 0.25)).toBe(1);
+    const opening = planGlide(sceneOf(null), sceneOf('Gen'), index, HAZE);
+    expect(slotAlpha(opening, opening.count, 0.25)).toBe(0.75);
+  });
+});
+
+describe('a glide cut short', () => {
+  const start = sceneOf(null);
+  const middle = sceneOf('Gen');
+  const first = planGlide(start, middle, index, HAZE);
+  const frame = createGlideFrame(first);
+  writeGlideFrame(first, middle.layout, 0.5, frame);
+  const label = (key: string, x: number): PlacedLabel => ({
+    key,
+    text: key,
+    kind: 'name',
+    x,
+    y: 0,
+  });
+  const withLabels = (scene: ShownScene, labels: PlacedLabel[]): ShownScene => ({
+    ...scene,
+    labels,
+  });
+  const shown = sceneMidGlide(
+    first,
+    withLabels(start, [label('Gen', 0), label('Ps', 100)]),
+    withLabels(middle, [label('Gen', 200)]),
+    frame,
+    0.5,
+  );
+
+  it('leaves the picture as it stands: dots, how faded they are, and the names part-way', () => {
+    expect(shown.layout.x[0]).toBe(frame.x[0]);
+    expect([...(shown.alpha ?? [])].every((alpha) => alpha === 1)).toBe(true);
+    expect([...(shown.leaving?.nodes ?? [])]).toEqual([PS_23_1, ISA_53_5]);
+    expect([...(shown.leaving?.alpha ?? [])]).toEqual([0.5, 0.5]);
+    expect(shown.leaving?.x[0]).toBe(first.leavingX[0]);
+    expect(shown.labels).toContainEqual(expect.objectContaining({ key: 'Gen', x: 100, alpha: 1 }));
+    expect(shown.labels).toContainEqual(expect.objectContaining({ key: 'Ps', alpha: 0.5 }));
+  });
+
+  it('leaves each link as strong as it is drawn: those staying part-way, those going half gone', () => {
+    // Half way from the old strength to the new, and half way from the old strength to nothing.
+    const halfway = Math.fround(HAZE.from) + (HAZE.to - Math.fround(HAZE.from)) * 0.5;
+    expect([...(shown.linkAlpha ?? [])]).toEqual(
+      middle.linkIds.length ? [...middle.linkIds].map(() => Math.fround(halfway)) : [],
+    );
+    expect([...(shown.fadingLinks?.ids ?? [])]).toEqual([...first.leavingLinks.ids]);
+    expect([...(shown.fadingLinks?.alpha ?? [])]).toEqual([
+      Math.fround(Math.fround(HAZE.from) * 0.5),
     ]);
+  });
+
+  it('lets the next glide bring back a fading verse from as faded as it had got', () => {
+    const second = planGlide(shown, start, index, HAZE);
+    const slot = start.layout.nodeOf[PS_23_1] ?? -1;
+    expect(second.kept).toContain(slot);
+    expect(second.fromAlpha[slot]).toBe(0.5);
+    expect(second.fromX[slot]).toBe(first.leavingX[0]);
+    // Its link had been fading out with it; now it stays, from as strong as it had got.
+    expect(second.links.from).toHaveLength(start.linkIds.length);
+    expect(second.leavingLinks.from).toHaveLength(0);
+    const revived = [...start.linkIds].indexOf(first.leavingLinks.ids[0] ?? -1);
+    expect(second.links.start[revived]).toBe(shown.fadingLinks?.alpha[0]);
+    expect(isStill(second, start.layout)).toBe(false);
+  });
+
+  it('lets a fading verse carry on fading from where it was, if the next picture has no place for it', () => {
+    const second = planGlide(shown, middle, index, HAZE);
+    expect([...second.leaving]).toEqual([PS_23_1, ISA_53_5]);
+    expect([...second.fromAlpha.subarray(second.count)]).toEqual([0.5, 0.5]);
+    expect(slotAlpha(second, second.count, 0.5)).toBe(0.25);
+    expect([...second.leavingLinks.ids]).toEqual([...first.leavingLinks.ids]);
+    expect(second.leavingLinks.start[0]).toBe(shown.fadingLinks?.alpha[0]);
+    // The links still there start as strong as the cut-short glide had made them.
+    expect([...second.links.start]).toEqual([...(shown.linkAlpha ?? [])]);
+  });
+
+  it('carries the names on from where they were, at the strength they were', () => {
+    const blended = blendLabels(
+      [
+        { ...label('Gen', 100), alpha: 0.5 },
+        { ...label('Ps', 50), alpha: 0.4 },
+      ],
+      [label('Gen', 300)],
+      0.5,
+    );
+    expect(blended).toContainEqual(expect.objectContaining({ key: 'Gen', x: 200, alpha: 0.75 }));
+    expect(blended).toContainEqual(expect.objectContaining({ key: 'Ps', alpha: 0.2 }));
+  });
+});
+
+describe('glideLineVertices', () => {
+  /** One end of a link: start x, start y, end x, end y, strength at the start, at the end. */
+  function endOf(vertices: Float32Array, end: number): number[] {
+    return [...vertices.subarray(end * LINE_FLOATS, (end + 1) * LINE_FLOATS)];
+  }
+
+  it('gives both ends of each link: the new picture’s links, then those leaving', () => {
+    const from = sceneOf(null);
+    const to = sceneOf('Gen');
+    const plan = planGlide(from, to, index, HAZE);
+    const vertices = glideLineVertices(plan, to.layout);
+    const links = plan.links.from.length + plan.leavingLinks.from.length;
+    expect(vertices).toHaveLength(links * 2 * LINE_FLOATS);
+    // The first link of the new picture, from Genesis 1:1 to John 1:1, both ends gliding.
+    const genesis = plan.links.from[0] ?? -1;
+    expect(endOf(vertices, 0)).toEqual(
+      [
+        plan.fromX[genesis],
+        plan.fromY[genesis],
+        to.layout.x[genesis],
+        to.layout.y[genesis],
+        HAZE.from,
+        HAZE.to,
+      ].map((value) => Math.fround(value ?? NaN)),
+    );
+    // The link leaving, from Psalm 23:1 to Isaiah 53:5: held where it was, fading to nothing.
+    const first = plan.links.from.length * 2;
+    const [x0, y0, x1, y1, start, end] = endOf(vertices, first);
+    expect([x1, y1]).toEqual([x0, y0]);
+    expect(x0).toBe(plan.leavingX[0]);
+    expect([start, end]).toEqual([Math.fround(HAZE.from), 0]);
   });
 
   it('is empty when nothing is linked', () => {
     const empty: ShownScene = { ...sceneOf(null), linkIds: new Int32Array(0) };
-    const result = glideLinkIndices(planGlide(empty, empty, index));
-    expect(result.indices).toHaveLength(0);
+    const plan = planGlide(empty, empty, index, HAZE);
+    expect(glideLineVertices(plan, empty.layout)).toHaveLength(0);
   });
 });

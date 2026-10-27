@@ -124,6 +124,27 @@ test.describe('the clusters glide between pictures', () => {
     await expect.poll(async () => pictureDigest(page)).toBe(still);
   });
 
+  test('a glide cut short by another still lands on the picture it is heading for', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openClusters(page);
+    await chooseBook(page, 'Isaiah');
+    await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeVisible();
+    const still = await pictureDigest(page);
+    await page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' }).click();
+    await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await watchGlides(page);
+    await chooseBook(page, 'Psalms');
+    await expect.poll(async () => (await glideChanges(page)).length).toBeGreaterThan(0);
+    // Straight on to another book, while the dots may still be on their way to the first.
+    await chooseBook(page, 'Isaiah');
+    await waitForLanding(page);
+    await expect.poll(async () => pictureDigest(page)).toBe(still);
+  });
+
   test('the tour still plays, closing an open book with a glide', async ({ page }) => {
     await openClusters(page);
     await watchGlides(page);

@@ -135,12 +135,17 @@ export interface ShownLabel extends PlacedLabel {
   readonly alpha: number;
 }
 
+function labelAlpha(label: PlacedLabel | ShownLabel): number {
+  return 'alpha' in label ? label.alpha : 1;
+}
+
 /**
  * The labels part-way through a glide: one in both pictures moves from its old place to its new;
  * one in only the old fades out where it was, and one in only the new fades in where it lands.
+ * A label already part-faded (a glide cut short by this one) carries on from where it was.
  */
 export function blendLabels(
-  from: readonly PlacedLabel[],
+  from: readonly (PlacedLabel | ShownLabel)[],
   to: readonly PlacedLabel[],
   progress: number,
 ): ShownLabel[] {
@@ -152,20 +157,31 @@ export function blendLabels(
     const old = before.get(identity(label));
     if (old) {
       kept.add(identity(label));
+      const alpha = labelAlpha(old);
       shown.push({
         ...label,
         x: old.x + (label.x - old.x) * progress,
         y: old.y + (label.y - old.y) * progress,
-        alpha: 1,
+        alpha: alpha + (1 - alpha) * progress,
       });
     } else {
       shown.push({ ...label, alpha: progress });
     }
   }
   for (const label of from) {
-    if (!kept.has(identity(label))) shown.push({ ...label, alpha: 1 - progress });
+    if (!kept.has(identity(label))) {
+      shown.push({ ...label, alpha: labelAlpha(label) * (1 - progress) });
+    }
   }
   return shown;
+}
+
+/** Dots still fading out of the picture: their verses, places and opacities, by position. */
+export interface FadingDots {
+  readonly nodes: Int32Array;
+  readonly x: Float32Array;
+  readonly y: Float32Array;
+  readonly alpha: Float32Array;
 }
 
 /** What the base canvas shows: where its dots are drawn, its links, and its labels. */
@@ -174,13 +190,26 @@ export interface ShownScene {
    * layout put them. */
   readonly layout: ClusterLayout;
   readonly linkIds: Int32Array;
-  readonly labels: readonly PlacedLabel[];
+  readonly labels: readonly (PlacedLabel | ShownLabel)[];
+  /** Mid-glide, how opaque each of the layout's dots is (those arriving are part-way in). */
+  readonly alpha?: Float32Array;
+  /** Mid-glide, the dots of the picture before that are still fading out. */
+  readonly leaving?: FadingDots;
+  /** Mid-glide, how strong each of `linkIds` is drawn (at rest, all at the haze's strength). */
+  readonly linkAlpha?: Float32Array;
+  /** Mid-glide, the links of the picture before that are still fading out, and how strong. */
+  readonly fadingLinks?: { readonly ids: Int32Array; readonly alpha: Float32Array };
 }
 
-/** Links as pairs of slots (see `GlidePlan`). */
-export interface LinkSlots {
+/**
+ * Links as pairs of slots (see `GlidePlan`), and how strong each is drawn at the start of the
+ * glide: the haze's strength for one drawn at rest, 0 for one arriving, and in between for one a
+ * glide cut short had left part-way in or out.
+ */
+export interface LinkRun {
   readonly from: Int32Array;
   readonly to: Int32Array;
+  readonly start: Float32Array;
 }
 
 /**
@@ -205,40 +234,63 @@ export interface GlidePlan {
   readonly leaving: Int32Array;
   readonly leavingX: Float32Array;
   readonly leavingY: Float32Array;
-  /** The links in both pictures, in only the new one, and in only the old one. */
-  readonly links: {
-    readonly kept: LinkSlots;
-    readonly arriving: LinkSlots;
-    readonly leaving: LinkSlots;
-  };
+  /**
+   * How opaque each slot's dot starts: 1 for one fully drawn, 0 for one arriving, and in between
+   * for one a glide cut short had left part-way in or out.
+   */
+  readonly fromAlpha: Float32Array;
+  /** The new picture's links, one for each of its `linkIds`, in order; they end at `linkStrength`. */
+  readonly links: LinkRun;
+  /** The links only on screen before, by ID in dataset order; they fade out to nothing. */
+  readonly leavingLinks: LinkRun & { readonly ids: Int32Array };
+  /** How strong the new picture's links are drawn once it is at rest. */
+  readonly linkStrength: number;
   readonly fromDotRadius: number;
   readonly toDotRadius: number;
 }
 
 /**
- * Pairs of slots, written into arrays as long as they could need to be: a glide out of the whole
- * Bible has well over a hundred thousand links, and growing plain arrays to that size leaves the
- * page a heap of garbage to collect while the glide is meant to be moving.
+ * Links, written into arrays as long as they could need to be: a glide out of the whole Bible has
+ * well over a hundred thousand of them, and growing plain arrays to that size leaves the page a
+ * heap of garbage to collect while the glide is meant to be moving.
  */
-class SlotPairs {
+class LinkRunBuilder {
   readonly #from: Int32Array;
   readonly #to: Int32Array;
+  readonly #start: Float32Array;
+  readonly #ids: Int32Array;
   #count = 0;
 
   constructor(capacity: number) {
     this.#from = new Int32Array(capacity);
     this.#to = new Int32Array(capacity);
+    this.#start = new Float32Array(capacity);
+    this.#ids = new Int32Array(capacity);
   }
 
-  add(from: number, to: number): void {
+  add(id: number, from: number, to: number, start: number): void {
     this.#from[this.#count] = from;
     this.#to[this.#count] = to;
+    this.#start[this.#count] = start;
+    this.#ids[this.#count] = id;
     this.#count += 1;
   }
 
-  build(): LinkSlots {
-    return { from: this.#from.subarray(0, this.#count), to: this.#to.subarray(0, this.#count) };
+  build(): LinkRun & { readonly ids: Int32Array } {
+    const end = this.#count;
+    return {
+      from: this.#from.subarray(0, end),
+      to: this.#to.subarray(0, end),
+      start: this.#start.subarray(0, end),
+      ids: this.#ids.subarray(0, end),
+    };
   }
+}
+
+/** How strong the links of two pictures are drawn at rest (see `hazeAlpha` in the drawing). */
+export interface GlideHaze {
+  readonly from: number;
+  readonly to: number;
 }
 
 /** The two verses a link joins (the drawing joins a link's source to its target's first verse). */
@@ -248,68 +300,96 @@ export interface LinkEnds {
 }
 
 /**
- * Plans the glide from what is on screen to a new picture. Both pictures' `linkIds` are in dataset
- * order, as `selectClusterGraph` makes them, so the links they share are found in one pass.
+ * Plans the glide from what is on screen to a new picture: from the picture at rest, or from
+ * wherever a glide this one cuts short had got to, its fading dots and links included. Every set
+ * of links is in dataset order, as `selectClusterGraph` makes them, so the links they share are
+ * found in one pass.
  */
-export function planGlide(from: ShownScene, to: ShownScene, ends: LinkEnds): GlidePlan {
+export function planGlide(
+  from: ShownScene,
+  to: ShownScene,
+  ends: LinkEnds,
+  haze: GlideHaze,
+): GlidePlan {
   const target = to.layout;
   const count = target.nodes.length;
   const fromX = target.x.slice();
   const fromY = target.y.slice();
+  // Every dot of the new layout starts unseen, until it turns out to be on screen already.
+  const keptAlpha = new Float32Array(count);
   const isKept = new Uint8Array(count);
   // The slot of each leaving verse, by verse; −1 for the rest.
   const leavingSlot = new Int32Array(target.nodeOf.length).fill(-1);
   const leaving: number[] = [];
   const leavingX: number[] = [];
   const leavingY: number[] = [];
-  from.layout.nodes.forEach((verse, position) => {
-    const x = elementAt(from.layout.x, position);
-    const y = elementAt(from.layout.y, position);
+  const leavingAlpha: number[] = [];
+  const visit = (verse: number, x: number, y: number, alpha: number) => {
     const slot = elementAt(target.nodeOf, verse);
     if (slot >= 0) {
       fromX[slot] = x;
       fromY[slot] = y;
+      keptAlpha[slot] = alpha;
       isKept[slot] = 1;
     } else {
       leavingSlot[verse] = count + leaving.length;
       leaving.push(verse);
       leavingX.push(x);
       leavingY.push(y);
+      leavingAlpha.push(alpha);
     }
+  };
+  const { layout: shown, alpha, leaving: fading } = from;
+  shown.nodes.forEach((verse, position) => {
+    const opacity = alpha ? elementAt(alpha, position) : 1;
+    visit(verse, elementAt(shown.x, position), elementAt(shown.y, position), opacity);
+  });
+  fading?.nodes.forEach((verse, i) => {
+    visit(verse, elementAt(fading.x, i), elementAt(fading.y, i), elementAt(fading.alpha, i));
   });
   const kept: number[] = [];
   const arriving: number[] = [];
   isKept.forEach((flag, slot) => {
     (flag ? kept : arriving).push(slot);
   });
+  const fromAlpha = new Float32Array(count + leaving.length);
+  fromAlpha.set(keptAlpha);
+  fromAlpha.set(leavingAlpha, count);
 
   const slotOf = (verse: VerseIndex) => {
     const slot = elementAt(target.nodeOf, verse);
     return slot >= 0 ? slot : elementAt(leavingSlot, verse);
   };
-  const old = from.linkIds;
+  // The links on screen (drawn, and still fading out of the picture before) against the new
+  // picture's: each gets the strength it is drawn at now, 0 for one not yet on screen.
+  const drawn = from.linkIds;
+  const fadingLinks = from.fadingLinks ?? { ids: new Int32Array(0), alpha: new Float32Array(0) };
+  const fadingIds = fadingLinks.ids;
   const next = to.linkIds;
-  const keptLinks = new SlotPairs(Math.min(old.length, next.length));
-  const arrivingLinks = new SlotPairs(next.length);
-  const leavingLinks = new SlotPairs(old.length);
-  const add = (pairs: SlotPairs, id: number) => {
-    pairs.add(slotOf(elementAt(ends.sources, id)), slotOf(elementAt(ends.targetStarts, id)));
-  };
+  const strengthOf = (i: number) => (from.linkAlpha ? elementAt(from.linkAlpha, i) : haze.from);
+  const links = new LinkRunBuilder(next.length);
+  const leavingLinks = new LinkRunBuilder(drawn.length + fadingIds.length);
+  const idAt = (ids: Int32Array, i: number) => (i < ids.length ? elementAt(ids, i) : Infinity);
   let i = 0;
+  let f = 0;
   let j = 0;
-  while (i < old.length || j < next.length) {
-    const a = i < old.length ? elementAt(old, i) : Infinity;
-    const b = j < next.length ? elementAt(next, j) : Infinity;
-    if (a === b) {
-      add(keptLinks, a);
+  while (i < drawn.length || f < fadingIds.length || j < next.length) {
+    const id = Math.min(idAt(drawn, i), idAt(fadingIds, f), idAt(next, j));
+    let start = 0;
+    if (idAt(drawn, i) === id) {
+      start = strengthOf(i);
       i += 1;
+    } else if (idAt(fadingIds, f) === id) {
+      start = elementAt(fadingLinks.alpha, f);
+      f += 1;
+    }
+    const ends0 = slotOf(elementAt(ends.sources, id));
+    const ends1 = slotOf(elementAt(ends.targetStarts, id));
+    if (idAt(next, j) === id) {
+      links.add(id, ends0, ends1, start);
       j += 1;
-    } else if (a < b) {
-      add(leavingLinks, a);
-      i += 1;
     } else {
-      add(arrivingLinks, b);
-      j += 1;
+      leavingLinks.add(id, ends0, ends1, start);
     }
   }
 
@@ -322,28 +402,32 @@ export function planGlide(from: ShownScene, to: ShownScene, ends: LinkEnds): Gli
     leaving: Int32Array.from(leaving),
     leavingX: Float32Array.from(leavingX),
     leavingY: Float32Array.from(leavingY),
-    links: {
-      kept: keptLinks.build(),
-      arriving: arrivingLinks.build(),
-      leaving: leavingLinks.build(),
-    },
+    fromAlpha,
+    links: links.build(),
+    leavingLinks: leavingLinks.build(),
+    linkStrength: haze.to,
     fromDotRadius: from.layout.dotRadius,
     toDotRadius: target.dotRadius,
   };
 }
 
 /**
- * Whether a glide would show nothing moving: the same dots in the same places, the same links. A
- * redraw that changes nothing (a filter that hides no drawn link) is then drawn at once.
+ * Whether a glide would show nothing moving: the same dots in the same places, as opaque as at
+ * rest, and the same links as strong. A redraw that changes nothing (a filter that hides no drawn
+ * link) is then drawn at once.
  */
 export function isStill(plan: GlidePlan, layout: ClusterLayout): boolean {
   if (plan.arriving.length > 0 || plan.leaving.length > 0) return false;
-  if (plan.links.arriving.from.length > 0 || plan.links.leaving.from.length > 0) return false;
+  if (plan.leavingLinks.from.length > 0) return false;
+  // Strengths are kept at the GPU's precision, so they are compared at it.
+  const strength = Math.fround(plan.linkStrength);
+  if (plan.links.start.some((start) => start !== strength)) return false;
   if (plan.fromDotRadius !== plan.toDotRadius) return false;
   for (let slot = 0; slot < plan.count; slot += 1) {
     if (
       elementAt(plan.fromX, slot) !== elementAt(layout.x, slot) ||
-      elementAt(plan.fromY, slot) !== elementAt(layout.y, slot)
+      elementAt(plan.fromY, slot) !== elementAt(layout.y, slot) ||
+      elementAt(plan.fromAlpha, slot) !== 1
     ) {
       return false;
     }
@@ -411,13 +495,17 @@ export function frameLayout(
 /** What becomes of a dot through a glide, as the GPU is told it. */
 export const GLIDE_ROLE = { kept: 0, arriving: 1, leaving: 2 } as const;
 
-/** Numbers per slot in `glideVertices`: where it starts (x, y), where it ends, genre, role. */
-export const SLOT_FLOATS = 6;
+/**
+ * Numbers per slot in `glideVertices`: where it starts (x, y), where it ends, genre, role, and
+ * how opaque it starts.
+ */
+export const SLOT_FLOATS = 7;
 
 /**
  * Every slot of a glide, ready for the GPU in one upload: where its dot starts and ends, its
- * verse's genre and its role. The GPU then moves every dot itself; a frame sends it only how far
- * the glide has got, so it costs the same for ten dots as for thirty thousand.
+ * verse's genre, its role and its opacity at the start. The GPU then moves every dot itself; a
+ * frame sends it only how far the glide has got, so it costs the same for ten dots as for thirty
+ * thousand.
  */
 export function glideVertices(
   plan: GlidePlan,
@@ -452,36 +540,89 @@ export function glideVertices(
     put(slot, x, y, x, y, verse);
     vertices[slot * SLOT_FLOATS + 5] = GLIDE_ROLE.leaving;
   });
+  plan.fromAlpha.forEach((alpha, slot) => {
+    vertices[slot * SLOT_FLOATS + 6] = alpha;
+  });
   return vertices;
 }
 
-/**
- * The glide's links as pairs of slots in one index list: those kept, then those arriving, then
- * those leaving, each run drawn with its own strength.
- */
-export interface GlideLinkIndices {
-  readonly indices: Uint32Array;
-  /** How many indices (two per link) each run has. */
-  readonly kept: number;
-  readonly arriving: number;
-  readonly leaving: number;
+/** How opaque a slot's dot is `progress` of the way through a glide (the shader's own rule). */
+export function slotAlpha(plan: GlidePlan, slot: number, progress: number): number {
+  const start = elementAt(plan.fromAlpha, slot);
+  return slot >= plan.count ? start * (1 - progress) : start + (1 - start) * progress;
 }
 
-export function glideLinkIndices(plan: GlidePlan): GlideLinkIndices {
-  const runs = [plan.links.kept, plan.links.arriving, plan.links.leaving];
-  const indices = new Uint32Array(runs.reduce((sum, run) => sum + run.from.length * 2, 0));
+/**
+ * What a glide cut short leaves on screen, for the glide that interrupts it to set off from:
+ * every dot where it is and as opaque as it is, the dots and links still fading out, and the
+ * names part-way between their places. Taken once, when the glide is cut short, not every frame.
+ */
+export function sceneMidGlide(
+  plan: GlidePlan,
+  from: ShownScene,
+  to: ShownScene,
+  frame: GlideFrame,
+  progress: number,
+): ShownScene {
+  const alpha = new Float32Array(plan.count);
+  for (let slot = 0; slot < plan.count; slot += 1) alpha[slot] = slotAlpha(plan, slot, progress);
+  const leavingAlpha = new Float32Array(plan.leaving.length);
+  plan.leaving.forEach((_, i) => {
+    leavingAlpha[i] = slotAlpha(plan, plan.count + i, progress);
+  });
+  const { links, leavingLinks, linkStrength } = plan;
+  return {
+    layout: frameLayout(plan, to.layout, frame, progress),
+    linkIds: to.linkIds,
+    labels: blendLabels(from.labels, to.labels, progress),
+    alpha,
+    leaving: { nodes: plan.leaving, x: plan.leavingX, y: plan.leavingY, alpha: leavingAlpha },
+    linkAlpha: links.start.map((start) => start + (linkStrength - start) * progress),
+    fadingLinks: {
+      ids: leavingLinks.ids,
+      alpha: leavingLinks.start.map((start) => start * (1 - progress)),
+    },
+  };
+}
+
+/**
+ * Numbers per end of a link in `glideLineVertices`: where it starts (x, y), where it ends, and how
+ * strong the link is drawn at the start and at the end of the glide.
+ */
+export const LINE_FLOATS = 6;
+
+/**
+ * Every link of a glide, ready for the GPU in one upload, as its two ends: the new picture's links,
+ * which end at full strength, then those leaving, which end at nothing. Each link keeps its own
+ * strength at the start, so one a glide cut short had left half faded carries on from there.
+ */
+export function glideLineVertices(plan: GlidePlan, layout: ClusterLayout): Float32Array {
+  const { links, leavingLinks } = plan;
+  const vertices = new Float32Array(
+    (links.from.length + leavingLinks.from.length) * 2 * LINE_FLOATS,
+  );
   let at = 0;
-  for (const run of runs) {
+  const put = (slot: number, start: number, end: number) => {
+    const kept = slot < plan.count;
+    const x0 = kept ? elementAt(plan.fromX, slot) : elementAt(plan.leavingX, slot - plan.count);
+    const y0 = kept ? elementAt(plan.fromY, slot) : elementAt(plan.leavingY, slot - plan.count);
+    vertices[at] = x0;
+    vertices[at + 1] = y0;
+    vertices[at + 2] = kept ? elementAt(layout.x, slot) : x0;
+    vertices[at + 3] = kept ? elementAt(layout.y, slot) : y0;
+    vertices[at + 4] = start;
+    vertices[at + 5] = end;
+    at += LINE_FLOATS;
+  };
+  for (const [run, end] of [
+    [links, plan.linkStrength],
+    [leavingLinks, 0],
+  ] as const) {
     run.from.forEach((from, i) => {
-      indices[at] = from;
-      indices[at + 1] = elementAt(run.to, i);
-      at += 2;
+      const start = elementAt(run.start, i);
+      put(from, start, end);
+      put(elementAt(run.to, i), start, end);
     });
   }
-  return {
-    indices,
-    kept: plan.links.kept.from.length * 2,
-    arriving: plan.links.arriving.from.length * 2,
-    leaving: plan.links.leaving.from.length * 2,
-  };
+  return vertices;
 }

@@ -26,6 +26,7 @@ import {
   isStill,
   planGlide,
   playFrames,
+  sceneMidGlide,
   writeGlideFrame,
   type ShownScene,
 } from './cluster-glide.ts';
@@ -126,6 +127,9 @@ export function ClustersStage({
   const repaintOverlayRef = useRef<(() => void) | null>(null);
   // Draws the gliding dots and links; made at the first glide, `null` until then or without WebGL.
   const rendererRef = useRef<GlideRenderer | null | undefined>(undefined);
+  // While the dots glide they are nowhere a pointer can rely on: what is under it is worked out
+  // from where they land, so pointing waits until they have.
+  const glidingRef = useRef(false);
 
   useEffect(
     () => () => {
@@ -226,6 +230,7 @@ export function ClustersStage({
     const rest = () => {
       rendererRef.current?.clear();
       glideCanvas?.removeAttribute('data-gliding');
+      glidingRef.current = false;
       drawBase(context, scene, target.labels);
       shownRef.current = target;
       repaintOverlayRef.current?.();
@@ -235,7 +240,8 @@ export function ClustersStage({
       rest();
       return undefined;
     }
-    const plan = planGlide(from, target, index);
+    const haze = { from: hazeAlpha(from.linkIds.length), to: hazeAlpha(graph.linkIds.length) };
+    const plan = planGlide(from, target, index, haze);
     if (isStill(plan, layout)) {
       rest();
       return undefined;
@@ -248,20 +254,22 @@ export function ClustersStage({
     }
     renderer.load(plan, layout, verseGenres, pixelRatio());
     glideCanvas.setAttribute('data-gliding', '');
+    glidingRef.current = true;
     const frame = createGlideFrame(plan);
-    const haze = { from: hazeAlpha(from.linkIds.length), to: hazeAlpha(graph.linkIds.length) };
     let landed = false;
     let landing: number | null = null;
+    let drawn = 0;
     const pace = new FramePace(performance.now());
     const paint = (linear: number) => {
       if (landed) return;
       const progress = glideEase(linear);
       const keepingUp = linear === 0 || !pace.tooSlow(performance.now());
-      if (!keepingUp || !renderer.draw(progress, haze)) {
+      if (!keepingUp || !renderer.draw(progress)) {
         landed = true;
         rest();
         return;
       }
+      drawn = progress;
       writeGlideFrame(plan, layout, progress, frame);
       const labels = blendLabels(from.labels, target.labels, progress);
       drawGlideLabels(context, layout, labels, scene.fontFamily);
@@ -280,10 +288,14 @@ export function ClustersStage({
     return () => {
       stop();
       if (landing !== null) cancelAnimationFrame(landing);
+      // A glide cut short (by a resize, another book) hands on the picture as it stands, fading
+      // dots and links and part-way names included, for the next glide to carry on from.
+      if (!landed) shownRef.current = sceneMidGlide(plan, from, target, frame, drawn);
       // Whatever comes next (another glide, the picture at rest, or nothing while the view is
-      // away) is drawn from scratch, so a glide cut short leaves nothing behind.
+      // away) is drawn from scratch, so a glide cut short leaves nothing behind on this canvas.
       rendererRef.current?.clear();
       glideCanvas.removeAttribute('data-gliding');
+      glidingRef.current = false;
     };
   }, [active, layout, index, graph, verseGenres, books, t, openBook]);
 
@@ -340,6 +352,10 @@ export function ClustersStage({
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!layout || event.pointerType === 'touch') return;
+    if (glidingRef.current) {
+      setHover(null);
+      return;
+    }
     const { x, y } = point(event);
     const target = targetAt(layout, x, y);
     setHover(
@@ -353,7 +369,7 @@ export function ClustersStage({
   };
 
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!layout) return;
+    if (!layout || glidingRef.current) return;
     const { x, y } = point(event);
     const target = targetAt(layout, x, y);
     const group = target && layout.groups[target.group];
