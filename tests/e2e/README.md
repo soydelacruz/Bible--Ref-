@@ -17,6 +17,15 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Close the details and return to the whole picture       | `reading.spec.ts` |
 | Switch between Arcs and Threads, keeping the passage    | `reading.spec.ts` |
 
+## The arcs' tour
+
+| Flow                                                               | Covered by          |
+| ------------------------------------------------------------------ | ------------------- |
+| A first visit is offered the tour; it plays, pauses and resumes    | `arcs-tour.spec.ts` |
+| Closing it leaves the reader at its stop, details open             | `arcs-tour.spec.ts` |
+| Offered only once; the arcs' own controls start it, Escape ends it | `arcs-tour.spec.ts` |
+| A touch of the arcs ends it, handing its stop back once let go     | `arcs-tour.spec.ts` |
+
 ## Reading in Threads
 
 | Flow                                                             | Covered by        |
@@ -38,6 +47,11 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | See the genre breakdown of a passage's links             | `cross-references.spec.ts` |
 | Raise the vote threshold and see fewer, better links     | `cross-references.spec.ts` |
 | Hide a genre from the legend, and bring it back          | `cross-references.spec.ts` |
+| Find the chain of links to another passage, and walk it  | `search-and-paths.spec.ts` |
+| …which travels the arcs as light, lighting each step     | `path-light.spec.ts`       |
+| …and between the dots in Clusters, the same way          | `path-light.spec.ts`       |
+| …drawn whole, every step lit, with reduced motion        | `path-light.spec.ts`       |
+| …played again on request, and gone when cleared          | `path-light.spec.ts`       |
 
 ## The whole Bible beside the arcs
 

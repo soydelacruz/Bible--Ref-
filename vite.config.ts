@@ -77,6 +77,7 @@ export default defineConfig(({ command, isPreview = false }) => ({
         'src/visualizations/arcs/ArcsStage.tsx',
         'src/visualizations/arcs/Minimap.tsx',
         'src/visualizations/shared/components/LoadingArcs.tsx',
+        'src/visualizations/shared/light-painter.ts',
         'src/visualizations/threads/threads-drawing.ts',
         'src/visualizations/threads/ThreadsStage.tsx',
         'src/visualizations/clusters/clusters-drawing.ts',

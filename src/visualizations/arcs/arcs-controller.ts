@@ -1,5 +1,6 @@
 import { chapterPassageOf, versePassage, type Passage } from '../../core/bible/passage.ts';
 import type { GenreId } from '../../core/bible/genres.ts';
+import type { VerseIndex } from '../../core/bible/verse-ref.ts';
 import type { VerseIndexRange, Versification } from '../../core/bible/versification.ts';
 import type { BookNames } from '../../i18n/books/types.ts';
 import {
@@ -18,6 +19,8 @@ import {
   simulate,
 } from '../shared/frames.ts';
 import { isAtRest, rubberBand, stepGlide } from '../shared/momentum.ts';
+import { PathLayer } from '../shared/path-layer.ts';
+import { pathMode, type PathPlayOptions } from '../shared/path-light.ts';
 import { morphChanges, settleArcMorph, type ArcInstances, type ArcMorph } from './arc-instances.ts';
 import {
   alongOfPoint,
@@ -26,6 +29,7 @@ import {
   pixelsPerVerse,
   type ArcLayout,
 } from './arc-layout.ts';
+import { ARC_PATH_TRACE, arcPathCurve, type ArcPath, type ArcPathHop } from './arc-path.ts';
 import { ArcScene } from './arc-scene.ts';
 import {
   clampView,
@@ -192,6 +196,9 @@ export class ArcsController {
   /** Books brushed on the minimap: lit up in the focused passage's place (see `setBrush`). */
   #brush: VerseIndexRange | null = null;
   #viewListener: ((view: AxisView, layout: ArcLayout) => void) | null = null;
+  /** A chain of links drawn as light (see `playPath`), and the verse it starts from. */
+  readonly #path: PathLayer<ArcPathHop>;
+  #pathOrigin: VerseIndex | null = null;
 
   constructor(options: ArcsControllerOptions) {
     this.#options = options;
@@ -201,6 +208,7 @@ export class ArcsController {
       throw new Error('Canvas 2D is not available.');
     }
     this.#overlay = overlay;
+    this.#path = PathLayer.over(options.overlayCanvas, ARC_PATH_TRACE);
     this.#view = fullView(options.versification.verseCount);
     this.#names = options.names;
     this.#genreNames = options.genreNames;
@@ -260,6 +268,7 @@ export class ArcsController {
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     this.#overlay.setTransform(ratio, 0, 0, ratio, 0, 0);
+    this.#path.setSize(width, height);
     this.#scheduler.request();
   }
 
@@ -317,6 +326,10 @@ export class ArcsController {
    */
   setFocus(range: VerseIndexRange | null): void {
     const changed = range?.start !== this.#focus?.start || range?.end !== this.#focus?.end;
+    const origin = this.#pathOrigin;
+    if (changed && origin !== null && !(range && origin >= range.start && origin <= range.end)) {
+      this.clearPath();
+    }
     this.#focus = range;
     this.#scene.setFocus(range && this.#linksOfRange(range));
     this.#fadeDim(range === null ? 0 : 1);
@@ -413,6 +426,57 @@ export class ArcsController {
     this.#scheduler.request();
   }
 
+  /**
+   * Draws a chain of cross-references as light travelling it hop by hop along the links' own arcs,
+   * one hop every `HOP_MS` (250ms), each landing with a flash: the loading screen's light. Build
+   * the chain with `buildArcPath` from `findConnectionPath`'s steps. It takes the place of any path
+   * drawn before, and once every hop has landed the whole chain stays drawn, quietly, until another
+   * path is played, `clearPath` is called, `signal` aborts, or the focus moves to a passage without
+   * the chain's first verse. The camera stays where it is: fly it there first if need be.
+   *
+   * Resolves `true` once the last hop has landed and its flash has faded, `false` if it was cut
+   * short (any of the above, or the controller disposed). `onLit` is told which steps the light is
+   * at as it reaches each one, and `null` once it has passed them all or stopped. With reduced
+   * motion the whole chain is drawn at once and every step lit together, for as long as the light
+   * would have taken; out of sight (see `setActive`), it is drawn at once and resolves at once.
+   */
+  playPath(path: ArcPath, options: PathPlayOptions = {}): Promise<boolean> {
+    this.#pathOrigin = path.origin;
+    return this.#path.play(path.hops, pathMode(this.#active), options);
+  }
+
+  /** Takes the path off the diagram; one still travelling stops at once (see `playPath`). */
+  clearPath(): void {
+    this.#pathOrigin = null;
+    this.#path.clear();
+  }
+
+  /**
+   * For the guided tour (`tour/`), which frames each stop itself: focuses `range` as `setFocus`
+   * does, but flies to `view` rather than only bringing the passage into sight. Its links grow out
+   * of it as the camera lands — whatever key the reader pressed last, since it is the tour that
+   * moves them. Resolves `true` once landed, or `false` if the reader took over first.
+   */
+  showStop(range: VerseIndexRange, view: AxisView): Promise<boolean> {
+    const changed = range.start !== this.#focus?.start || range.end !== this.#focus.end;
+    // As with `setFocus`: a path stays only while its first verse is in focus.
+    const origin = this.#pathOrigin;
+    if (changed && origin !== null && !(origin >= range.start && origin <= range.end)) {
+      this.clearPath();
+    }
+    this.#keyboard = false;
+    this.#focus = range;
+    this.#scene.setFocus(this.#linksOfRange(range));
+    this.#fadeDim(1);
+    return new Promise((resolve) => {
+      const arrival = this.#fly(view, 'flight', resolve);
+      if (changed) {
+        this.#ignite(range, arrival);
+      }
+      this.#scheduler.request();
+    });
+  }
+
   dispose(): void {
     this.#stopMotion();
     this.#cancelDim?.();
@@ -422,6 +486,7 @@ export class ArcsController {
     this.#stopEdgePan();
     this.#scheduler.dispose();
     this.#detachGestures();
+    this.#path.dispose();
     this.#options.container.removeEventListener('keydown', this.#onKeyDown);
     window.removeEventListener('keydown', this.#onAnyKey, { capture: true });
     window.removeEventListener('pointerdown', this.#onAnyPointer, { capture: true });
@@ -479,7 +544,7 @@ export class ArcsController {
    */
   snapshot<T>(compose: (layers: readonly HTMLCanvasElement[]) => T): T {
     this.#draw();
-    return compose([this.#options.glCanvas, this.#options.overlayCanvas]);
+    return compose([this.#options.glCanvas, this.#options.overlayCanvas, this.#path.canvas]);
   }
 
   get #total(): number {
@@ -491,8 +556,10 @@ export class ArcsController {
       return;
     }
     const view = this.#shownView();
+    const layout = this.#layout;
     this.#scene.setView(view);
     this.#scene.render();
+    this.#path.setCurves((hop) => arcPathCurve(layout, view, hop));
     paintAxis(this.#overlay, {
       layout: this.#layout,
       view,
@@ -816,6 +883,7 @@ export class ArcsController {
     this.#dim = this.#dimTarget;
     this.#scene.setDim(this.#dim);
     this.#settleMorph();
+    this.#path.finish();
   }
 
   /** Dims the glow (1) or brightens it back (0), over `DIM_MS`. */

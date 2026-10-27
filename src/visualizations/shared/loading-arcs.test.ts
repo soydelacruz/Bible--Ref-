@@ -4,8 +4,10 @@ import {
   arcPoint,
   bookSegments,
   flightFrame,
+  flightSettles,
   launchFlight,
   TRACE_MS,
+  travelLandingIn,
   type ArcFlight,
 } from './loading-arcs.ts';
 import { computeVerseGenres } from './verse-genres.ts';
@@ -102,6 +104,29 @@ describe('flightFrame', () => {
     expect(flightFrame(flight, 3000 + TRACE_MS / 2)?.trace).toBeCloseTo(0.5, 5);
     expect(flightFrame(flight, 3000 + TRACE_MS + 1)).toBeNull();
     expect(flightFrame(flight, 999)).toBeNull();
+  });
+});
+
+describe('travelLandingIn', () => {
+  it('times a flight so that its light lands when asked', () => {
+    const travel = travelLandingIn(250);
+    const flight = { launchedAt: 0, travel };
+    expect(flightFrame(flight, 249)?.head).toBeLessThan(1);
+    expect(flightFrame(flight, 250)?.head).toBe(1);
+    expect(flightFrame(flight, 250)?.landing).toBe(1);
+  });
+});
+
+describe('flightSettles', () => {
+  it('is over once the light has passed and the landing flash has faded', () => {
+    const flight = { launchedAt: 0, travel: travelLandingIn(250) };
+    const settled = flightSettles(flight);
+    expect(settled).toBeCloseTo(950, 6);
+    expect(flightFrame(flight, settled)?.light).toBe(0);
+    expect(flightFrame(flight, settled)?.landing).toBe(0);
+    expect(flightFrame(flight, settled - 50)?.landing).toBeGreaterThan(0);
+    // A long flight is still travelling when its flash has gone.
+    expect(flightSettles({ travel: 4000 })).toBe(4000);
   });
 });
 

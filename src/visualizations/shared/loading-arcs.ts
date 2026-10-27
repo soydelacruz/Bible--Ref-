@@ -93,7 +93,10 @@ export interface FlightFrame {
 }
 
 /** The flight at a given time, or `null` once it has faded out (or before it starts). */
-export function flightFrame(flight: ArcFlight, now: number): FlightFrame | null {
+export function flightFrame(
+  flight: Pick<ArcFlight, 'launchedAt' | 'travel'>,
+  now: number,
+): FlightFrame | null {
   const elapsed = now - flight.launchedAt;
   if (elapsed < 0 || elapsed > flight.travel + TRACE_MS) {
     return null;
@@ -107,6 +110,19 @@ export function flightFrame(flight: ArcFlight, now: number): FlightFrame | null 
     trace: clamp01(1 - (elapsed - flight.travel) / TRACE_MS),
     landing: elapsed < landedAt ? 0 : clamp01(1 - (elapsed - landedAt) / LANDING_MS),
   };
+}
+
+/** The travel time of a flight whose light lands at its far end `landsInMs` after it sets off. */
+export function travelLandingIn(landsInMs: number): number {
+  return landsInMs / HEAD_SHARE;
+}
+
+/**
+ * How long after it sets off a flight's light has passed and its landing flash has faded, in ms:
+ * all that is left of it then is its trace.
+ */
+export function flightSettles(flight: Pick<ArcFlight, 'travel'>): number {
+  return Math.max(flight.travel, flight.travel * HEAD_SHARE + LANDING_MS);
 }
 
 /**

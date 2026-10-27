@@ -208,6 +208,8 @@ export const es: LocaleMessages = {
   'path.placeholder': 'Otro pasaje, p. ej. Ap 12:9',
   'path.find': 'Buscar camino',
   'path.clear': 'Borrar camino',
+  'path.replay': 'Ver de nuevo',
+  'path.replay.hint': 'Iluminar el camino de nuevo, enlace por enlace',
   'path.summary': (from, to, count, plural) =>
     plural === 1
       ? `De ${from} a ${to} en ${count} enlace:`
@@ -321,6 +323,32 @@ export const es: LocaleMessages = {
   // A gerund, so it reads the same for one book or many.
   'arcs.minimap.lit': (books, count) => `Iluminando ${books}: ${count}`,
   'arcs.minimap.cleared': 'Los libros ya no están iluminados',
+  'tour.invite': '¿Primera vez en los arcos? Un recorrido de 45 segundos muestra lo que unen.',
+  'tour.start': 'Hacer el recorrido',
+  'tour.dismiss': 'Ahora no',
+  'tour.region': 'Recorrido guiado',
+  'tour.progress': (position, count) => `Recorrido · ${position} de ${count}`,
+  'tour.paused': 'En pausa',
+  'tour.pause': 'Pausar el recorrido',
+  'tour.resume': 'Reanudar el recorrido',
+  'tour.close': 'Terminar el recorrido',
+  'tour.announce': (position, count, title, passages) =>
+    `Recorrido, ${position} de ${count}: ${title}. ${passages}`,
+  'tour.stop.beginning.title': 'En el principio',
+  'tour.stop.beginning.line':
+    'Las primeras palabras de la Biblia vuelven como las primeras de Juan.',
+  'tour.stop.shema.title': 'Oye, Israel',
+  'tour.stop.shema.line':
+    'Cuando le preguntan cuál es el primer mandamiento, Jesús responde con el Shemá.',
+  'tour.stop.forsaken.title': 'Dios mío, Dios mío',
+  'tour.stop.forsaken.line': 'Un salmo de David, clamado desde la cruz; mucho de él resuena allí.',
+  'tour.stop.servant.title': 'Como un cordero',
+  'tour.stop.servant.line': 'El siervo sufriente de Isaías, leído en voz alta camino de Gaza.',
+  'tour.stop.spirit.title': 'Derramaré mi Espíritu',
+  'tour.stop.spirit.line': 'La promesa de Joel, citada por Pedro en Pentecostés.',
+  'tour.finale.title': 'Del Edén al final',
+  'tour.finale.line':
+    'Una sola cadena de referencias cruzadas, de la primera promesa a «Yo soy el Alfa y la Omega».',
 
   // Feminine plural, as "reindexadas" below agrees with it.
   'credits.links': 'Referencias cruzadas:',

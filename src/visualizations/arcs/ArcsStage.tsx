@@ -13,11 +13,13 @@ import { ClickIcon, PinchIcon, TapIcon } from '../../shared/ui/icons.tsx';
 import { useLocalization } from '../../i18n/use-locale.tsx';
 import { collectConnections, connectionLinkIds, type Connection } from '../shared/connections.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
+import type { PathLight } from '../shared/path-light.ts';
 import { useAnnouncer } from '../shared/use-announcer.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
 import { buildArcInstances, buildArcMorph } from './arc-instances.ts';
 import { computeArcLayout } from './arc-layout.ts';
+import { buildArcPath } from './arc-path.ts';
 import { ArcsController, type ArcHover } from './arcs-controller.ts';
 import { describeBooks, linksTouching } from './minimap-strip.ts';
 import { Minimap, type ViewListener } from './Minimap.tsx';
@@ -38,6 +40,12 @@ interface ArcsStageProps {
   readonly onSelect: (passage: Passage | null) => void;
   /** Filled with a way to take a picture of the diagram as it is, once it can be drawn. */
   readonly snapshotRef?: RefObject<ArcsController['snapshot'] | null>;
+  /** A chain of links the details panel shows, to travel its arcs as light (see `playPath`). */
+  readonly pathLight?: PathLight;
+  /** Filled with the controller while the stage is up, for what moves the camera on its own (the tour). */
+  readonly controllerRef?: RefObject<ArcsController | null>;
+  /** A tour is playing: it lights up its own links, so no books are lit up from the minimap. */
+  readonly touring?: boolean;
 }
 
 /**
@@ -53,6 +61,9 @@ export function ArcsStage({
   preview,
   onSelect,
   snapshotRef,
+  pathLight,
+  controllerRef: outsideControllerRef,
+  touring = false,
 }: ArcsStageProps) {
   const { t, books, locale, n } = useLocalization();
   const genres = locale.genres;
@@ -79,6 +90,12 @@ export function ArcsStage({
     readonly range: VerseIndexRange;
     readonly over: Passage | null;
   } | null>(null);
+  // A tour takes the lit links over, so starting one puts the books away for good.
+  const [touringBefore, setTouringBefore] = useState(touring);
+  if (touring !== touringBefore) {
+    setTouringBefore(touring);
+    setBrushed(null);
+  }
   const brush = brushed?.over === focus ? brushed.range : null;
   const { index } = data.crossReferences;
   const brushLinks = useMemo(
@@ -86,6 +103,9 @@ export function ArcsStage({
     [brush, index, linkIds],
   );
   const brushBooks = (range: VerseIndexRange | null) => {
+    if (touring) {
+      return;
+    }
     setBrushed(range && { range, over: focus });
     if (range) {
       const count = linksTouching(index, linkIds, range).length;
@@ -142,14 +162,20 @@ export function ArcsStage({
     if (snapshotRef) {
       snapshotRef.current = (compose) => controller.snapshot(compose);
     }
+    if (outsideControllerRef) {
+      outsideControllerRef.current = controller;
+    }
     return () => {
       controller.dispose();
       controllerRef.current = null;
       if (snapshotRef) {
         snapshotRef.current = null;
       }
+      if (outsideControllerRef) {
+        outsideControllerRef.current = null;
+      }
     };
-  }, [data.versification, snapshotRef]);
+  }, [data.versification, snapshotRef, outsideControllerRef]);
 
   useEffect(() => {
     namesRef.current = { books, genres };
@@ -214,6 +240,18 @@ export function ArcsStage({
         : null,
     );
   }, [preview, data]);
+
+  const { index: linkIndex } = data.crossReferences;
+  const { verseGenres } = data;
+  useEffect(() => {
+    const controller = controllerRef.current;
+    if (!pathLight || !controller) {
+      return undefined;
+    }
+    return pathLight.attach((steps, options) =>
+      controller.playPath(buildArcPath(linkIndex, steps, verseGenres), options),
+    );
+  }, [pathLight, linkIndex, verseGenres]);
 
   return (
     <div ref={frameRef} className={styles.frame} data-orientation={orientation}>
