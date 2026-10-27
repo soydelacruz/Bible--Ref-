@@ -196,7 +196,15 @@ describe('VizPage', () => {
     );
     const names = (buttons: readonly HTMLElement[]) => buttons.map((button) => button.textContent);
     const header = within(screen.getByRole('banner'));
-    expect(names(header.getAllByRole('button'))).toEqual(['Wander', 'Saved', 'Filter', 'More']);
+    // One copy at the end of the first row, for where the header is two rows, and one among the
+    // controls; the styles show one at a time, which this DOM does not apply.
+    expect(names(header.getAllByRole('button'))).toEqual([
+      'Wander',
+      'Wander',
+      'Saved',
+      'Filter',
+      'More',
+    ]);
     const more = screen.getByRole('button', { name: 'More' });
     await userEvent.click(more);
     const popover = document.getElementById(more.getAttribute('aria-controls') ?? '');

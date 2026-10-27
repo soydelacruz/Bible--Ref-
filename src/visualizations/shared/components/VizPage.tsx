@@ -10,7 +10,8 @@ import styles from './VizPage.module.css';
 /**
  * What the host adds to every view's header (Wander): provided once, around all the views, rather
  * than handed to each of them to pass on. First among the controls, beside the search box, since
- * like the search it takes the reader to a passage; in the More menu on phones.
+ * like the search it takes the reader to a passage; at the end of the first row where the header
+ * is two rows, since the second has no room to spare; in the More menu on phones.
  */
 export const HeaderActions = createContext<ReactNode>(null);
 
@@ -74,13 +75,17 @@ export function VizPage({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div className={styles.masthead}>{masthead}</div>
+        <div className={styles.masthead}>
+          {masthead}
+          {/* Shown only on two rows, in place of the copy among the controls: one at a time. */}
+          {Boolean(actions) && <div className={styles.mastheadActions}>{actions}</div>}
+        </div>
         <div className={styles.search}>{search}</div>
         <div className={styles.tools}>
           {/* The same controls are rendered again inside More, which only exists while open:
               there is never more than one of each on screen or to a screen reader. */}
           <div className={styles.shared}>
-            {actions}
+            <div className={styles.rowActions}>{actions}</div>
             {tools}
           </div>
           {filters}
