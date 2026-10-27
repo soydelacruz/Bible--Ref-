@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, waitForApp, waitForDrawing } from './helpers.ts';
+import { ACTIVE, PANEL, openHeaderMenu, waitForApp, waitForDrawing } from './helpers.ts';
 
 const STAGE = `${ACTIVE} [role="application"]`;
 /** The strip of the whole Bible beside the axis. */
@@ -210,6 +210,54 @@ test.describe('the minimap', () => {
     await expect(page.locator(LIT)).toHaveText(/^Luke lit up: /);
     await tapAt(page, hasTouch, at(0.82));
     await expect(page.locator(LIT)).toHaveText('The books are no longer lit up');
+  });
+
+  test('lit books keep their links when new text arrives under them', async ({
+    page,
+    hasTouch,
+  }) => {
+    await page.goto(`./?ref=Ruth.1&${FEW_LINKS}`);
+    await waitForApp(page);
+    const quiet = await brightPixels(page);
+    const at = await onStrip(page);
+    const press = await pressAt(page, hasTouch, at(0.75));
+    await press.moveTo(at(0.85));
+    await press.release();
+    await expect(page.locator(STRIP)).toHaveAttribute('data-lit', /^\d+-\d+$/);
+    await expect.poll(() => brightPixels(page)).toBeGreaterThan(quiet * 3);
+
+    // Another translation is new text over the same links: the lit ones stay lit.
+    await openHeaderMenu(page, /Translation/);
+    const kjv = page.locator(ACTIVE).getByRole('radio', { name: /King James/ });
+    await kjv.check();
+    await expect(page).toHaveURL(/t=kjv/);
+    await page.keyboard.press('Escape');
+    await expect(kjv).toBeHidden();
+    await expect(page.locator(STRIP)).toHaveAttribute('data-lit', /^\d+-\d+$/);
+    await expect.poll(() => brightPixels(page)).toBeGreaterThan(quiet * 3);
+  });
+
+  test('lit books leave for good when a passage opens or closes elsewhere', async ({
+    page,
+    hasTouch,
+  }) => {
+    await page.goto(`./?${FEW_LINKS}`);
+    await waitForApp(page);
+    const at = await onStrip(page);
+    const press = await pressAt(page, hasTouch, at(0.75));
+    await press.moveTo(at(0.85));
+    await press.release();
+    await expect(page.locator(STRIP)).toHaveAttribute('data-lit', /^\d+-\d+$/);
+
+    const search = page.locator(ACTIVE).getByRole('searchbox');
+    await search.fill('Ruth 1');
+    await search.press('Enter');
+    await expect(page.locator(PANEL).getByRole('heading', { name: 'Ruth 1' })).toBeVisible();
+    await expect(page.locator(STRIP)).not.toHaveAttribute('data-lit');
+    // Closing the passage goes back to the whole picture as it is, not as it was before.
+    await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(page.locator(STRIP)).not.toHaveAttribute('data-lit');
   });
 
   test('the keys move and zoom the window, light up the books in view, and clear them', async ({

@@ -84,19 +84,15 @@ export function ArcsStage({
   const [hover, setHover] = useState<ArcHover | null>(null);
   const [announcer, announce] = useAnnouncer<HTMLParagraphElement>();
 
-  // Books brushed on the minimap light up in the focused passage's place. They belong to the
-  // passage they were brushed over: opening another clears them, as the newest thing asked for.
-  const [brushed, setBrushed] = useState<{
-    readonly range: VerseIndexRange;
-    readonly over: Passage | null;
-  } | null>(null);
-  // A tour takes the lit links over, so starting one puts the books away for good.
-  const [touringBefore, setTouringBefore] = useState(touring);
-  if (touring !== touringBefore) {
-    setTouringBefore(touring);
-    setBrushed(null);
+  // Books brushed on the minimap light up in the focused passage's place. They belong to what was
+  // on screen when they were brushed: opening or closing a passage, from anywhere, or starting a
+  // tour (which lights up its own links) puts them away for good, as the newer thing asked for.
+  const [brush, setBrush] = useState<VerseIndexRange | null>(null);
+  const [brushedOver, setBrushedOver] = useState({ focus, touring });
+  if (focus !== brushedOver.focus || touring !== brushedOver.touring) {
+    setBrushedOver({ focus, touring });
+    setBrush(null);
   }
-  const brush = brushed?.over === focus ? brushed.range : null;
   const { index } = data.crossReferences;
   const brushLinks = useMemo(
     () => brush && linksTouching(index, linkIds, brush),
@@ -106,7 +102,7 @@ export function ArcsStage({
     if (touring) {
       return;
     }
-    setBrushed(range && { range, over: focus });
+    setBrush(range);
     if (range) {
       const count = linksTouching(index, linkIds, range).length;
       announce(
@@ -121,7 +117,7 @@ export function ArcsStage({
   };
 
   const select = useEffectEvent((passage: Passage | null) => {
-    setBrushed(null);
+    setBrush(null);
     onSelect(passage);
   });
   // Escape on the stage puts away what was asked for last: lit books, then the passage.

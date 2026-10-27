@@ -295,6 +295,8 @@ export function Minimap({
         aria-orientation={orientation}
         aria-valuemin={0}
         aria-valuemax={100}
+        // The books lit up, as verse indices, for whatever reads the page rather than its pixels.
+        data-lit={brush ? `${String(brush.start)}-${String(brush.end)}` : undefined}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

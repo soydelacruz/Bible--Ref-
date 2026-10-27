@@ -315,7 +315,10 @@ export class ArcsController {
   /** How to find the (filtered) links of a verse range, for focus and hover highlights. */
   setLinkResolver(resolver: (range: VerseIndexRange) => ArcInstances | null): void {
     this.#linksOfRange = resolver;
-    this.#scene.setFocus(this.#focus && resolver(this.#focus));
+    // Lit books bring their own links (see `setBrush`): the passage's wait under them.
+    if (!this.#brush) {
+      this.#scene.setFocus(this.#focus && resolver(this.#focus));
+    }
     this.#scene.setHover(this.#hover && resolver(this.#hover));
     this.#scheduler.request();
   }
