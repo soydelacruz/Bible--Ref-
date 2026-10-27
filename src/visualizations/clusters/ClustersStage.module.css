@@ -1,5 +1,7 @@
-/* Two canvases stacked: the picture at rest below, what stands out above. The one below dims
-   while something stands out, so the highlighted links read against a quiet background. */
+/* Canvases stacked: the picture at rest, what stands out above it, and, below both, the dots and
+   links gliding between two pictures (drawn on the GPU, and shown only while they move). The
+   picture dims while something stands out, so the highlighted links read against a quiet
+   background. */
 .stage {
   position: absolute;
   inset: 0;
@@ -29,6 +31,10 @@
 
 .overlay {
   pointer-events: none;
+}
+
+.glide:not([data-gliding]) {
+  visibility: hidden;
 }
 
 .tooltip {
