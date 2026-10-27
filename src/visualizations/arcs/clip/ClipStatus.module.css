@@ -1,0 +1,145 @@
+/* The clip's status: over the stage's lower corner, clear of the legend and the summary line at
+   the top, and above the arcs' tooltip. */
+.status {
+  position: absolute;
+  inset-block-end: var(--space-3);
+  inset-inline-end: var(--space-3);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-inline-size: calc(100% - 2 * var(--space-3));
+  padding: var(--space-2);
+  padding-inline-end: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.5);
+  font-size: 0.8125rem;
+  animation: status-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes status-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+/* The clip as it is made, small: the arcs growing are the progress a reader can see. */
+.preview {
+  flex: none;
+  inline-size: 4.5rem;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 2px);
+  /* The clip's own background, so the frame is the same before its first picture. */
+  background: #0d0d0d;
+}
+
+.preview canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.body {
+  display: grid;
+  flex: 1;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.message {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Filled to where the recording is, frame by frame: it moves only as the work does. */
+.bar {
+  flex: 1;
+  min-inline-size: 6rem;
+  block-size: 0.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-accent);
+  appearance: none;
+}
+
+.bar::-webkit-progress-bar {
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+}
+
+.bar::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.bar::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.percent {
+  min-inline-size: 2.5rem;
+  text-align: end;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* What the reader came for: on a phone, the share sheet. */
+.primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.close {
+  padding-inline: var(--space-2);
+  border-color: transparent;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+/* The header's button while its clip is made: still named and reachable, a second press does
+   nothing, so it steps back as a menu does while its choice is fetched. */
+.saving[aria-busy='true'] {
+  color: var(--color-text-muted);
+  cursor: progress;
+}
+
+/* On a phone the corner is the stage's whole width: the status spans it. */
+@media (max-width: 47.99rem) {
+  .status {
+    inset-inline: var(--space-2);
+    inset-block-end: var(--space-2);
+    max-inline-size: none;
+  }
+}
+
+/* Still: the panel appears in place, and the clip shows only once it is made, as a still of its
+   last frame. The video itself is what was asked for; the page around it doesn't move. */
+@media (prefers-reduced-motion: reduce) {
+  .status {
+    animation: none;
+  }
+
+  .preview[data-playing='true'] canvas {
+    opacity: 0;
+  }
+}
