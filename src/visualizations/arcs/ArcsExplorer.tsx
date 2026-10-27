@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ClickIcon,
   DragIcon,
   HoldAndSlideIcon,
   PinchIcon,
   SaveImageIcon,
+  SaveVideoIcon,
   ScrollIcon,
   TapIcon,
 } from '../../shared/ui/icons.tsx';
@@ -30,6 +31,12 @@ import type { EarlyVizData } from '../shared/viz-data.ts';
 import type { VisualizationProps } from '../visualization.ts';
 import type { ArcsController } from './arcs-controller.ts';
 import { ArcsStage } from './ArcsStage.tsx';
+import { clipFileName, supportedClipType } from './clip/clip-format.ts';
+import { ClipJob } from './clip/clip-job.ts';
+import { makeClip } from './clip/clip-painter.ts';
+import { buildClipScene } from './clip/clip-scene.ts';
+import { ClipStatus } from './clip/ClipStatus.tsx';
+import clipStyles from './clip/ClipStatus.module.css';
 
 const INSPIRATION = {
   title: 'Bible Cross-References',
@@ -49,7 +56,7 @@ export function ArcsExplorer({
   passageLinks,
   shareUrl,
 }: VisualizationProps<EarlyVizData>) {
-  const { t, books } = useLocalization();
+  const { t, books, locale } = useLocalization();
   const { index } = data.crossReferences;
   const linkIds = useMemo(
     () => selectLinks(index, data.verseGenres, filter),
@@ -71,20 +78,21 @@ export function ArcsExplorer({
   } | null>(null);
   const previewed = preview?.passage === passage ? preview.connection : null;
   const snapshotRef = useRef<ArcsController['snapshot'] | null>(null);
+  // What the picture and the clip say they show, and name their files after.
+  const exportTitle = [passage && formatPassage(passage, data.versification, books), t('app.name')]
+    .filter((part) => part !== null)
+    .join(' · ');
   const saveImage = () => {
     const snapshot = snapshotRef.current;
     if (!snapshot) {
       return;
     }
-    const title = [passage && formatPassage(passage, data.versification, books), t('app.name')]
-      .filter((part) => part !== null)
-      .join(' · ');
     const ratio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
     const canvas = snapshot((layers) =>
       composeImage(
         layers,
         {
-          title,
+          title: exportTitle,
           url: passage ? shareUrl(passage) : import.meta.env.SITE_URL,
           credit: data.crossReferences.manifest.attribution,
         },
@@ -93,7 +101,7 @@ export function ArcsExplorer({
       ),
     );
     if (canvas instanceof HTMLCanvasElement) {
-      downloadImage(canvas, imageFileName(title)).catch(() => {
+      downloadImage(canvas, imageFileName(exportTitle)).catch(() => {
         window.alert(t('image.failed'));
       });
     }
@@ -101,6 +109,46 @@ export function ArcsExplorer({
 
   // The arcs need only the links; the words come when they come, and only what shows them waits.
   const text = data.text.state === 'loaded' ? data.text.translation : null;
+
+  // A short video of the focused passage, drawn apart from the diagram. Offered only where the
+  // browser can record one; the format it would be is settled once.
+  const [clipType] = useState(supportedClipType);
+  const [clipJob] = useState(() => new ClipJob());
+  const isClipRecording = useSyncExternalStore(clipJob.subscribe, clipJob.isRecording);
+  // A clip plays on the page while it is recorded: putting the view away stops it.
+  useEffect(() => {
+    if (!active) {
+      clipJob.cancel();
+    }
+  }, [active, clipJob]);
+  useEffect(
+    () => () => {
+      clipJob.cancel();
+    },
+    [clipJob],
+  );
+  const saveClip = () => {
+    if (!passage || !clipType || clipJob.isRecording()) {
+      return;
+    }
+    const scene = buildClipScene({
+      core: data,
+      passage,
+      filter,
+      translation: text,
+      names: books,
+      genreNames: locale.genres,
+      caption: {
+        title: exportTitle,
+        url: shareUrl(passage),
+        credit: data.crossReferences.manifest.attribution,
+      },
+    });
+    clipJob.start(
+      (onProgress) => makeClip(scene, clipType, onProgress),
+      clipFileName(exportTitle, clipType),
+    );
+  };
 
   return (
     <VizPage
@@ -130,6 +178,19 @@ export function ArcsExplorer({
             {/* Its icon alone in the header; spelled out as a row of the phone's More menu. */}
             <span className={controls.rowLabel}>{t('image.save')}</span>
           </button>
+          {passage && clipType && (
+            <button
+              type="button"
+              className={`${controls.button} ${clipStyles.saving}`}
+              aria-label={t('clip.save')}
+              title={t('clip.save')}
+              aria-busy={isClipRecording || undefined}
+              onClick={saveClip}
+            >
+              <SaveVideoIcon />
+              <span className={controls.rowLabel}>{t('clip.save')}</span>
+            </button>
+          )}
         </>
       }
       filters={
@@ -174,6 +235,7 @@ export function ArcsExplorer({
         onSelect={onNavigate}
         snapshotRef={snapshotRef}
       />
+      <ClipStatus job={clipJob} />
       <LinkStats
         summary={summary}
         isFilterDefault={isDefaultFilter(filter, DEFAULT_LINK_FILTER)}

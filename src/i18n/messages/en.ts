@@ -220,6 +220,17 @@ export const en = {
 
   'image.save': 'Save as image',
   'image.failed': 'The image could not be saved.',
+  // A short video of the passage in the details: its links growing out of it, to share. Made
+  // while the reader waits, then shared or saved from the status that shows its progress.
+  'clip.save': 'Save as video',
+  'clip.label': 'Video',
+  'clip.making': 'Making the video…',
+  'clip.cancel': 'Cancel',
+  'clip.ready': 'Your video is ready.',
+  'clip.share': 'Share',
+  'clip.download': 'Save',
+  'clip.close': 'Close',
+  'clip.failed': 'The video could not be made.',
 
   'path.title': 'Path',
   'path.note': 'the chain of links to another passage',

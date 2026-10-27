@@ -12,7 +12,8 @@ export interface PassageQuote {
 
 const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 
-function superscript(mark: string): string {
+/** A verse mark as superscript digits, for text that can't carry `<sup>`: `12` → `¹²`. */
+export function superscript(mark: string): string {
   return mark.replace(/\d/g, (digit) => SUPERSCRIPT_DIGITS.charAt(Number(digit)));
 }
 
