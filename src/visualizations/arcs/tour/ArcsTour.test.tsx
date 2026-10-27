@@ -11,6 +11,7 @@ import {
   type LinkFilter,
 } from '../../shared/link-filter.ts';
 import { TourLayer } from './ArcsTour.tsx';
+import { HOLD_MS } from './tour-player.ts';
 import { coveredShare, useArcsTour, type PlayPath, type TourCamera } from './use-arcs-tour.ts';
 
 const GEN_1_1 = verseIndex('Gen', 1, 1);
@@ -29,6 +30,8 @@ const DATA = createVizData([
   { from: ISA_7_14, to: REV_22_13, votes: 50 },
 ]);
 const WHOLE_TOUR_MS = 30_000;
+/** Both shots of a stop, which lands at once with this camera. */
+const STOP_MS = HOLD_MS.closeUp + HOLD_MS.reach;
 const verse = (index: number): Passage => ({ kind: 'verse', verse: index });
 
 function fakeCamera() {
@@ -213,7 +216,7 @@ describe('the tour', () => {
   it('pulls back to show where the link lands, picking it out', async () => {
     const { camera } = await startTour();
     expect(camera.setPreview).toHaveBeenLastCalledWith(null);
-    await elapse(1400);
+    await elapse(HOLD_MS.closeUp);
     expect(camera.setPreview).toHaveBeenLastCalledWith({
       links: expect.objectContaining({ count: 1 }) as unknown,
       passage: { start: JOHN_1_1, end: JOHN_1_1 },
@@ -223,10 +226,10 @@ describe('the tour', () => {
 
   it('goes from stop to stop, ends on the finale, and leaves the reader at its last passage', async () => {
     const { onNavigate } = await startTour();
-    await elapse(5200);
+    await elapse(STOP_MS);
     expect(progress()).toBe('Tour · 2 of 3');
     expect(screen.getByRole('heading', { name: 'Hear, O Israel' })).toBeTruthy();
-    await elapse(5200);
+    await elapse(STOP_MS);
     expect(progress()).toBe('Tour · 3 of 3');
     expect(card()?.textContent).toContain('Genesis 3:15 → Isaiah 7:14 → Revelation 22:13');
     expect(onNavigate).not.toHaveBeenCalled();
@@ -243,7 +246,7 @@ describe('the tour', () => {
     await elapse(WHOLE_TOUR_MS);
     expect(progress()).toBe('Tour · 1 of 3 · Paused');
     fireEvent.click(screen.getByRole('button', { name: 'Resume the tour' }));
-    await elapse(4200 - 1);
+    await elapse(HOLD_MS.closeUp - 1000 + HOLD_MS.reach - 1);
     expect(progress()).toBe('Tour · 1 of 3');
     await elapse(1);
     expect(progress()).toBe('Tour · 2 of 3');
@@ -365,7 +368,7 @@ describe('the tour', () => {
     await elapse(WHOLE_TOUR_MS);
     expect(progress()).toBe('Tour · 1 of 3');
     view.rerender(<Harness camera={camera} onNavigate={onNavigate} active />);
-    await elapse(5200);
+    await elapse(STOP_MS);
     expect(progress()).toBe('Tour · 2 of 3');
   });
 
@@ -381,7 +384,7 @@ describe('the tour', () => {
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
-    await elapse(5200);
+    await elapse(STOP_MS);
     expect(progress()).toBe('Tour · 2 of 3');
   });
 
@@ -410,7 +413,7 @@ describe('the tour', () => {
   it('hands the finale to the path light when there is one', async () => {
     const playPath = vi.fn<PlayPath>(() => Promise.resolve(true));
     const { onNavigate } = await startTour({ playPath });
-    await elapse(10_400);
+    await elapse(2 * STOP_MS + HOLD_MS.pathStart);
     expect(progress()).toBe('Tour · 3 of 3');
     expect(playPath).toHaveBeenCalledOnce();
     const [steps, signal] = playPath.mock.calls[0] ?? [];
@@ -425,7 +428,7 @@ describe('the tour', () => {
   it('stops for good when the view goes, taking the path light with it', async () => {
     const playPath = vi.fn<PlayPath>(() => new Promise(() => undefined));
     const { view } = await startTour({ playPath });
-    await elapse(10_400);
+    await elapse(2 * STOP_MS + HOLD_MS.pathStart);
     const [, signal] = playPath.mock.calls[0] ?? [];
     view.unmount();
     expect(signal?.aborted).toBe(true);

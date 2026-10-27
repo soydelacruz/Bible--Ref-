@@ -73,8 +73,8 @@ test.describe('The arcs’ tour', () => {
 
     await pause(page);
     const paused = await progress(page).textContent();
-    // A stop lasts under seven seconds; paused, it stays.
-    await page.waitForTimeout(8000);
+    // A stop lasts about seven seconds; paused, it stays.
+    await page.waitForTimeout(9000);
     await expect(progress(page)).toHaveText(paused ?? '');
 
     await card(page).getByRole('button', { name: 'Resume the tour' }).click();

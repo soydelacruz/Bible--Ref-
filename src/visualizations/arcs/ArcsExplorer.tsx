@@ -23,6 +23,7 @@ import { WithText } from '../shared/components/TextPending.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
 import { DEFAULT_LINK_FILTER, isDefaultFilter, selectLinks } from '../shared/link-filter.ts';
 import { summarizeLinks } from '../shared/link-summary.ts';
+import { PathLight } from '../shared/path-light.ts';
 import { formatPassage, type Passage } from '../../core/bible/passage.ts';
 import controls from '../shared/components/controls.module.css';
 import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
@@ -30,6 +31,7 @@ import { composeImage, downloadImage, imageFileName } from '../shared/image-expo
 import type { Connection } from '../shared/connections.ts';
 import type { EarlyVizData } from '../shared/viz-data.ts';
 import type { VisualizationProps } from '../visualization.ts';
+import { buildArcPath } from './arc-path.ts';
 import type { ArcsController } from './arcs-controller.ts';
 import { ArcsStage } from './ArcsStage.tsx';
 import { clipFileName, supportedClipType } from './clip/clip-format.ts';
@@ -82,8 +84,11 @@ export function ArcsExplorer({
   } | null>(null);
   const previewed = preview?.passage === passage ? preview.connection : null;
   const snapshotRef = useRef<ArcsController['snapshot'] | null>(null);
+  // A path the panel finds travels the arcs as light.
+  const [pathLight] = useState(() => new PathLight());
   const controllerRef = useRef<ArcsController | null>(null);
   // A guided tour of a few famous links, offered on a first visit and from the hint line after.
+  // Its finale travels a chain of cross-references as the same light.
   const tour = useArcsTour({
     data,
     filter,
@@ -91,11 +96,9 @@ export function ArcsExplorer({
     passage,
     onNavigate,
     camera: controllerRef,
-    // SEAM — the path light. The path-light work (Wave 2) gives the controller a light that
-    // travels along a chain of cross-references. Once it has `playPath(steps, { signal })`, hand
-    // it over here and the finale draws that light instead of lighting the chain a link at a time:
-    //   playPath: (steps, signal) => controllerRef.current?.playPath(steps, { signal }),
-    playPath: undefined,
+    playPath: (steps, signal) =>
+      controllerRef.current?.playPath(buildArcPath(index, steps, data.verseGenres), { signal }) ??
+      Promise.resolve(false),
   });
   const touring = tour.run !== null;
   const tourEntry = tour.available && (
@@ -255,6 +258,7 @@ export function ArcsExplorer({
                 onSelect={onNavigate}
                 onClose={closePanel}
                 shareUrl={shareUrl}
+                pathLight={pathLight}
                 onPreview={(connection) => {
                   setPreview(connection && { passage, connection });
                 }}
@@ -273,6 +277,7 @@ export function ArcsExplorer({
         preview={previewed}
         onSelect={tour.select}
         snapshotRef={snapshotRef}
+        pathLight={pathLight}
         controllerRef={controllerRef}
       />
       <ClipStatus job={clipJob} />

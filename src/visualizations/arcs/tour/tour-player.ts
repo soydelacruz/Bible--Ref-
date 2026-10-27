@@ -41,16 +41,16 @@ export interface TourBeat {
 
 /**
  * How long each shot holds once the camera has landed. A stop is two shots: up close, long enough
- * to see its links leave; then both ends in sight, long enough to read the card. About 6.5s a stop
+ * to see its links leave; then both ends in sight, long enough to read the card. About 7s a stop
  * with the flights, and 45s for the whole tour.
  */
 export const HOLD_MS = {
   closeUp: 1400,
-  reach: 3800,
+  reach: 4200,
   /** The finale: its first verse up close, each link of the chain, and the whole chain at the end. */
   pathStart: 1200,
   pathStep: 1500,
-  pathEnd: 3200,
+  pathEnd: 4000,
 } as const;
 
 /**
@@ -124,7 +124,9 @@ const rangeOf = (step: PathStep): VerseIndexRange => ({ start: step.verse, end: 
 /**
  * The finale: up close on the chain's first verse, then a link at a time, the camera framing
  * each one as the focus moves along and the links walked so far stay picked out; last, the whole
- * chain in sight. With the path light, its first verse and then the light along the chain.
+ * chain in sight. With the path light, the whole chain in sight at once, the light travelling it,
+ * and the chain picked out once it has landed: the focus stays on its first verse, whose links
+ * would otherwise outshine the light's quiet trace.
  */
 function finaleBeats(steps: readonly PathStep[], card: number, options: BeatOptions): TourBeat[] {
   const { total, reducedMotion } = options;
@@ -132,27 +134,13 @@ function finaleBeats(steps: readonly PathStep[], card: number, options: BeatOpti
   const first = rangeOf(steps[0] ?? { verse: 0, hop: null });
   const last = steps.at(-1) ?? { verse: first.start, hop: null };
   const whole = framingView(steps.map(rangeOf), total);
+  const hops = steps.flatMap((step) => (step.hop === null ? [] : [step.hop.linkId]));
+  const chain = { linkIds: hops, passage: rangeOf(last) };
   const cut = (stage: TourStage) => {
     if (reducedMotion) {
       stage.crossfade();
     }
   };
-  if (options.playsPath) {
-    return [
-      {
-        card,
-        passage: versePassage(first.start),
-        holdMs: holds.pathEnd,
-        act: async (stage) => {
-          cut(stage);
-          stage.point(null);
-          await stage.show(first, whole);
-          await stage.playPath?.(steps);
-        },
-      },
-    ];
-  }
-  const hops = steps.flatMap((step) => (step.hop === null ? [] : [step.hop.linkId]));
   const opening: TourBeat = {
     card,
     passage: versePassage(first.start),
@@ -163,6 +151,20 @@ function finaleBeats(steps: readonly PathStep[], card: number, options: BeatOpti
       return stage.show(first, closeUpView(first, total));
     },
   };
+  if (options.playsPath) {
+    const light: TourBeat = {
+      card,
+      passage: versePassage(first.start),
+      holdMs: holds.pathEnd,
+      act: async (stage) => {
+        cut(stage);
+        await stage.show(first, whole);
+        await stage.playPath?.(steps);
+        stage.point(chain);
+      },
+    };
+    return [opening, light];
+  }
   const walk = steps.slice(1).map((step, hop): TourBeat => ({
     card,
     passage: versePassage(step.verse),
@@ -180,7 +182,7 @@ function finaleBeats(steps: readonly PathStep[], card: number, options: BeatOpti
     holdMs: holds.pathEnd,
     act: (stage) => {
       cut(stage);
-      stage.point({ linkIds: hops, passage: rangeOf(last) });
+      stage.point(chain);
       return stage.show(rangeOf(last), whole);
     },
   };

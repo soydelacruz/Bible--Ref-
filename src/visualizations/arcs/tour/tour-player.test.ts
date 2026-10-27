@@ -119,14 +119,24 @@ describe('tourBeats', () => {
     expect(calls.slice(0, 3)).toEqual(['crossfade', 'point 1 at 26045', 'show 0 [0, 31102]']);
   });
 
-  it('hands the finale to the path light when the stage has one', async () => {
+  it('hands the finale to the path light when the stage has one, then picks out the chain', async () => {
     const playPath = vi.fn(() => Promise.resolve(true));
     const beats = tourBeats(PLAN, { total: TOTAL, reducedMotion: false, playsPath: true });
     const finale = beats.filter((beat) => beat.card === 2);
-    expect(finale).toHaveLength(1);
+    expect(finale.map((beat) => beat.holdMs)).toEqual([HOLD_MS.pathStart, HOLD_MS.pathEnd]);
+    // The reader is left at the chain's first verse, where its light stays drawn.
+    expect(finale.map((beat) => beat.passage)).toEqual([
+      { kind: 'verse', verse: 70 },
+      { kind: 'verse', verse: 70 },
+    ]);
     const { stage, calls } = recordingStage({ playPath });
-    await finale[0]?.act(stage);
-    expect(calls).toEqual(['point none', 'show 70 [0, 31102]']);
+    await playAll(finale, stage);
+    expect(calls).toEqual([
+      'point none',
+      'show 70 [0, 900]',
+      'show 70 [0, 31102]',
+      'point 11+12+13 at 31089',
+    ]);
     expect(playPath).toHaveBeenCalledWith(FINALE);
   });
 
