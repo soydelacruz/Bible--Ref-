@@ -1,0 +1,263 @@
+/* Over the arcs and under their tooltip; the pointer goes through to the arcs, but not through
+   the cards. */
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* With reduced motion, the picture before a cut, laid over the new one as it fades out. */
+.fade {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  opacity: 0;
+}
+
+.card {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-start: var(--space-3);
+  inline-size: min(22rem, calc(100% - 2 * var(--space-3)));
+  padding: var(--space-2) var(--space-2) var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.5);
+  pointer-events: auto;
+  animation: card-in 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* An upright phone: the axis and its names run down the left, so the card keeps to the right. */
+.layer[data-orientation='vertical'] .card {
+  inset-block-start: var(--space-2);
+  inset-inline: calc(4rem + var(--space-2)) var(--space-2);
+  inline-size: auto;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.progress {
+  flex: 1;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.card[data-paused] .progress {
+  color: var(--color-accent);
+}
+
+/* The card's own controls: quiet until pointed at, so the words lead. */
+.icon {
+  justify-content: center;
+  padding: var(--space-1);
+  border-color: transparent;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) {
+  .icon:hover {
+    border-color: var(--color-border);
+    color: var(--color-text);
+  }
+}
+
+/* A new stop's words arrive; those of the same stop stay put from one shot to the next. */
+.copy {
+  padding-inline-end: var(--space-2);
+  animation: copy-in 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.passages {
+  margin: var(--space-1) 0 0;
+  color: var(--color-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.passage {
+  white-space: nowrap;
+}
+
+.line {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* A phone has room for the title and the passages; the line would hide the arcs it is about. */
+@media (max-width: 47.99rem) {
+  .title {
+    font-size: 1.125rem;
+  }
+
+  .line {
+    display: none;
+  }
+}
+
+/* The invitation: low and central, over the arcs' quietest part, once they have unfolded. */
+.invite {
+  inset-block: auto calc(3.625rem + var(--space-3));
+  inset-inline-start: 50%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  inline-size: max-content;
+  max-inline-size: min(36rem, calc(100% - 2 * var(--space-3)));
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  translate: -50% 0;
+  animation: invite-in 300ms cubic-bezier(0.16, 1, 0.3, 1) 1200ms both;
+}
+
+.layer[data-orientation='vertical'] .invite {
+  inset-block: auto var(--space-3);
+  inset-inline: calc(4rem + var(--space-2)) var(--space-2);
+  inline-size: auto;
+  translate: none;
+}
+
+/* Hidden until it shows, so nothing under it is blocked before then. */
+@keyframes invite-in {
+  from {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+.inviteText {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: 0.875rem;
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.start {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .copy,
+  .invite {
+    animation-name: fade-in;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    visibility: hidden;
+    opacity: 0;
+  }
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The tour, offered again at the end of the arcs' hint line. The line lets the pointer through;
+   this takes it back. */
+.hintEntry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.hintButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: -0.25rem -0.125rem;
+  padding: 0.25rem 0.125rem;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  pointer-events: auto;
+}
+
+@media (hover: hover) {
+  .hintButton:hover {
+    color: var(--color-accent);
+  }
+}
+
+.hintButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* On a phone it is a row of the More menu instead: the hint line has no room for it there. */
+@media (max-width: 47.99rem) {
+  .hintEntry {
+    display: none;
+  }
+}
+
+/* The legend and the summary step aside while the tour plays, and the card takes their corner. */
+.chrome {
+  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chrome[data-touring] {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 200ms;
+}

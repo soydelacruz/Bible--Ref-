@@ -37,6 +37,8 @@ interface ArcsStageProps {
   readonly snapshotRef?: RefObject<ArcsController['snapshot'] | null>;
   /** A chain of links the details panel shows, to travel its arcs as light (see `playPath`). */
   readonly pathLight?: PathLight;
+  /** Filled with the controller while the stage is up, for what moves the camera on its own (the tour). */
+  readonly controllerRef?: RefObject<ArcsController | null>;
 }
 
 /** The arc diagram: a WebGL layer for arcs, a 2D overlay for the axis, and a hover tooltip. */
@@ -50,6 +52,7 @@ export function ArcsStage({
   onSelect,
   snapshotRef,
   pathLight,
+  controllerRef: outsideControllerRef,
 }: ArcsStageProps) {
   const { t, books, locale } = useLocalization();
   const genres = locale.genres;
@@ -92,14 +95,20 @@ export function ArcsStage({
     if (snapshotRef) {
       snapshotRef.current = (compose) => controller.snapshot(compose);
     }
+    if (outsideControllerRef) {
+      outsideControllerRef.current = controller;
+    }
     return () => {
       controller.dispose();
       controllerRef.current = null;
       if (snapshotRef) {
         snapshotRef.current = null;
       }
+      if (outsideControllerRef) {
+        outsideControllerRef.current = null;
+      }
     };
-  }, [data.versification, snapshotRef]);
+  }, [data.versification, snapshotRef, outsideControllerRef]);
 
   useEffect(() => {
     namesRef.current = { books, genres };

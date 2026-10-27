@@ -4,6 +4,7 @@ import {
   DragIcon,
   HoldAndSlideIcon,
   PinchIcon,
+  PlayIcon,
   SaveImageIcon,
   SaveVideoIcon,
   ScrollIcon,
@@ -30,6 +31,7 @@ import { composeImage, downloadImage, imageFileName } from '../shared/image-expo
 import type { Connection } from '../shared/connections.ts';
 import type { EarlyVizData } from '../shared/viz-data.ts';
 import type { VisualizationProps } from '../visualization.ts';
+import { buildArcPath } from './arc-path.ts';
 import type { ArcsController } from './arcs-controller.ts';
 import { ArcsStage } from './ArcsStage.tsx';
 import { clipFileName, supportedClipType } from './clip/clip-format.ts';
@@ -38,6 +40,9 @@ import { makeClip } from './clip/clip-painter.ts';
 import { buildClipScene } from './clip/clip-scene.ts';
 import { ClipStatus } from './clip/ClipStatus.tsx';
 import clipStyles from './clip/ClipStatus.module.css';
+import { TourLayer } from './tour/ArcsTour.tsx';
+import tourStyles from './tour/ArcsTour.module.css';
+import { useArcsTour } from './tour/use-arcs-tour.ts';
 
 const INSPIRATION = {
   title: 'Bible Cross-References',
@@ -81,6 +86,30 @@ export function ArcsExplorer({
   const snapshotRef = useRef<ArcsController['snapshot'] | null>(null);
   // A path the panel finds travels the arcs as light.
   const [pathLight] = useState(() => new PathLight());
+  const controllerRef = useRef<ArcsController | null>(null);
+  // A guided tour of a few famous links, offered on a first visit and from the hint line after.
+  // Its finale travels a chain of cross-references as the same light.
+  const tour = useArcsTour({
+    data,
+    filter,
+    active,
+    passage,
+    onNavigate,
+    camera: controllerRef,
+    playPath: (steps, signal) =>
+      controllerRef.current?.playPath(buildArcPath(index, steps, data.verseGenres), { signal }) ??
+      Promise.resolve(false),
+  });
+  const touring = tour.run !== null;
+  const tourEntry = tour.available && (
+    <span className={tourStyles.hintEntry}>
+      {' · '}
+      <button type="button" className={tourStyles.hintButton} onClick={tour.start}>
+        <PlayIcon />
+        {t('tour.start')}
+      </button>
+    </span>
+  );
   // What the picture and the clip say they show, and name their files after.
   const exportTitle = [passage && formatPassage(passage, data.versification, books), t('app.name')]
     .filter((part) => part !== null)
@@ -207,6 +236,16 @@ export function ArcsExplorer({
           onOpenChange={setFiltersOpen}
         />
       }
+      // The arcs have no toolbar of their own: their one control, the tour, is offered at the end
+      // of the hint line, and here, as a row of the More menu on narrower screens.
+      viewTools={
+        tour.available && (
+          <button type="button" className={controls.button} onClick={tour.start}>
+            <PlayIcon />
+            <span className={controls.rowLabel}>{t('tour.start')}</span>
+          </button>
+        )
+      }
       panel={
         passage && (
           <WithText data={data}>
@@ -236,38 +275,56 @@ export function ArcsExplorer({
         filter={filter}
         focus={passage}
         preview={previewed}
-        onSelect={onNavigate}
+        onSelect={tour.select}
         snapshotRef={snapshotRef}
         pathLight={pathLight}
+        controllerRef={controllerRef}
       />
       <ClipStatus job={clipJob} />
-      <LinkStats
-        summary={summary}
-        isFilterDefault={isDefaultFilter(filter, DEFAULT_LINK_FILTER)}
-        onShowFilters={() => {
-          setFiltersOpen(true);
-        }}
-        hint={{
-          pointer: (
-            <>
-              <ScrollIcon /> {t('hint.zoom')} · <DragIcon /> {t('hint.pan')} · <ClickIcon />{' '}
-              {t('hint.focus')}
-            </>
-          ),
-          touch: (
-            <>
-              <HoldAndSlideIcon /> {t('hint.hold')} · <TapIcon /> {t('hint.focus')} · <PinchIcon />{' '}
-              {t('hint.zoom')}
-            </>
-          ),
-        }}
+      <TourLayer
+        run={tour.run}
+        inviting={tour.inviting}
+        versification={data.versification}
+        layerRef={tour.layerRef}
+        cardRef={tour.cardRef}
+        fadeRef={tour.fadeRef}
+        onStart={tour.start}
+        onDismiss={tour.dismiss}
+        onPause={tour.pause}
+        onResume={tour.resume}
+        onClose={tour.close}
       />
-      <GenreLegend
-        hiddenGenres={filter.hiddenGenres}
-        onToggle={(genre) => {
-          onFilterChange({ ...filter, hiddenGenres: toggleGenre(filter.hiddenGenres, genre) });
-        }}
-      />
+      <div className={tourStyles.chrome} data-touring={touring || undefined}>
+        <LinkStats
+          summary={summary}
+          isFilterDefault={isDefaultFilter(filter, DEFAULT_LINK_FILTER)}
+          onShowFilters={() => {
+            setFiltersOpen(true);
+          }}
+          hint={{
+            pointer: (
+              <>
+                <ScrollIcon /> {t('hint.zoom')} · <DragIcon /> {t('hint.pan')} · <ClickIcon />{' '}
+                {t('hint.focus')}
+                {tourEntry}
+              </>
+            ),
+            touch: (
+              <>
+                <HoldAndSlideIcon /> {t('hint.hold')} · <TapIcon /> {t('hint.focus')} ·{' '}
+                <PinchIcon /> {t('hint.zoom')}
+                {tourEntry}
+              </>
+            ),
+          }}
+        />
+        <GenreLegend
+          hiddenGenres={filter.hiddenGenres}
+          onToggle={(genre) => {
+            onFilterChange({ ...filter, hiddenGenres: toggleGenre(filter.hiddenGenres, genre) });
+          }}
+        />
+      </div>
     </VizPage>
   );
 }

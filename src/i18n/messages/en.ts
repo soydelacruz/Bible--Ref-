@@ -356,6 +356,33 @@ export const en = {
     'Arc diagram of cross-references. Drag or use the arrow keys to pan, scroll or +/- to zoom, ' +
     'click a passage to read it, Escape to clear. On a touch screen, touch and hold to preview a ' +
     'passage.',
+  // The arcs' guided tour: a few famous links, flown to one after another, each with a card.
+  'tour.invite': 'New to the arcs? A 45-second tour shows what they join.',
+  'tour.start': 'Take the tour',
+  'tour.dismiss': 'Not now',
+  'tour.region': 'Guided tour',
+  // Over the card's title: "Tour · 2 of 6".
+  'tour.progress': (position: string, count: string) => `Tour · ${position} of ${count}`,
+  'tour.paused': 'Paused',
+  'tour.pause': 'Pause the tour',
+  'tour.resume': 'Resume the tour',
+  'tour.close': 'End the tour',
+  // Said as each stop arrives: "Tour, 1 of 6: In the beginning. Genesis 1:1 → John 1:1".
+  'tour.announce': (position: string, count: string, title: string, passages: string) =>
+    `Tour, ${position} of ${count}: ${title}. ${passages}`,
+  'tour.stop.beginning.title': 'In the beginning',
+  'tour.stop.beginning.line': 'The Bible’s first words return as the first words of John.',
+  'tour.stop.shema.title': 'Hear, O Israel',
+  'tour.stop.shema.line': 'Asked which commandment comes first, Jesus answers with the Shema.',
+  'tour.stop.forsaken.title': 'My God, my God',
+  'tour.stop.forsaken.line': 'A psalm of David, cried from the cross; much of it echoes there.',
+  'tour.stop.servant.title': 'Led like a lamb',
+  'tour.stop.servant.line': 'Isaiah’s suffering servant, read aloud on the road to Gaza.',
+  'tour.stop.spirit.title': 'I will pour out my Spirit',
+  'tour.stop.spirit.line': 'Joel’s promise, quoted by Peter at Pentecost.',
+  'tour.finale.title': 'From Eden to the end',
+  'tour.finale.line':
+    'One chain of cross-references, from the first promise to “I am Alpha and Omega”.',
 
   'credits.links': 'Cross-references:',
   'credits.fromTsk': ', from the Treasury of Scripture Knowledge',

@@ -17,6 +17,15 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Close the details and return to the whole picture       | `reading.spec.ts` |
 | Switch between Arcs and Threads, keeping the passage    | `reading.spec.ts` |
 
+## The arcs' tour
+
+| Flow                                                               | Covered by          |
+| ------------------------------------------------------------------ | ------------------- |
+| A first visit is offered the tour; it plays, pauses and resumes    | `arcs-tour.spec.ts` |
+| Closing it leaves the reader at its stop, details open             | `arcs-tour.spec.ts` |
+| Offered only once; the arcs' own controls start it, Escape ends it | `arcs-tour.spec.ts` |
+| A touch of the arcs ends it, handing its stop back once let go     | `arcs-tour.spec.ts` |
+
 ## Reading in Threads
 
 | Flow                                                             | Covered by        |
