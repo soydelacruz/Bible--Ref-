@@ -186,6 +186,15 @@ export const es: LocaleMessages = {
 
   'image.save': 'Guardar como imagen',
   'image.failed': 'No se pudo guardar la imagen.',
+  'clip.save': 'Guardar como video',
+  'clip.label': 'Video',
+  'clip.making': 'Creando el video…',
+  'clip.cancel': 'Cancelar',
+  'clip.ready': 'Tu video está listo.',
+  'clip.share': 'Compartir',
+  'clip.download': 'Guardar',
+  'clip.close': 'Cerrar',
+  'clip.failed': 'No se pudo crear el video.',
 
   'path.title': 'Camino',
   'path.note': 'la cadena de enlaces hasta otro pasaje',

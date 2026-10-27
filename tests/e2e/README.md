@@ -67,6 +67,10 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | …in the translation it names                        | `translations.spec.ts`     |
 | …with the filter it names                           | `cross-references.spec.ts` |
 | Back returns to the passage before it               | `reading.spec.ts`          |
+| A passage's links as a short video, saved as a file | `clip.spec.ts`             |
+| …or handed to the phone's share sheet               | `clip.spec.ts`             |
+| …or stopped while it is made                        | `clip.spec.ts`             |
+| …still offered with reduced motion, the page still  | `clip.spec.ts`             |
 
 ## Languages
 
