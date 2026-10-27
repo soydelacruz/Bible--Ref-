@@ -197,9 +197,33 @@ export interface TourPlayerEvents {
 }
 
 /**
+ * `stage` while `live()` holds. A beat stopped part-way, waiting on a flight or on the light,
+ * would otherwise go on once that lands: start the light, or pick out its links, over whatever
+ * the reader has gone to since.
+ */
+function whileLive(stage: TourStage, live: () => boolean): TourStage {
+  const { playPath } = stage;
+  return {
+    show: (range, view) => (live() ? stage.show(range, view) : Promise.resolve(false)),
+    point: (pointer) => {
+      if (live()) {
+        stage.point(pointer);
+      }
+    },
+    crossfade: () => {
+      if (live()) {
+        stage.crossfade();
+      }
+    },
+    playPath: playPath && ((steps) => (live() ? playPath(steps) : Promise.resolve(false))),
+  };
+}
+
+/**
  * Plays beats one after another: each acts on the stage and, once its camera has landed, holds
  * for its time before the next. Pausing stops the clock of the hold under way — a flight already
- * under way still lands, and nothing starts until the tour resumes. Stopping drops the rest.
+ * under way still lands, and nothing starts until the tour resumes. Stopping drops the rest,
+ * including whatever the beat under way still had to do.
  *
  * Nothing here draws or runs on a frame loop: a hold is one timer, and the stage draws only
  * while its camera moves.
@@ -219,7 +243,7 @@ export class TourPlayer {
 
   constructor(beats: readonly TourBeat[], stage: TourStage, events: TourPlayerEvents) {
     this.#beats = beats;
-    this.#stage = stage;
+    this.#stage = whileLive(stage, () => !this.#stopped);
     this.#events = events;
   }
 

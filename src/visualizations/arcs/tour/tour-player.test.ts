@@ -272,6 +272,41 @@ describe('TourPlayer', () => {
     expect(onEnd).not.toHaveBeenCalled();
   });
 
+  it('lets nothing a stopped beat still had to do reach the stage', async () => {
+    const landings: (() => void)[] = [];
+    const playPath = vi.fn(() => Promise.resolve(true));
+    const { stage, calls } = recordingStage({
+      show: () =>
+        new Promise((resolve) => {
+          landings.push(() => {
+            resolve(true);
+          });
+        }),
+      playPath,
+    });
+    // As the finale does: fly, then play the light, then pick out the chain.
+    const finale: TourBeat = {
+      card: 0,
+      passage: { kind: 'verse', verse: 70 },
+      holdMs: 1000,
+      act: async (on) => {
+        await on.show({ start: 70, end: 70 }, { start: 0, end: TOTAL });
+        await on.playPath?.(FINALE);
+        on.crossfade();
+        on.point({ linkIds: [11], passage: { start: 0, end: 0 } });
+        await on.show({ start: 0, end: 0 }, { start: 0, end: TOTAL });
+      },
+    };
+    const player = new TourPlayer([finale], stage, { onBeat: vi.fn(), onEnd: vi.fn() });
+    player.start();
+    player.stop();
+    landings[0]?.();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(playPath).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+    expect(landings).toHaveLength(1);
+  });
+
   it('cannot be started once stopped', () => {
     const onBeat = vi.fn();
     const player = new TourPlayer(beatsLandingOnCue([1]).beats, recordingStage().stage, {
