@@ -30,6 +30,12 @@ export const es: LocaleMessages = {
   'search.results.label': 'Versículos que contienen las palabras',
   'search.results.close': 'Cerrar los resultados',
 
+  // Not "Pasear": the clusters' tour is already a "Recorrido", and a stroll would sound like one.
+  'wander.label': 'Sorpréndeme',
+  'wander.hint': 'Ir a un versículo con muchos enlaces que quizá no conozcas',
+  'wander.arrived': (passage) => `Sorpresa: ${passage}`,
+  'wander.none': 'Ningún versículo tiene enlaces con estos filtros.',
+
   'reference.unreadable': 'Escribe una referencia como “Juan 3:16” o “Sal 23”.',
   'reference.unknownBook': (query) =>
     `Ningún libro se llama “${query}”. Prueba con un nombre o una abreviatura, como “Ap 12:9”.`,

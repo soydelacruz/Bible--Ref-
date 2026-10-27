@@ -13,6 +13,7 @@ import {
   LuChevronDown,
   LuChevronLeft,
   LuChevronRight,
+  LuCompass,
   LuCopy,
   LuDownload,
   LuEllipsis,
@@ -89,6 +90,8 @@ export const CloseIcon = decorative(LuX);
 
 // Actions
 export const SearchIcon = decorative(LuSearch);
+// Wander: off to a verse the reader did not choose.
+export const WanderIcon = decorative(LuCompass);
 export const ResetIcon = decorative(LuRotateCcw);
 export const RetryIcon = decorative(LuRefreshCw);
 export const CopyIcon = decorative(LuCopy);
