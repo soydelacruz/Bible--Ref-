@@ -314,6 +314,15 @@ export const es: LocaleMessages = {
     'Diagrama de arcos de las referencias cruzadas. Arrastra o usa las flechas para mover, la ' +
     'rueda o +/- para acercar, haz clic en un pasaje para leerlo, Esc para limpiar. En una ' +
     'pantalla táctil, mantén pulsado para previsualizar un pasaje.',
+  'arcs.minimap': 'Toda la Biblia',
+  'arcs.minimap.inView': (range) => `${range} a la vista`,
+  'arcs.minimap.help':
+    'Arrastra la ventana a lo largo de la Biblia, o sus bordes para acercar, y arrastra sobre ' +
+    'libros para iluminar sus referencias cruzadas. Las flechas mueven la ventana, + y − la ' +
+    'acercan, Enter ilumina los libros a la vista y Esc apaga la iluminación.',
+  // A gerund, so it reads the same for one book or many.
+  'arcs.minimap.lit': (books, count) => `Iluminando ${books}: ${count}`,
+  'arcs.minimap.cleared': 'Los libros ya no están iluminados',
   'tour.invite': '¿Primera vez en los arcos? Un recorrido de 45 segundos muestra lo que unen.',
   'tour.start': 'Hacer el recorrido',
   'tour.dismiss': 'Ahora no',

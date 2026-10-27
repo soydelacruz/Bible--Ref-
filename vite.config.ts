@@ -75,6 +75,7 @@ export default defineConfig(({ command, isPreview = false }) => ({
         'src/visualizations/arcs/axis-painter.ts',
         'src/visualizations/arcs/clip/clip-painter.ts',
         'src/visualizations/arcs/ArcsStage.tsx',
+        'src/visualizations/arcs/Minimap.tsx',
         'src/visualizations/shared/components/LoadingArcs.tsx',
         'src/visualizations/shared/light-painter.ts',
         'src/visualizations/threads/threads-drawing.ts',

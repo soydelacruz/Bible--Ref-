@@ -193,6 +193,9 @@ export class ArcsController {
   /** Hidden (another view is shown), it draws nothing; the intro waits until it's shown. */
   #active = true;
   #hasLinks = false;
+  /** Books brushed on the minimap: lit up in the focused passage's place (see `setBrush`). */
+  #brush: VerseIndexRange | null = null;
+  #viewListener: ((view: AxisView, layout: ArcLayout) => void) | null = null;
   /** A chain of links drawn as light (see `playPath`), and the verse it starts from. */
   readonly #path: PathLayer<ArcPathHop>;
   #pathOrigin: VerseIndex | null = null;
@@ -312,7 +315,10 @@ export class ArcsController {
   /** How to find the (filtered) links of a verse range, for focus and hover highlights. */
   setLinkResolver(resolver: (range: VerseIndexRange) => ArcInstances | null): void {
     this.#linksOfRange = resolver;
-    this.#scene.setFocus(this.#focus && resolver(this.#focus));
+    // Lit books bring their own links (see `setBrush`): the passage's wait under them.
+    if (!this.#brush) {
+      this.#scene.setFocus(this.#focus && resolver(this.#focus));
+    }
     this.#scene.setHover(this.#hover && resolver(this.#hover));
     this.#scheduler.request();
   }
@@ -363,6 +369,64 @@ export class ArcsController {
     return new Promise((resolve) => {
       this.#fly(target, 'flight', resolve);
     });
+  }
+
+  // The minimap (see `Minimap.tsx`): it follows the window, moves it, and brushes books.
+
+  /**
+   * Called with the window as shown and the layout, each time the diagram is drawn: the minimap
+   * draws its window in the same frame, so the two agree through flights, glides and pulls past an
+   * end alike.
+   */
+  setViewListener(listener: ((view: AxisView, layout: ArcLayout) => void) | null): void {
+    this.#viewListener = listener;
+    this.#scheduler.request();
+  }
+
+  /**
+   * Takes hold of the window for a drag on the minimap: whatever moves on its own stops where it
+   * is, as under a finger on the stage. Returns the window, at rest.
+   */
+  grabView(): AxisView {
+    this.#interrupt();
+    return this.#view;
+  }
+
+  /** Puts the window at `view` at once: a drag on the minimap moves it directly, with no easing. */
+  showView(view: AxisView): void {
+    this.#stopMotion();
+    this.#view = clampView(view, this.#total);
+    this.#overscroll = 0;
+    this.#scheduler.request();
+  }
+
+  /** A key's step from the minimap, chained and timed like the stage's own keys. */
+  stepView(next: (from: AxisView) => AxisView): void {
+    this.#step(next);
+  }
+
+  /**
+   * Lights up `links`, those of books brushed on the minimap, as a focused passage's are: grown
+   * out of the books over the dimmed glow, though the camera stays where it is. They stand in for
+   * the focused passage's links until cleared (`null`), and then those show again at once.
+   */
+  setBrush(range: VerseIndexRange | null, links: ArcInstances | null): void {
+    const before = this.#brush;
+    this.#brush = range;
+    if (!range && !before) {
+      return;
+    }
+    this.#scene.setFocus(range ? links : this.#focus && this.#linksOfRange(this.#focus));
+    this.#fadeDim(range === null && this.#focus === null ? 0 : 1);
+    if (range && (range.start !== before?.start || range.end !== before.end)) {
+      this.#ignite(range, 0);
+    } else if (!range) {
+      this.#cancelGrowth?.();
+      this.#cancelGrowth = null;
+      this.#scene.setFocusGrowth(1, this.#focus);
+      this.#scene.setFocusFade(1);
+    }
+    this.#scheduler.request();
   }
 
   /**
@@ -508,7 +572,9 @@ export class ArcsController {
       focus: this.#focus,
       hover: this.#hover,
       passage: this.#linkPreview?.passage ?? null,
+      brush: this.#brush,
     });
+    this.#viewListener?.(view, this.#layout);
   }
 
   /** The window as shown: the one at rest, shifted by however far a drag pulls past an end. */

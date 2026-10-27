@@ -53,6 +53,19 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | …drawn whole, every step lit, with reduced motion        | `path-light.spec.ts`       |
 | …played again on request, and gone when cleared          | `path-light.spec.ts`       |
 
+## The whole Bible beside the arcs
+
+| Flow                                                               | Covered by            |
+| ------------------------------------------------------------------ | --------------------- |
+| Drag the minimap's window, and the arcs follow under the pointer   | `minimap.spec.ts`     |
+| Drag an edge of the window to zoom                                 | `minimap.spec.ts`     |
+| Drag across books to light up their links, beside the open passage | `minimap.spec.ts`     |
+| Escape, or a tap on the lit books, puts them away                  | `minimap.spec.ts`     |
+| The keys move, zoom and light up, and say what is in view          | `minimap.spec.ts`     |
+| …in the reader's language                                          | `minimap.spec.ts`     |
+| A finger gets a target as big as a fingertip                       | `minimap.spec.ts`     |
+| The window keeps up with a camera flight, frame by frame           | `arcs-motion.spec.ts` |
+
 ## The Hebrew and Greek
 
 | Flow                                                          | Covered by               |

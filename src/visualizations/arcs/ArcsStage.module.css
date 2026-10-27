@@ -1,6 +1,18 @@
-.stage {
+/* The stage, with the minimap beside its axis: under it, or down the side of an upright one. */
+.frame {
   position: absolute;
   inset: 0;
+  display: grid;
+  grid-template: 'stage' minmax(0, 1fr) 'strip' auto / minmax(0, 1fr);
+}
+
+.frame[data-orientation='vertical'] {
+  grid-template: 'stage strip' minmax(0, 1fr) / minmax(0, 1fr) auto;
+}
+
+.stage {
+  position: relative;
+  grid-area: stage;
   overflow: hidden;
   outline: none;
   touch-action: none;
@@ -20,6 +32,63 @@
   inset: 0;
   inline-size: 100%;
   block-size: 100%;
+}
+
+/* Thin to look at; as thick as a fingertip where one is the pointer. */
+.minimap {
+  --strip: 1.5rem;
+  position: relative;
+  grid-area: strip;
+  block-size: var(--strip);
+  outline: none;
+  touch-action: none;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.frame[data-orientation='vertical'] .minimap {
+  inline-size: var(--strip);
+  block-size: auto;
+}
+
+@media (pointer: coarse) {
+  .minimap {
+    --strip: 2.75rem;
+  }
+}
+
+.minimap:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.minimap[data-grab='window'] {
+  cursor: grab;
+}
+
+.minimap[data-grab='window'][data-pressed] {
+  cursor: grabbing;
+}
+
+.minimap[data-grab='start'],
+.minimap[data-grab='end'] {
+  cursor: ew-resize;
+}
+
+.frame[data-orientation='vertical'] .minimap[data-grab='start'],
+.frame[data-orientation='vertical'] .minimap[data-grab='end'] {
+  cursor: ns-resize;
+}
+
+/* Heard, not seen: what the minimap's keys do, and what it lit up. */
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .tooltip {

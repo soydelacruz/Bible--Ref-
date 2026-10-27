@@ -279,6 +279,7 @@ export function ArcsExplorer({
         snapshotRef={snapshotRef}
         pathLight={pathLight}
         controllerRef={controllerRef}
+        touring={touring}
       />
       <ClipStatus job={clipJob} />
       <TourLayer
