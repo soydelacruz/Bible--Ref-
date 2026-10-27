@@ -12,6 +12,8 @@ import { PreviousIcon } from '../../shared/ui/icons.tsx';
 import controls from '../shared/components/controls.module.css';
 import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
+import { PathLayer } from '../shared/path-layer.ts';
+import { pathMode, type PathLight } from '../shared/path-light.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
 import {
@@ -43,6 +45,12 @@ import {
   type ClusterGroup,
 } from './cluster-layout.ts';
 import {
+  CLUSTER_PATH_TRACE,
+  clusterPathCurve,
+  clusterPathHops,
+  type ClusterPathHop,
+} from './cluster-path.ts';
+import {
   drawBase,
   drawGlideLabels,
   drawOverlay,
@@ -63,6 +71,8 @@ interface ClustersStageProps {
   readonly focus: Passage | null;
   readonly onSelect: (passage: Passage | null) => void;
   readonly onOpenBook: (book: BookId | null) => void;
+  /** A chain of links the details panel shows, to travel between its dots as light. */
+  readonly pathLight?: PathLight;
 }
 
 interface Hover {
@@ -110,6 +120,7 @@ export function ClustersStage({
   focus,
   onSelect,
   onOpenBook,
+  pathLight,
 }: ClustersStageProps) {
   const { t, n, books } = useLocalization();
   const { versification, crossReferences, verseGenres } = data;
@@ -118,6 +129,7 @@ export function ClustersStage({
   const glideRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const pathCanvasRef = useRef<HTMLCanvasElement>(null);
   const size = useElementSize(hostRef);
   const [hover, setHover] = useState<Hover | null>(null);
   // What the base canvas shows now, at rest or mid-glide: where the next glide sets off from, and
@@ -125,6 +137,10 @@ export function ClustersStage({
   const shownRef = useRef<ShownScene | null>(null);
   // Repaints what stands out, for a glide to call as the dots move under it.
   const repaintOverlayRef = useRef<(() => void) | null>(null);
+  // A path's light, over everything else, and how to move it with the dots as they glide.
+  const pathLayerRef = useRef<PathLayer<ClusterPathHop> | null>(null);
+  const repaintPathRef = useRef<(() => void) | null>(null);
+  const activeRef = useRef(active);
   // Draws the gliding dots and links; made at the first glide, `null` until then or without WebGL.
   const rendererRef = useRef<GlideRenderer | null | undefined>(undefined);
   // While the dots glide they are nowhere a pointer can rely on: what is under it is worked out
@@ -234,6 +250,7 @@ export function ClustersStage({
       drawBase(context, scene, target.labels);
       shownRef.current = target;
       repaintOverlayRef.current?.();
+      repaintPathRef.current?.();
     };
     const from = shownRef.current;
     if (!from || from.layout === layout || !glideCanvas || reducedMotion()) {
@@ -275,6 +292,7 @@ export function ClustersStage({
       drawGlideLabels(context, layout, labels, scene.fontFamily);
       shownRef.current = { ...target, layout: frameLayout(plan, layout, frame, progress) };
       repaintOverlayRef.current?.();
+      repaintPathRef.current?.();
       // The glide lands on the picture at rest, drawn a frame after its last: tracing every link
       // and dot again can hold a phone up for a while, and this way it holds up a still picture.
       if (linear >= 1) {
@@ -344,6 +362,48 @@ export function ClustersStage({
       forget();
     };
   }, [active, layout, emphasis, verseGenres]);
+
+  // A chain shown in the details panel: its light travels from dot to dot on a canvas of its own,
+  // drawn where the dots are, mid-glide too. Out of sight it lands at once.
+  useEffect(() => {
+    const canvas = pathCanvasRef.current;
+    if (!canvas) return undefined;
+    const layer = new PathLayer<ClusterPathHop>(canvas, CLUSTER_PATH_TRACE);
+    pathLayerRef.current = layer;
+    return () => {
+      layer.dispose();
+      pathLayerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    activeRef.current = active;
+    if (!active) pathLayerRef.current?.finish();
+  }, [active]);
+
+  useEffect(() => {
+    const layer = pathLayerRef.current;
+    if (!active || !layout || !layer) return undefined;
+    layer.setSize(layout.width, layout.height);
+    const paint = () => {
+      const shown = shownRef.current?.layout;
+      const dots = shown?.nodes === layout.nodes ? shown : layout;
+      layer.setCurves((hop) => clusterPathCurve(dots, verseGenres, hop));
+    };
+    repaintPathRef.current = paint;
+    paint();
+    return () => {
+      if (repaintPathRef.current === paint) repaintPathRef.current = null;
+    };
+  }, [active, layout, verseGenres]);
+
+  useEffect(() => {
+    const layer = pathLayerRef.current;
+    if (!pathLight || !layer) return undefined;
+    return pathLight.attach((steps, options) =>
+      layer.play(clusterPathHops(index, steps), pathMode(activeRef.current), options),
+    );
+  }, [pathLight, index]);
 
   const point = (event: MouseEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -427,6 +487,11 @@ export function ClustersStage({
       />
       <canvas
         ref={overlayRef}
+        className={`${styles.canvas} ${styles.overlay}`}
+        aria-hidden="true"
+      />
+      <canvas
+        ref={pathCanvasRef}
         className={`${styles.canvas} ${styles.overlay}`}
         aria-hidden="true"
       />

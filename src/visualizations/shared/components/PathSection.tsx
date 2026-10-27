@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type SubmitEvent } from 'react';
+import { useEffect, useId, useMemo, useState, useSyncExternalStore, type SubmitEvent } from 'react';
 import {
   formatPassage,
   passageFromReference,
@@ -10,10 +10,11 @@ import { formatVerseRef } from '../../../core/bible/reference-format.ts';
 import { parseReference } from '../../../core/bible/reference-parse.ts';
 import { describeReferenceError } from '../../../i18n/describe-reference-error.ts';
 import { useLocalization } from '../../../i18n/use-locale.tsx';
-import { CloseIcon, ExpandIcon, PathIcon } from '../../../shared/ui/icons.tsx';
+import { CloseIcon, ExpandIcon, PathIcon, PlayIcon } from '../../../shared/ui/icons.tsx';
 import { verseTextOrNote } from '../../../translations/verse-text.ts';
 import { findConnectionPath, type PathStep } from '../connection-path.ts';
 import type { LinkFilter } from '../link-filter.ts';
+import { isLit, type LitSteps, type PathLight } from '../path-light.ts';
 import type { VizData } from '../viz-data.ts';
 import controls from './controls.module.css';
 import { PanelSection } from './PanelSection.tsx';
@@ -31,6 +32,8 @@ interface PathSectionProps {
   readonly destination: Passage | null;
   readonly onDestinationChange: (destination: Passage | null) => void;
   readonly onSelect: (passage: Passage) => void;
+  /** Where the chain is drawn on the visualization beside the panel, if it draws one. */
+  readonly light?: PathLight | undefined;
 }
 
 /**
@@ -44,6 +47,7 @@ export function PathSection({
   destination,
   onDestinationChange,
   onSelect,
+  light,
 }: PathSectionProps) {
   const localization = useLocalization();
   const { t, books } = localization;
@@ -61,6 +65,19 @@ export function PathSection({
         verseGenres,
       ),
     [crossReferences.index, passage, destination, versification, filter, verseGenres],
+  );
+  // The chain travels the picture as light once, when it appears, and is taken off it when it
+  // goes: another destination, a step followed (the chain is then found again from there), the
+  // panel closed.
+  const chain = path && path.length > 1 ? path : null;
+  useEffect(() => {
+    light?.show(chain);
+  }, [light, chain]);
+  useEffect(
+    () => () => {
+      light?.show(null);
+    },
+    [light],
   );
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
@@ -120,40 +137,65 @@ export function PathSection({
                     path.length - 1,
                   )}
           </p>
-          {path !== null && path.length > 1 && (
-            <PathSteps steps={path} data={data} onSelect={onSelect} />
-          )}
-          <button
-            type="button"
-            className={panel.more}
-            onClick={() => {
-              onDestinationChange(null);
-            }}
-          >
-            <CloseIcon />
-            {t('path.clear')}
-          </button>
+          {chain && <PathSteps steps={chain} data={data} light={light} onSelect={onSelect} />}
+          <div className={styles.actions}>
+            {chain && light && (
+              <button
+                type="button"
+                className={panel.more}
+                title={t('path.replay.hint')}
+                onClick={() => {
+                  light.replay();
+                }}
+              >
+                <PlayIcon />
+                {t('path.replay')}
+              </button>
+            )}
+            <button
+              type="button"
+              className={panel.more}
+              onClick={() => {
+                onDestinationChange(null);
+              }}
+            >
+              <CloseIcon />
+              {t('path.clear')}
+            </button>
+          </div>
         </div>
       )}
     </PanelSection>
   );
 }
 
+/** A panel whose view draws no path: nothing is ever lit. */
+const UNLIT = {
+  subscribe: () => () => undefined,
+  lit: (): LitSteps | null => null,
+};
+
 function PathSteps({
   steps,
   data,
+  light,
   onSelect,
 }: {
   readonly steps: readonly PathStep[];
   readonly data: VizData;
+  readonly light: PathLight | undefined;
   readonly onSelect: (passage: Passage) => void;
 }) {
   const { t, books, n } = useLocalization();
   const { versification, translation } = data;
+  const { subscribe, lit } = light ?? UNLIT;
+  // The step the light is heading for on the picture, as it travels there; all of them at once
+  // for a reader who asked for less motion.
+  const litSteps = useSyncExternalStore(subscribe, lit);
   return (
     <ol className={styles.steps}>
-      {steps.map(({ verse, hop }) => (
-        <li key={verse}>
+      {steps.map(({ verse, hop }, position) => (
+        <li key={verse} data-lit={isLit(litSteps, position) || undefined}>
           {hop !== null && (
             <p className={styles.hop}>
               <ExpandIcon />

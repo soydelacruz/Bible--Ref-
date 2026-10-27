@@ -208,6 +208,8 @@ export const es: LocaleMessages = {
   'path.placeholder': 'Otro pasaje, p. ej. Ap 12:9',
   'path.find': 'Buscar camino',
   'path.clear': 'Borrar camino',
+  'path.replay': 'Ver de nuevo',
+  'path.replay.hint': 'Iluminar el camino de nuevo, enlace por enlace',
   'path.summary': (from, to, count, plural) =>
     plural === 1
       ? `De ${from} a ${to} en ${count} enlace:`
