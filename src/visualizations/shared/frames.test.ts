@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { animate, FrameScheduler, MAX_PIXEL_RATIO } from './frames.ts';
+import {
+  animate,
+  easeInOutCubic,
+  easeOutCubic,
+  FrameScheduler,
+  MAX_FRAME_MS,
+  MAX_PIXEL_RATIO,
+  prefersReducedMotion,
+  simulate,
+} from './frames.ts';
 
 let frames: (() => void)[] = [];
 
@@ -111,5 +120,80 @@ describe('animate', () => {
     cancel();
     runFrames();
     expect(onFrame).not.toHaveBeenCalled();
+  });
+
+  it('takes another curve when given one', () => {
+    const seen: number[] = [];
+    animate(0, (progress) => seen.push(progress), easeInOutCubic);
+    runFrames();
+    expect(seen).toEqual([1]);
+  });
+});
+
+describe('easing', () => {
+  it('starts at 0 and lands on 1', () => {
+    for (const ease of [easeOutCubic, easeInOutCubic]) {
+      expect(ease(0)).toBe(0);
+      expect(ease(1)).toBe(1);
+    }
+  });
+
+  it('eases out fast first, and in and out symmetrically', () => {
+    expect(easeOutCubic(0.25)).toBeGreaterThan(0.5);
+    expect(easeInOutCubic(0.25)).toBeLessThan(0.25);
+    expect(easeInOutCubic(0.5)).toBeCloseTo(0.5);
+    expect(easeInOutCubic(0.25) + easeInOutCubic(0.75)).toBeCloseTo(1);
+  });
+});
+
+describe('simulate', () => {
+  it('hands each step the time since the last, until the step says it is done', () => {
+    let now = 1000;
+    vi.stubGlobal('performance', { now: () => now });
+    const captured: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => captured.push(cb));
+    const seen: number[] = [];
+    simulate((elapsed) => {
+      seen.push(elapsed);
+      return seen.length < 2;
+    });
+    now = 1016;
+    captured[0]?.(now);
+    now = 1040;
+    captured[1]?.(now);
+    expect(seen).toEqual([16, 24]);
+    expect(captured).toHaveLength(2); // The second step was the last: no third frame.
+  });
+
+  it('caps a stalled frame, so motion never jumps', () => {
+    let now = 0;
+    vi.stubGlobal('performance', { now: () => now });
+    const captured: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => captured.push(cb));
+    const seen: number[] = [];
+    simulate((elapsed) => seen.push(elapsed) < 0);
+    now = 5000;
+    captured[0]?.(now);
+    expect(seen).toEqual([MAX_FRAME_MS]);
+  });
+
+  it('stops when cancelled', () => {
+    const step = vi.fn(() => true);
+    const cancel = simulate(step);
+    cancel();
+    runFrames();
+    expect(step).not.toHaveBeenCalled();
+  });
+});
+
+describe('prefersReducedMotion', () => {
+  it('follows the reader’s setting', () => {
+    let reduce = false;
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: reduce && query === '(prefers-reduced-motion: reduce)',
+    }));
+    expect(prefersReducedMotion()).toBe(false);
+    reduce = true;
+    expect(prefersReducedMotion()).toBe(true);
   });
 });

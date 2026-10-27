@@ -14,9 +14,11 @@ import { collectConnections, connectionLinkIds, type Connection } from '../share
 import type { LinkFilter } from '../shared/link-filter.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
-import { buildArcInstances } from './arc-instances.ts';
+import { buildArcInstances, buildArcMorph } from './arc-instances.ts';
 import { ArcsController, type ArcHover } from './arcs-controller.ts';
 import styles from './ArcsStage.module.css';
+
+const NO_LINKS = new Int32Array(0);
 
 interface ArcsStageProps {
   readonly data: VizCore;
@@ -107,9 +109,14 @@ export function ArcsStage({
     controllerRef.current?.setSize(size.width, size.height);
   }, [size]);
 
+  // The links drawn so far, so a change of filter can morph from them to the new ones.
+  const drawnLinksRef = useRef<{ readonly data: VizCore; readonly ids: Int32Array } | null>(null);
   useEffect(() => {
+    const drawn = drawnLinksRef.current;
+    const before = drawn?.data === data ? drawn.ids : NO_LINKS;
+    drawnLinksRef.current = { data, ids: linkIds };
     controllerRef.current?.setLinks(
-      buildArcInstances(data.crossReferences.index, linkIds, data.verseGenres),
+      buildArcMorph(data.crossReferences.index, before, linkIds, data.verseGenres),
     );
   }, [data, linkIds]);
 
