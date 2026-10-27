@@ -238,6 +238,8 @@ export const en = {
   'path.placeholder': 'Another passage, e.g. Rev 12:9',
   'path.find': 'Find path',
   'path.clear': 'Clear path',
+  'path.replay': 'Play again',
+  'path.replay.hint': 'Light up the path again, link by link',
   'path.summary': (from: string, to: string, count: string, plural: number) =>
     plural === 1 ? `${from} to ${to} in ${count} link:` : `${from} to ${to} in ${count} links:`,
   'path.arrived': (to: string) => `This passage is ${to}, or contains it.`,

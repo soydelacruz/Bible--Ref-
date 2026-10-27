@@ -45,6 +45,7 @@ import {
 } from '../connections.ts';
 import type { LinkFilter } from '../link-filter.ts';
 import { canCopy, copyQuote, quotePassage, type PassageQuote } from '../passage-quote.ts';
+import type { PathLight } from '../path-light.ts';
 import { GENRE_COLORS, GENRE_HEX } from '../palette.ts';
 import {
   PANEL_TITLE_ATTRIBUTE,
@@ -82,6 +83,8 @@ interface PassagePanelProps {
   readonly onPreview?: (connection: Connection | null) => void;
   /** A passage's address on the published site, for copied quotes. */
   readonly shareUrl: (passage: Passage) => string;
+  /** Where a path found here is drawn on the visualization, and lit up step by step. */
+  readonly pathLight?: PathLight;
 }
 
 /** Says something through the panel's live region (see `useAnnouncer`). */
@@ -270,6 +273,7 @@ export function PassagePanel({
   onClose,
   onPreview,
   shareUrl,
+  pathLight,
 }: PassagePanelProps) {
   const { t, books, n, genreName } = useLocalization();
   const { versification, translation, crossReferences, verseGenres } = data;
@@ -404,6 +408,7 @@ export function PassagePanel({
       destination={destination}
       onDestinationChange={setDestination}
       onSelect={onSelect}
+      light={pathLight}
     />
   );
 

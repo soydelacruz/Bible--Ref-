@@ -14,6 +14,7 @@ import { WithText } from '../shared/components/TextPending.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
 import controls from '../shared/components/controls.module.css';
 import { DEFAULT_LINK_FILTER, selectLinks } from '../shared/link-filter.ts';
+import { PathLight } from '../shared/path-light.ts';
 import type { EarlyVizData } from '../shared/viz-data.ts';
 import type { VisualizationProps } from '../visualization.ts';
 import { ClustersStage } from './ClustersStage.tsx';
@@ -52,6 +53,8 @@ export function ClustersExplorer({
   // Only the view the page was opened on may take the hint: every view is mounted at once.
   const [touring, setTouring] = useState(() => active && askedForTour());
   const stops = useMemo(() => tourPassages(data.versification), [data.versification]);
+  // A path the panel finds travels between the dots as light.
+  const [pathLight] = useState(() => new PathLight());
   const shownLinks = useMemo(
     () => selectLinks(index, data.verseGenres, filter).length,
     [index, data.verseGenres, filter],
@@ -184,6 +187,7 @@ export function ClustersExplorer({
                 onSelect={onNavigate}
                 onClose={closePanel}
                 shareUrl={shareUrl}
+                pathLight={pathLight}
               />
             )}
           </WithText>
@@ -201,6 +205,7 @@ export function ClustersExplorer({
             focus={passage}
             onSelect={onNavigate}
             onOpenBook={setOpenBook}
+            pathLight={pathLight}
           />
         </div>
       </div>

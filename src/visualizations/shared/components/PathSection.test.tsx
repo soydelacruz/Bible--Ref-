@@ -1,10 +1,12 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { versePassage, type Passage } from '../../../core/bible/passage.ts';
 import { verseIndex } from '../../../test-utils/fixtures.ts';
 import { createVizData } from '../../../test-utils/viz-data.ts';
+import type { PathStep } from '../connection-path.ts';
 import { createLinkFilter, DEFAULT_LINK_FILTER } from '../link-filter.ts';
+import { PathLight, type LitSteps } from '../path-light.ts';
 import { PassagePanel } from './PassagePanel.tsx';
 
 const GEN_3_15 = verseIndex('Gen', 3, 15);
@@ -25,7 +27,12 @@ const DATA = createVizData(
 
 const EVERY_LINK = createLinkFilter(-Infinity);
 
-function panelFor(passage: Passage, onSelect = vi.fn(), filter = EVERY_LINK) {
+function panelFor(
+  passage: Passage,
+  onSelect = vi.fn(),
+  filter = EVERY_LINK,
+  pathLight?: PathLight,
+) {
   return (
     <PassagePanel
       data={DATA}
@@ -34,8 +41,31 @@ function panelFor(passage: Passage, onSelect = vi.fn(), filter = EVERY_LINK) {
       onSelect={onSelect}
       onClose={vi.fn()}
       shareUrl={() => 'https://example.org/'}
+      {...(pathLight && { pathLight })}
     />
   );
+}
+
+/** What the picture beside the panel was asked to draw, and a way to say which steps it lit. */
+function drawingPicture() {
+  const light = new PathLight();
+  const plays: {
+    readonly steps: readonly PathStep[];
+    readonly signal: AbortSignal;
+    readonly onLit: (lit: LitSteps | null) => void;
+  }[] = [];
+  light.attach((steps, { signal, onLit }) => {
+    plays.push({ steps, signal, onLit });
+    return Promise.resolve(true);
+  });
+  return { light, plays };
+}
+
+/** The chain's steps as listed, each with whether it is lit. */
+function litSteps() {
+  return within(pathSection().getByRole('list'))
+    .getAllByRole('listitem')
+    .map((step) => step.hasAttribute('data-lit'));
 }
 
 /** The path's own section: the panel has other lists in it (the study links) and a live region. */
@@ -141,5 +171,78 @@ describe('PathSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Clear path' }));
     expect(pathSection().queryByRole('status')).toBeNull();
     expect(pathSection().queryByRole('list')).toBeNull();
+  });
+
+  describe('beside a picture that draws it', () => {
+    it('has the chain drawn once, when it appears', async () => {
+      const { light, plays } = drawingPicture();
+      render(panelFor(versePassage(GEN_3_15), vi.fn(), EVERY_LINK, light));
+      await findPathTo('Rev 12:9');
+      expect(plays.map(({ steps }) => steps.map((step) => step.verse))).toEqual([
+        [GEN_3_15, ROM_16_20, REV_12_9],
+      ]);
+    });
+
+    it('lights up the step the light is heading for, and all of them together', async () => {
+      const { light, plays } = drawingPicture();
+      render(panelFor(versePassage(GEN_3_15), vi.fn(), EVERY_LINK, light));
+      await findPathTo('Rev 12:9');
+      expect(litSteps()).toEqual([false, false, false]);
+      act(() => {
+        plays[0]?.onLit({ first: 1, last: 1 });
+      });
+      expect(litSteps()).toEqual([false, true, false]);
+      act(() => {
+        plays[0]?.onLit({ first: 2, last: 2 });
+      });
+      expect(litSteps()).toEqual([false, false, true]);
+      act(() => {
+        plays[0]?.onLit({ first: 0, last: 2 });
+      });
+      expect(litSteps()).toEqual([true, true, true]);
+      act(() => {
+        plays[0]?.onLit(null);
+      });
+      expect(litSteps()).toEqual([false, false, false]);
+    });
+
+    it('plays it again on request', async () => {
+      const { light, plays } = drawingPicture();
+      render(panelFor(versePassage(GEN_3_15), vi.fn(), EVERY_LINK, light));
+      await findPathTo('Rev 12:9');
+      await userEvent.click(pathSection().getByRole('button', { name: 'Play again' }));
+      expect(plays).toHaveLength(2);
+      expect(plays[0]?.signal.aborted).toBe(true);
+    });
+
+    it('has it taken off the picture when the path is cleared or the panel goes', async () => {
+      const { light, plays } = drawingPicture();
+      const { unmount } = render(panelFor(versePassage(GEN_3_15), vi.fn(), EVERY_LINK, light));
+      await findPathTo('Rev 12:9');
+      await userEvent.click(screen.getByRole('button', { name: 'Clear path' }));
+      expect(plays[0]?.signal.aborted).toBe(true);
+      await userEvent.clear(screen.getByRole('textbox', { name: 'Passage to find a path to' }));
+      await findPathTo('Rev 12:9');
+      unmount();
+      expect(plays).toHaveLength(2);
+      expect(plays[1]?.signal.aborted).toBe(true);
+    });
+
+    it('draws the chain from a step followed, in place of the one before', async () => {
+      const { light, plays } = drawingPicture();
+      const onSelect = vi.fn();
+      const { rerender } = render(panelFor(versePassage(GEN_3_15), onSelect, EVERY_LINK, light));
+      await findPathTo('Rev 12:9');
+      rerender(panelFor(versePassage(ROM_16_20), onSelect, EVERY_LINK, light));
+      expect(plays[0]?.signal.aborted).toBe(true);
+      expect(plays[1]?.steps.map((step) => step.verse)).toEqual([ROM_16_20, REV_12_9]);
+    });
+  });
+
+  it('offers no replay where the view draws no path', async () => {
+    render(panelFor(versePassage(GEN_3_15)));
+    await findPathTo('Rev 12:9');
+    expect(pathSection().queryByRole('button', { name: 'Play again' })).toBeNull();
+    expect(litSteps()).toEqual([false, false, false]);
   });
 });

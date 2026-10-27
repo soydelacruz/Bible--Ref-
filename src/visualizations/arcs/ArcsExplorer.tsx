@@ -22,6 +22,7 @@ import { WithText } from '../shared/components/TextPending.tsx';
 import { VizPage } from '../shared/components/VizPage.tsx';
 import { DEFAULT_LINK_FILTER, isDefaultFilter, selectLinks } from '../shared/link-filter.ts';
 import { summarizeLinks } from '../shared/link-summary.ts';
+import { PathLight } from '../shared/path-light.ts';
 import { formatPassage, type Passage } from '../../core/bible/passage.ts';
 import controls from '../shared/components/controls.module.css';
 import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
@@ -78,6 +79,8 @@ export function ArcsExplorer({
   } | null>(null);
   const previewed = preview?.passage === passage ? preview.connection : null;
   const snapshotRef = useRef<ArcsController['snapshot'] | null>(null);
+  // A path the panel finds travels the arcs as light.
+  const [pathLight] = useState(() => new PathLight());
   // What the picture and the clip say they show, and name their files after.
   const exportTitle = [passage && formatPassage(passage, data.versification, books), t('app.name')]
     .filter((part) => part !== null)
@@ -216,6 +219,7 @@ export function ArcsExplorer({
                 onSelect={onNavigate}
                 onClose={closePanel}
                 shareUrl={shareUrl}
+                pathLight={pathLight}
                 onPreview={(connection) => {
                   setPreview(connection && { passage, connection });
                 }}
@@ -234,6 +238,7 @@ export function ArcsExplorer({
         preview={previewed}
         onSelect={onNavigate}
         snapshotRef={snapshotRef}
+        pathLight={pathLight}
       />
       <ClipStatus job={clipJob} />
       <LinkStats

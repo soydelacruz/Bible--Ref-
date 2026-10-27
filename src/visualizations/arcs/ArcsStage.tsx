@@ -12,9 +12,11 @@ import { ClickIcon, PinchIcon, TapIcon } from '../../shared/ui/icons.tsx';
 import { useLocalization } from '../../i18n/use-locale.tsx';
 import { collectConnections, connectionLinkIds, type Connection } from '../shared/connections.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
+import type { PathLight } from '../shared/path-light.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
 import { buildArcInstances, buildArcMorph } from './arc-instances.ts';
+import { buildArcPath } from './arc-path.ts';
 import { ArcsController, type ArcHover } from './arcs-controller.ts';
 import styles from './ArcsStage.module.css';
 
@@ -33,6 +35,8 @@ interface ArcsStageProps {
   readonly onSelect: (passage: Passage | null) => void;
   /** Filled with a way to take a picture of the diagram as it is, once it can be drawn. */
   readonly snapshotRef?: RefObject<ArcsController['snapshot'] | null>;
+  /** A chain of links the details panel shows, to travel its arcs as light (see `playPath`). */
+  readonly pathLight?: PathLight;
 }
 
 /** The arc diagram: a WebGL layer for arcs, a 2D overlay for the axis, and a hover tooltip. */
@@ -45,6 +49,7 @@ export function ArcsStage({
   preview,
   onSelect,
   snapshotRef,
+  pathLight,
 }: ArcsStageProps) {
   const { t, books, locale } = useLocalization();
   const genres = locale.genres;
@@ -150,6 +155,18 @@ export function ArcsStage({
         : null,
     );
   }, [preview, data]);
+
+  const { index: linkIndex } = data.crossReferences;
+  const { verseGenres } = data;
+  useEffect(() => {
+    const controller = controllerRef.current;
+    if (!pathLight || !controller) {
+      return undefined;
+    }
+    return pathLight.attach((steps, options) =>
+      controller.playPath(buildArcPath(linkIndex, steps, verseGenres), options),
+    );
+  }, [pathLight, linkIndex, verseGenres]);
 
   return (
     <div
