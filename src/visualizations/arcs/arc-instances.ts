@@ -18,22 +18,49 @@ export function buildArcInstances(
   linkIds: ArrayLike<number>,
   verseGenres: Uint8Array,
 ): ArcInstances {
-  const count = linkIds.length;
-  const endpoints = new Float32Array(count * 2);
-  const genres = new Float32Array(count * 2);
-  const weights = new Float32Array(count);
-  for (let i = 0; i < count; i += 1) {
-    const id = elementAt(linkIds, i);
-    const source = elementAt(index.sources, id);
-    const targetStart = elementAt(index.targetStarts, id);
-    const targetEnd = elementAt(index.targetEnds, id);
+  const instances = allocateArcInstances(linkIds.length);
+  fillArcInstances(instances, index, linkIds, verseGenres, 0, linkIds.length);
+  return instances;
+}
+
+/** Room for `count` arcs, to fill with `fillArcInstances`. */
+export function allocateArcInstances(count: number): ArcInstances {
+  return {
+    count,
+    endpoints: new Float32Array(count * 2),
+    genres: new Float32Array(count * 2),
+    weights: new Float32Array(count),
+  };
+}
+
+/** The brightness of links with no votes up to 99, beyond which it no longer grows. */
+const WEIGHT_BY_VOTES = Float32Array.from({ length: 100 }, (_, votes) => voteWeight(votes));
+
+/**
+ * Writes the arcs of links `from` to `to` (exclusive) of `linkIds` into `instances`, in place, so a
+ * large set can be built a slice at a time (see `LitLinksSearch`).
+ */
+export function fillArcInstances(
+  { endpoints, genres, weights }: ArcInstances,
+  { sources, targetStarts, targetEnds, votes }: CrossReferenceIndex,
+  linkIds: ArrayLike<number>,
+  verseGenres: Uint8Array,
+  from: number,
+  to: number,
+): void {
+  // Read straight from the columns, not through `elementAt`: this runs for every arc drawn, up to
+  // the whole Bible's, and the ids come from the index, so they are in range.
+  for (let i = from; i < to; i += 1) {
+    const id = linkIds[i] ?? 0;
+    const source = sources[id] ?? 0;
+    const targetStart = targetStarts[id] ?? 0;
+    const linkVotes = votes[id] ?? 0;
     endpoints[i * 2] = source + 0.5;
-    endpoints[i * 2 + 1] = (targetStart + targetEnd + 1) / 2;
-    genres[i * 2] = elementAt(verseGenres, source);
-    genres[i * 2 + 1] = elementAt(verseGenres, targetStart);
-    weights[i] = voteWeight(elementAt(index.votes, id));
+    endpoints[i * 2 + 1] = (targetStart + (targetEnds[id] ?? 0) + 1) / 2;
+    genres[i * 2] = verseGenres[source] ?? 0;
+    genres[i * 2 + 1] = verseGenres[targetStart] ?? 0;
+    weights[i] = WEIGHT_BY_VOTES[linkVotes] ?? voteWeight(linkVotes);
   }
-  return { count, endpoints, genres, weights };
 }
 
 /** What a link does when the filter changes: drops out, stays, or joins (see `ArcMorph`). */

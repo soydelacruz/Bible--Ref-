@@ -11,7 +11,11 @@ import {
   verseIndex,
 } from '../test-utils/fixtures.ts';
 import { VizDataBoundary } from '../visualizations/shared/components/VizDataBoundary.tsx';
-import { HeaderActions, VizPage } from '../visualizations/shared/components/VizPage.tsx';
+import {
+  HeaderActions,
+  PageNotice,
+  VizPage,
+} from '../visualizations/shared/components/VizPage.tsx';
 import { vizCoreLoader, resetTranslations } from '../visualizations/shared/viz-data.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
 import { VIEWS } from './views.ts';
@@ -210,6 +214,22 @@ describe('VizPage', () => {
       </HeaderActions>,
     );
     expect(screen.getByRole('button', { name: 'More' })).toBeDefined();
+  });
+
+  it('puts what the host shows under the header in a row of its own, before the stage', () => {
+    render(
+      <PageNotice value={<section aria-label="Start here" />}>
+        <VizPage credits={<span>Credits</span>}>
+          <canvas />
+        </VizPage>
+      </PageNotice>,
+    );
+    const notice = screen.getByRole('region', { name: 'Start here' });
+    const header = screen.getByRole('banner');
+    const stage = screen.getByRole('main');
+    expect(notice.parentElement?.previousElementSibling).toBe(header);
+    expect(stage.contains(notice)).toBe(false);
+    expect(notice.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('says on the More button when something inside it hides part of the picture', () => {

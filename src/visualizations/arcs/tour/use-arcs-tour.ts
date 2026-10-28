@@ -20,6 +20,7 @@ import { computeArcLayout } from '../arc-layout.ts';
 import type { ArcPreview } from '../arcs-controller.ts';
 import type { AxisView } from '../axis-view.ts';
 import { clearStart } from './tour-framing.ts';
+import { onTourRequest, setArcsTourAvailable } from './tour-request.ts';
 import { planFinale, planStops, type TourData, type TourPlan } from './tour-plan.ts';
 import { TourPlayer, tourBeats, type TourBeat, type TourStage } from './tour-player.ts';
 
@@ -329,26 +330,42 @@ export function useArcsTour({
     [],
   );
 
+  const start = () => {
+    if (touring || !available) {
+      return;
+    }
+    setOffered(true);
+    const plan = { stops: planStops(tourData, filter), finale: planFinale(tourData, filter) };
+    const beats = tourBeats(plan, {
+      total: tourData.versification.verseCount,
+      reducedMotion: prefersReducedMotion(),
+      playsPath: playPath !== undefined,
+    });
+    setRun({ plan, beats, card: null, paused: false });
+    if (passage !== null) {
+      onNavigate(null);
+    }
+  };
+
+  // Asked for from outside the arcs (see `startArcsTour`): the same start as their own button's,
+  // offered there only while there is a tour to take, as here.
+  const requested = useEffectEvent(start);
+  useEffect(
+    () =>
+      onTourRequest(() => {
+        requested();
+      }),
+    [],
+  );
+  useEffect(() => {
+    setArcsTourAvailable(available);
+  }, [available]);
+
   return {
     available,
     inviting,
     run,
-    start: () => {
-      if (touring || !available) {
-        return;
-      }
-      setOffered(true);
-      const plan = { stops: planStops(tourData, filter), finale: planFinale(tourData, filter) };
-      const beats = tourBeats(plan, {
-        total: tourData.versification.verseCount,
-        reducedMotion: prefersReducedMotion(),
-        playsPath: playPath !== undefined,
-      });
-      setRun({ plan, beats, card: null, paused: false });
-      if (passage !== null) {
-        onNavigate(null);
-      }
-    },
+    start,
     dismiss: () => {
       setOffered(true);
     },

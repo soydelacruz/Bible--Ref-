@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { useRef, type ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Passage } from '../../../core/bible/passage.ts';
@@ -12,6 +12,7 @@ import {
 } from '../../shared/link-filter.ts';
 import { TourLayer } from './ArcsTour.tsx';
 import { HOLD_MS } from './tour-player.ts';
+import { startArcsTour, useArcsTourAvailable } from './tour-request.ts';
 import { coveredShare, useArcsTour, type PlayPath, type TourCamera } from './use-arcs-tour.ts';
 
 const GEN_1_1 = verseIndex('Gen', 1, 1);
@@ -192,6 +193,30 @@ describe('the invitation', () => {
     await elapse(0);
     expect(progress()).toBe('Tour · 1 of 3');
     expect(camera.showStop).toHaveBeenCalled();
+  });
+
+  it('says outside the arcs when the filter leaves no tour to take', () => {
+    const available = renderHook(() => useArcsTourAvailable());
+    const { rerender } = firstVisit(
+      <Harness camera={fakeCamera()} filter={createLinkFilter(100)} />,
+    );
+    expect(available.result.current).toBe(false);
+    rerender(<Harness camera={fakeCamera()} />);
+    expect(available.result.current).toBe(true);
+  });
+
+  it('starts when asked from outside the arcs, as from their own button', async () => {
+    const { unmount } = firstVisit(<Harness camera={fakeCamera()} />);
+    act(() => {
+      startArcsTour();
+    });
+    await elapse(0);
+    expect(progress()).toBe('Tour · 1 of 3');
+    expect(localStorage.getItem(preferenceKey(ARCS_TOUR_PREFERENCE))).toBe('true');
+    // Gone with the arcs: nothing is left listening.
+    unmount();
+    startArcsTour();
+    expect(card()).toBeNull();
   });
 });
 

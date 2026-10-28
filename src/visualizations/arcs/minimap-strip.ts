@@ -1,7 +1,5 @@
-import { elementAt } from '../../core/lib/array.ts';
 import { bookName, bookReferenceName } from '../../core/bible/reference-format.ts';
 import type { VerseIndexRange, Versification } from '../../core/bible/versification.ts';
-import type { CrossReferenceIndex } from '../../cross-references/cross-reference-index.ts';
 import type { BookNames } from '../../i18n/books/types.ts';
 import { clampView, fullView, panView, resizeView, zoomView, type AxisView } from './axis-view.ts';
 
@@ -145,31 +143,6 @@ export function tapBrush(
     return null;
   }
   return bookSpan(versification, tapped, tapped);
-}
-
-/**
- * The links among `linkIds` that start or end in `range`: from a verse in it, or to a passage
- * that overlaps it. In the order given, so the arcs draw as the background does.
- */
-export function linksTouching(
-  index: CrossReferenceIndex,
-  linkIds: Int32Array,
-  range: VerseIndexRange,
-): Int32Array {
-  const touching = new Int32Array(linkIds.length);
-  let count = 0;
-  for (const id of linkIds) {
-    const source = elementAt(index.sources, id);
-    if (
-      (source >= range.start && source <= range.end) ||
-      (elementAt(index.targetStarts, id) <= range.end &&
-        elementAt(index.targetEnds, id) >= range.start)
-    ) {
-      touching[count] = id;
-      count += 1;
-    }
-  }
-  return touching.slice(0, count);
 }
 
 /** Names whole books, e.g. `Psalms` or `Genesis – Deuteronomy`. */
