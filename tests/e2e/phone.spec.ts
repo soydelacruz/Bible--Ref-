@@ -164,9 +164,16 @@ async function noteTransitions(page: Page): Promise<void> {
   });
 }
 
-/** The transitions noted since `noteTransitions` (or the last call to this), and clears them. */
+/**
+ * The transitions noted since `noteTransitions` (or the last call to this), and clears them. A
+ * transition's `transitionrun` comes with the next frame after the change that made it, and a
+ * menu still at its starting opacity already counts as visible, so two frames go by first.
+ */
 async function takeTransitions(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
     const root = document.documentElement;
     const noted = (root.dataset['transitions'] ?? '').split(' ').filter(Boolean);
     root.dataset['transitions'] = '';
@@ -235,6 +242,13 @@ test.describe('every control is a fingertip’s size', () => {
 });
 
 test.describe('the details sheet', () => {
+  /**
+   * Once the sheet has gone, the picture is drawn again at its new height, which the software
+   * renderer CI draws with is slow at: the page answers nothing for fifteen seconds and more while
+   * two tests share four cores.
+   */
+  const REDRAWN = { timeout: 45_000 };
+
   /** The part of the sheet that shows, collapsed, and where its content sits within it. */
   async function peek(page: Page) {
     return page.locator(ACTIVE).evaluate((view) => {
@@ -314,6 +328,7 @@ test.describe('the details sheet', () => {
   test('slides away when closed, on the curve it came in on, and is gone once it has', async ({
     page,
   }) => {
+    test.slow();
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
     // At rest first: the sheet moves to its measured peek as its header arrives.
@@ -322,11 +337,12 @@ test.describe('the details sheet', () => {
     await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).click();
     // On its way out it is no longer the panel: nothing in it can be used.
     await expect(page.locator(PANEL)).toHaveAttribute('inert');
-    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(page.locator(PANEL)).toHaveCount(0, REDRAWN);
     expect(await takeTransitions(page)).toContain('panel:transform');
   });
 
   test('fades away instead, with less motion', async ({ page }) => {
+    test.slow();
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
@@ -334,11 +350,12 @@ test.describe('the details sheet', () => {
     await settled(page.locator(PANEL));
     await noteTransitions(page);
     await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).click();
-    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(page.locator(PANEL)).toHaveCount(0, REDRAWN);
     expect(await takeTransitions(page)).toEqual(['panel:opacity']);
   });
 
   test('is gone at once when closed from the keyboard', async ({ page }) => {
+    test.slow();
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
     // At rest first: the sheet moves to its measured peek as its header arrives.
@@ -346,7 +363,7 @@ test.describe('the details sheet', () => {
     await noteTransitions(page);
     await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(page.locator(PANEL)).toHaveCount(0, REDRAWN);
     expect(await takeTransitions(page)).toEqual([]);
   });
 });
