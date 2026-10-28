@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, collectErrors, waitForApp, waitForDrawing } from './helpers.ts';
+import {
+  ACTIVE,
+  PANEL,
+  collectErrors,
+  openHeaderMenu,
+  waitForApp,
+  waitForDrawing,
+} from './helpers.ts';
 
 /**
  * The first visit's Start here strip: one line on what the picture is, and three ways in — John
@@ -56,11 +63,8 @@ test.describe('Start here', () => {
     page,
   }) => {
     await firstVisit(page);
-    // On a phone the legend is folded into an icon button; the genres are behind it.
-    const legend = page.locator(ACTIVE).getByRole('button', { name: 'Show genres' });
-    if (await legend.isVisible()) {
-      await legend.click();
-    }
+    // The legend is the Genres menu, in the header (in More on a phone).
+    await openHeaderMenu(page, /^Genres/);
     const law = page.locator(ACTIVE).getByRole('button', { name: /^Law/ }).first();
     const before = await law.boundingBox();
     await law.click();

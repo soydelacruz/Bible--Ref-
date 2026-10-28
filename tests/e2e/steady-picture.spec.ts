@@ -47,7 +47,9 @@ test.describe('Arcs', () => {
   const STRIP = `${ACTIVE} [role="slider"]`;
 
   test('keep their axis upright, and their size, when a verse opens', async ({ page }) => {
-    await page.goto('./');
+    // Not a first visit's front page: its Start here strip goes as a verse opens, and gives its
+    // row back to the stage.
+    await page.goto('./?votes=50');
     await waitForDrawing(page);
     await waitForSizing(page, `${PICTURE} >> nth=0`);
     // The arcs, and the tour's layer over them, which keeps its card off the axis.
