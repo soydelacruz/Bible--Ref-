@@ -269,6 +269,23 @@ test.describe('the details sheet', () => {
     });
   }
 
+  test('opens up when a count in its header jumps to a section below the fold', async ({
+    page,
+  }) => {
+    await page.goto('./?ref=John.3.16');
+    await waitForApp(page);
+    await settled(page.locator(PANEL));
+    await page
+      .locator(PANEL)
+      .getByRole('button', { name: /^\d+ references$/ })
+      .tap();
+    await expect(sheetHandle(page)).toHaveAttribute('aria-expanded', 'true');
+    await settled(page.locator(PANEL));
+    const band = page.locator(PANEL).getByRole('button', { name: /^References/ });
+    await expect(band).toBeFocused();
+    await expect(band).toBeInViewport({ ratio: 1 });
+  });
+
   test('never covers the footer, collapsed or opened up', async ({ page }) => {
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);

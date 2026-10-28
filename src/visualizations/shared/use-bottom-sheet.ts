@@ -98,7 +98,8 @@ function velocityOf(samples: Drag['samples']): number {
  *
  * Collapsed, it shows its handle and the panel's header (its first `<header>`: the passage's name
  * and the line that counts its links), however tall the language and the name make it. The room
- * kept for it is measured into `--sheet-peek` on the container.
+ * kept for it is measured into `--sheet-peek` on the container. When focus lands below that (one
+ * of the counts jumping to its section), it opens up to show it.
  *
  * When `content` goes, the sheet keeps showing it while it slides out (or fades, with less
  * motion), and only then is gone: `panel` is what to render in it, and `present` whether to
@@ -278,14 +279,30 @@ export function useBottomSheet(content: ReactNode, onClose: (() => void) | undef
       }
     };
 
+    // Something below the fold took focus: a count in the header jumping to its section, or the
+    // keyboard moving on past the header. Collapsed, the sheet shows only its header, so it opens
+    // up to show what was asked for.
+    const onFocusIn = (event: FocusEvent) => {
+      const isSheet = space.offsetHeight > 0;
+      if (isExpanded() || !isSheet || !(event.target instanceof Element)) {
+        return;
+      }
+      const fold = sheet.getBoundingClientRect().top + space.offsetHeight;
+      if (event.target.getBoundingClientRect().top >= fold - 1) {
+        setExpanded(true);
+      }
+    };
+
     // Opened again while it faded where a finger had left it: from its place, not from there.
     letGo();
+    sheet.addEventListener('focusin', onFocusIn);
     sheet.addEventListener('touchstart', onTouchStart, { passive: true });
     sheet.addEventListener('touchmove', onTouchMove, { passive: false });
     sheet.addEventListener('touchend', onTouchEnd);
     sheet.addEventListener('touchcancel', onTouchEnd);
     sheet.addEventListener('click', onClickCapture, true);
     return () => {
+      sheet.removeEventListener('focusin', onFocusIn);
       sheet.removeEventListener('touchstart', onTouchStart);
       sheet.removeEventListener('touchmove', onTouchMove);
       sheet.removeEventListener('touchend', onTouchEnd);
