@@ -9,6 +9,9 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   block-size: 100dvh;
   overflow: hidden;
+  /* A gesture on the picture or the sheet that runs out of room stops there: no pull-to-refresh,
+     no page rubber-banding behind it. */
+  overscroll-behavior: none;
   background: var(--color-background);
 }
 
@@ -22,7 +25,13 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2) var(--space-4);
-  padding: calc(var(--space-2) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-2);
+  /* Clear of the status bar above, and of a notch or rounded corner on either side when a phone
+     is turned. The insets are the screen's own, hence left and right rather than start and end. */
+  --gutter: var(--space-4);
+
+  padding: calc(var(--space-2) + env(safe-area-inset-top, 0px))
+    calc(var(--gutter) + env(safe-area-inset-right, 0px)) var(--space-2)
+    calc(var(--gutter) + env(safe-area-inset-left, 0px));
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -103,11 +112,22 @@
   min-block-size: 0;
 }
 
+/* The picture stays clear of a notch on either side of a turned phone: what is drawn there would
+   be hidden, and an edge is where its gestures start. The page's own background fills in. */
 .stage {
   position: relative;
   min-inline-size: 0;
   min-block-size: 0;
+  margin-left: env(safe-area-inset-left, 0px);
+  margin-right: env(safe-area-inset-right, 0px);
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Beside it, the panel has the screen's right edge instead: its surface runs on into the inset,
+   and its content stops short of it. */
+.body[data-sheet] .stage {
+  margin-right: 0;
 }
 
 .panel {
@@ -115,8 +135,53 @@
   flex-direction: column;
   inline-size: min(26rem, 42vw);
   min-block-size: 0;
+  padding-right: env(safe-area-inset-right, 0px);
   border-inline-start: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+/* The column comes in from its edge and goes back the way it came, on the drawer's curve: a short
+   way, since the picture beside it has made its room already and is where the eye stays. Closed
+   from the keyboard it is gone at once (`data-sheet-instant`, see use-bottom-sheet.ts). */
+@media (min-width: 48rem) {
+  .panel {
+    transition:
+      opacity var(--duration-normal) var(--ease-drawer),
+      transform var(--duration-normal) var(--ease-drawer);
+  }
+
+  @starting-style {
+    .panel {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+  }
+
+  .body[data-sheet-closing] .panel {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  @starting-style {
+    .panel {
+      transform: none;
+    }
+  }
+
+  .body[data-sheet-closing] .panel {
+    transform: none;
+  }
+}
+
+.body[data-sheet-instant] .panel,
+.body[data-sheet-instant] .sheetScrim {
+  transition: none;
 }
 
 .sheetHandle,
@@ -125,9 +190,15 @@
   display: none;
 }
 
+/* Never behind the sheet, whatever spills from it: the fill under it as it is pulled past its
+   top, or all of it where a browser does not clip it to the body. The home indicator's inset is
+   kept below it, which a padding of its own would otherwise drop. */
 .footer {
+  position: relative;
+  z-index: 3;
+  padding-block: var(--space-1) calc(var(--space-1) + env(safe-area-inset-bottom, 0px));
   border-block-start: 1px solid var(--color-border);
-  padding-block: var(--space-1);
+  background: var(--color-background);
 }
 
 @media (max-width: 47.99rem) {
@@ -137,7 +208,9 @@
   .header {
     grid-template-columns: minmax(11rem, 1fr) auto;
     gap: var(--space-1) var(--space-2);
-    padding: calc(0.375rem + env(safe-area-inset-top, 0px)) var(--space-3) 0.375rem;
+    --gutter: var(--space-3);
+
+    padding-block: calc(0.375rem + env(safe-area-inset-top, 0px)) 0.375rem;
   }
 
   .masthead {
@@ -171,15 +244,21 @@
      expanded, it slides over the visualization, which stays as it is (no re-layout while it
      moves). The sheet is always its expanded height; collapsing slides most of it out of view. */
   .body {
-    /* Collapsed height; the visualization still showing above the expanded sheet. */
-    --sheet-peek: 42dvh;
+    /* Collapsed height: the handle and the panel's header, the passage's name and the line that
+       counts its links, measured as it renders (use-bottom-sheet.ts); this until it has been. */
+    --sheet-peek: 9rem;
+    /* The visualization still showing above the expanded sheet. */
     --sheet-gap: 2.5rem;
-    /* iOS's sheet spring, approximated. */
-    --sheet-motion: 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+    --sheet-motion: var(--duration-sheet) var(--ease-drawer);
 
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
     overflow: clip;
+  }
+
+  /* Under the picture rather than beside it, the sheet leaves the picture both sides' insets. */
+  .body[data-sheet] .stage {
+    margin-right: env(safe-area-inset-right, 0px);
   }
 
   /* Its content can't rise over the sheet or the scrim. */
@@ -215,7 +294,10 @@
     z-index: 2;
     inline-size: auto;
     block-size: calc(100% - var(--sheet-gap));
-    padding-block-end: env(safe-area-inset-bottom, 0px);
+    /* Edge to edge, its content clear of a notch on either side. Its foot is above the footer,
+       which keeps the home indicator's inset. */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
     border-inline-start: 0;
     border-block-start: 1px solid var(--color-border);
     border-radius: 0.875rem 0.875rem 0 0;
@@ -242,6 +324,7 @@
 
   .body[data-sheet-closing] .sheetScrim {
     opacity: 0;
+    pointer-events: none;
   }
 
   /* While a finger moves it, the sheet follows the finger, not a transition. */
@@ -250,26 +333,29 @@
     transition: none;
   }
 
+  /* A whole finger's height, the grabber at its middle. It does not give under the finger as
+     other buttons do: it is the sheet's width. */
   .sheetHandle {
-    display: block;
+    display: grid;
     flex: none;
+    place-items: center;
     inline-size: 100%;
-    padding: var(--space-3) 0;
+    block-size: var(--touch-target);
+    padding: 0;
     touch-action: none;
     border: 0;
     background: none;
     cursor: pointer;
+    transform: none;
   }
 
   .sheetHandle::before {
-    display: block;
     inline-size: 2.5rem;
     block-size: 0.25rem;
-    margin-inline: auto;
     border-radius: 999px;
     background: var(--color-border);
     content: '';
-    transition: background-color 0.2s;
+    transition: background-color var(--duration-normal) var(--ease-out);
   }
 
   /* The grabber brightens while held. */
@@ -279,9 +365,26 @@
   }
 }
 
+/* With less motion the sheet does not slide: it fades in and out where it stands, and moves
+   between its two heights at once. */
 @media (max-width: 47.99rem) and (prefers-reduced-motion: reduce) {
   .panel,
   .sheetScrim {
-    transition: none;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  @starting-style {
+    .panel {
+      opacity: 0;
+    }
+  }
+
+  .body[data-sheet-closing] .panel {
+    opacity: 0;
+    transform: translateY(calc(100% - var(--sheet-peek)));
+  }
+
+  .body[data-sheet-closing][data-sheet='expanded'] .panel {
+    transform: none;
   }
 }

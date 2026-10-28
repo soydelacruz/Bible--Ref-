@@ -22,8 +22,21 @@
 }
 
 .item:hover,
+.item:active,
 .item:focus-visible {
   background: var(--color-surface-muted);
+}
+
+/* A row the menu's width answers a press with its background, not by giving under the finger. */
+.item {
+  transform: none;
+}
+
+@media (pointer: coarse) {
+  .item {
+    min-block-size: var(--touch-target);
+    align-content: center;
+  }
 }
 
 .item strong {

@@ -40,6 +40,20 @@
   pointer-events: auto;
 }
 
+/* A finger's target round the word. The lines above and below it let taps through to the arcs,
+   so the target can reach over them without taking a tap meant for anything else. */
+@media (pointer: coarse) {
+  .filtersLink {
+    position: relative;
+  }
+
+  .filtersLink::after {
+    position: absolute;
+    inset: -0.625rem -0.25rem;
+    content: '';
+  }
+}
+
 /* Only where there is a pointer to hover with: a touch screen would keep the colour after a tap. */
 @media (hover: hover) {
   .filtersLink:hover {

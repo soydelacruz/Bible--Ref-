@@ -1,5 +1,13 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { flushSync } from 'react-dom';
+import { usingKeyboard } from '../../shared/ui/input-modality.ts';
 
 /** Movement after which a touch on the sheet counts as dragging it or scrolling its content. */
 const DRAG_SLOP_PX = 4;
@@ -13,8 +21,10 @@ const STRETCH_PX = 36;
 const VELOCITY_WINDOW_MS = 100;
 /** Clicks right after a drag belong to the drag, not to the button where it ended. */
 const CLICKS_AFTER_DRAG_MS = 400;
-/** The closing slide's longest wait before the sheet is removed anyway. */
+/** The closing slide's longest wait before the sheet is removed anyway (it takes 500ms). */
 const CLOSE_TIMEOUT_MS = 700;
+/** Less motion: a sheet let go of below its low point fades where it is, rather than sliding. */
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 interface Drag {
   readonly startX: number;
@@ -58,6 +68,18 @@ function scrollerOf(target: EventTarget | null, sheet: HTMLElement): HTMLElement
   return null;
 }
 
+/** Whether a panel has something to show: what React would render nothing for, it has not. */
+function hasContent(content: ReactNode): boolean {
+  return content !== undefined && content !== null && content !== false;
+}
+
+/** Whether the element has a transition to run (a test's DOM has none). */
+function transitions(element: HTMLElement): boolean {
+  return getComputedStyle(element)
+    .transitionDuration.split(',')
+    .some((duration) => parseFloat(duration) > 0);
+}
+
 /** Pixels per ms (positive: down) over the drag's last moments. */
 function velocityOf(samples: Drag['samples']): number {
   const last = samples.at(-1);
@@ -74,17 +96,38 @@ function velocityOf(samples: Drag['samples']): number {
  * low point (if `onClose` is given). Taps on the handle and the scrim toggle it. Without touch, or
  * on wide screens (where `space` isn't displayed), it is a plain panel.
  *
+ * Collapsed, it shows its handle and the panel's header (its first `<header>`: the passage's name
+ * and the line that counts its links), however tall the language and the name make it. The room
+ * kept for it is measured into `--sheet-peek` on the container.
+ *
+ * When `content` goes, the sheet keeps showing it while it slides out (or fades, with less
+ * motion), and only then is gone: `panel` is what to render in it, and `present` whether to
+ * render it at all. Closed from the keyboard, it goes at once.
+ *
  * Positions and transitions are CSS, keyed on the container's `data-sheet` ("collapsed" or
- * "expanded"), `data-sheet-dragging` and `data-sheet-closing`. While dragged, the sheet and the
- * scrim are moved directly, with no re-renders.
+ * "expanded"), `data-sheet-dragging`, `data-sheet-closing` and `data-sheet-instant`. While dragged,
+ * the sheet and the scrim are moved directly, with no re-renders.
  */
-export function useBottomSheet(open: boolean, onClose: (() => void) | undefined) {
+export function useBottomSheet(content: ReactNode, onClose: (() => void) | undefined) {
+  const open = hasContent(content);
+  // What the sheet shows, kept as it was once it closes, so that it leaves with its content
+  // rather than empty.
+  const [shown, setShown] = useState<ReactNode>(content);
+  if (open && content !== shown) {
+    setShown(content);
+  }
+  const present = open || hasContent(shown);
+  const closing = present && !open;
   const [expanded, setExpanded] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
+  // Closed from the keyboard, it goes at once. Decided as it renders, so that nothing can read its
+  // style (and start its slide) before it is marked.
+  const [instant, setInstant] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (!open) {
-      setExpanded(false); // A sheet always opens collapsed.
+    setInstant(!open && usingKeyboard());
+    if (open) {
+      setExpanded(false); // A sheet always opens collapsed; one closing keeps its height.
     }
   }
   const containerRef = useRef<HTMLDivElement>(null);
@@ -107,7 +150,8 @@ export function useBottomSheet(open: boolean, onClose: (() => void) | undefined)
     }
     let drag: Drag | null = null;
     let clicksBlockedUntil = 0;
-    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+    // Let go of below its low point with less motion: it stays where the finger left it, fading.
+    let heldWhereLeft = false;
 
     const moveTo = (offset: number, lowest: number) => {
       sheet.style.transform = `translateY(${String(offset)}px)`;
@@ -125,28 +169,20 @@ export function useBottomSheet(open: boolean, onClose: (() => void) | undefined)
       });
       letGo();
     };
-    const slideOutAndClose = () => {
-      container.dataset.sheetClosing = '';
-      letGo();
-      const finish = () => {
-        clearTimeout(closeTimer);
-        sheet.removeEventListener('transitionend', onSlidOut);
-        flushSync(close);
-        if (sheet.isConnected) {
-          delete container.dataset.sheetClosing; // Kept open after all: slide back.
-        }
-      };
-      const onSlidOut = (event: TransitionEvent) => {
-        if (event.target === sheet && event.propertyName === 'transform') {
-          finish();
-        }
-      };
-      if (parseFloat(getComputedStyle(sheet).transitionDuration) === 0) {
-        finish(); // Reduced motion: no slide to wait for.
-        return;
+    /** Closes it from where the finger left it: the slide out carries on from there. */
+    const pullAway = () => {
+      heldWhereLeft = matchMedia(REDUCED_MOTION).matches;
+      if (heldWhereLeft) {
+        delete container.dataset.sheetDragging;
+        scrim.style.opacity = '';
+      } else {
+        letGo();
       }
-      sheet.addEventListener('transitionend', onSlidOut);
-      closeTimer = setTimeout(finish, CLOSE_TIMEOUT_MS);
+      flushSync(close);
+      if (!('sheetClosing' in container.dataset)) {
+        heldWhereLeft = false;
+        letGo(); // Kept open after all: back to where it was.
+      }
     };
 
     const onTouchStart = (event: TouchEvent) => {
@@ -156,7 +192,7 @@ export function useBottomSheet(open: boolean, onClose: (() => void) | undefined)
       drag = null;
       const touch = event.touches.item(0);
       const isSheet = space.offsetHeight > 0; // On wide screens it's a side panel.
-      if (!touch || event.touches.length > 1 || !isSheet || 'sheetClosing' in container.dataset) {
+      if (!touch || event.touches.length > 1 || !isSheet) {
         return;
       }
       drag = {
@@ -229,7 +265,7 @@ export function useBottomSheet(open: boolean, onClose: (() => void) | undefined)
       const projected = ended.offset + flick * FLICK_PROJECTION_MS;
       const startedLow = ended.from >= ended.lowest - 1;
       if (canClose() && startedLow && projected > ended.lowest + space.offsetHeight * CLOSE_SHARE) {
-        slideOutAndClose();
+        pullAway();
         return;
       }
       settle(projected < ended.lowest / 2);
@@ -242,24 +278,105 @@ export function useBottomSheet(open: boolean, onClose: (() => void) | undefined)
       }
     };
 
+    // Opened again while it faded where a finger had left it: from its place, not from there.
+    letGo();
     sheet.addEventListener('touchstart', onTouchStart, { passive: true });
     sheet.addEventListener('touchmove', onTouchMove, { passive: false });
     sheet.addEventListener('touchend', onTouchEnd);
     sheet.addEventListener('touchcancel', onTouchEnd);
     sheet.addEventListener('click', onClickCapture, true);
     return () => {
-      clearTimeout(closeTimer);
       sheet.removeEventListener('touchstart', onTouchStart);
       sheet.removeEventListener('touchmove', onTouchMove);
       sheet.removeEventListener('touchend', onTouchEnd);
       sheet.removeEventListener('touchcancel', onTouchEnd);
       sheet.removeEventListener('click', onClickCapture, true);
-      delete container.dataset.sheetClosing;
-      letGo();
+      if (!heldWhereLeft) {
+        letGo();
+      }
     };
   }, [open]);
 
+  // Closed: it slides out (`data-sheet-closing`), and goes once it has.
+  useLayoutEffect(() => {
+    const sheet = sheetRef.current;
+    if (!closing || !sheet) {
+      return undefined;
+    }
+    let gone = false;
+    const finish = () => {
+      if (!gone) {
+        gone = true;
+        setShown(null);
+      }
+    };
+    const onEnd = (event: TransitionEvent) => {
+      if (event.target === sheet) {
+        finish();
+      }
+    };
+    sheet.addEventListener('transitionend', onEnd);
+    // Its slide's end is the usual way out; this is for one that is not there to wait for (from
+    // the keyboard), or that never runs (in a hidden view).
+    const timer = setTimeout(finish, transitions(sheet) ? CLOSE_TIMEOUT_MS : 0);
+    return () => {
+      clearTimeout(timer);
+      sheet.removeEventListener('transitionend', onEnd);
+    };
+  }, [closing]);
+
+  // Collapsed, the sheet shows down to the end of its panel's header, which grows with a longer
+  // name or a language whose counts take two lines. The header can come later than the sheet (the
+  // panel waits for the text), so the sheet is watched for it.
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const sheet = sheetRef.current;
+    if (!present || !container || !sheet) {
+      return undefined;
+    }
+    let header: HTMLElement | null = null;
+    const measure = () => {
+      if (header) {
+        const peek = header.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top;
+        container.style.setProperty('--sheet-peek', `${Math.ceil(peek)}px`);
+      } else {
+        container.style.removeProperty('--sheet-peek');
+      }
+    };
+    const sizes = new ResizeObserver(measure);
+    const follow = () => {
+      const next = sheet.querySelector('header');
+      if (next === header) {
+        return;
+      }
+      if (header) {
+        sizes.unobserve(header);
+      }
+      header = next;
+      if (header) {
+        sizes.observe(header);
+      }
+      measure();
+    };
+    const changes = new MutationObserver(follow);
+    changes.observe(sheet, { childList: true, subtree: true });
+    follow();
+    return () => {
+      changes.disconnect();
+      sizes.disconnect();
+      container.style.removeProperty('--sheet-peek');
+    };
+  }, [present]);
+
   return {
+    /** What to show in the sheet: the panel, or the one it is leaving with. */
+    panel: open ? content : shown,
+    /** Whether the sheet is there at all, leaving included. */
+    present,
+    /** Whether it is on its way out: still shown, but no longer the panel. */
+    closing,
+    /** Whether, closed from the keyboard, it goes without a slide (`data-sheet-instant`). */
+    instant: closing && instant,
     /** Whether the sheet is at its full height (on phones). */
     expanded,
     setExpanded,
