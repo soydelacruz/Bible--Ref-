@@ -153,12 +153,11 @@ export function ClustersStage({
     [],
   );
 
-  // The host keeps every view mounted, and a hidden one keeps its size. Its links are chosen and
-  // laid out while it is hidden too — the layout in a worker, so the other views pay only for the
-  // choosing — and a switch to it finds its picture ready.
+  // The host keeps every view mounted, and a hidden one keeps its size: nothing is worked out
+  // until the view is on screen, so the other views pay nothing for it.
   const selected = useMemo(
-    () => selectClusterGraph(index, verseGenres, filter, versification, openBook),
-    [index, verseGenres, filter, versification, openBook],
+    () => (active ? selectClusterGraph(index, verseGenres, filter, versification, openBook) : null),
+    [active, index, verseGenres, filter, versification, openBook],
   );
   // The graph drawn, and the book named over it, are the ones its layout was made for, so they
   // stay together while the next layout is on its way. Nothing while the view is hidden.

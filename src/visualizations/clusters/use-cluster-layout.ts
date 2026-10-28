@@ -76,16 +76,16 @@ interface Placed extends PlacedClusters {
 }
 
 /**
- * The layout of `graph`, worked out off the main thread, while the view is hidden too: a switch to
- * the view then finds its picture ready, and the passage beacon finds the passage in it. Until a
- * new layout arrives, the previous graph and its layout are kept, so the stage goes on drawing a
- * picture that is whole, and glides from it when the new one lands. One layout is worked out at a
- * time: while one is running, newer asks replace each other, and only the latest is worked out
- * next — a window being dragged wider asks for dozens.
+ * The layout of `graph`, worked out off the main thread. Until a new layout arrives, the previous
+ * graph and its layout are kept, so the stage goes on drawing a picture that is whole, and glides
+ * from it when the new one lands. One layout is worked out at a time: while one is running, newer
+ * asks replace each other, and only the latest is worked out next — a window being dragged wider
+ * asks for dozens.
  *
- * A view shown with nothing laid out yet — before the worker has answered, or where there is none —
- * is laid out here and now, as it always was: the beacon looks for the passage the moment the view
- * is shown.
+ * A view shown with nothing laid out yet is laid out here and now, as it always was: the passage
+ * beacon looks for the passage the moment the view is shown. A graph given while the view is
+ * hidden is laid out in the worker, ready for it; the stage gives none, so that a hidden view
+ * costs the others nothing.
  *
  * `null` while the view is hidden, or has no graph or no room to draw it.
  */
@@ -122,8 +122,10 @@ export function useClusterLayout(
   // A view laid out here still has the worker started, so that the next layout (the first book
   // opened) does not wait for it to load.
   useEffect(() => {
-    layoutWorker.warm();
-  }, []);
+    if (active) {
+      layoutWorker.warm();
+    }
+  }, [active]);
 
   useEffect(() => {
     latest.current = wanted;
