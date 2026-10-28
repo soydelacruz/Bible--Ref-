@@ -112,14 +112,22 @@ function sheetHandle(page: Page): Locator {
 
 /**
  * Waits for whatever is moving inside `scope` to have arrived: a menu grows in from a little
- * smaller than it is, and measured on its way it would be a few pixels short.
+ * smaller than it is, and measured on its way it would be a few pixels short. Each look waits two
+ * frames first, so that a change made in this one (the sheet's peek, measured as its header
+ * arrives) has begun its transition by the time it is looked for. The details can come a moment
+ * after the page says it is ready, sliding up as they do, so they are waited for too.
  */
 async function settled(scope: Locator): Promise<void> {
+  // There at all first: nothing to look at would count as nothing moving.
+  await scope.first().waitFor({ state: 'attached' });
   await expect
     .poll(() =>
-      scope.evaluateAll(
-        (roots) => roots.flatMap((root) => root.getAnimations({ subtree: true })).length,
-      ),
+      scope.evaluateAll(async (roots) => {
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
+        return roots.flatMap((root) => root.getAnimations({ subtree: true })).length;
+      }),
     )
     .toBe(0);
 }
@@ -308,6 +316,8 @@ test.describe('the details sheet', () => {
   }) => {
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
+    // At rest first: the sheet moves to its measured peek as its header arrives.
+    await settled(page.locator(PANEL));
     await noteTransitions(page);
     await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).click();
     // On its way out it is no longer the panel: nothing in it can be used.
@@ -320,6 +330,8 @@ test.describe('the details sheet', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
+    // At rest first: the sheet moves to its measured peek as its header arrives.
+    await settled(page.locator(PANEL));
     await noteTransitions(page);
     await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.locator(PANEL)).toHaveCount(0);
@@ -329,6 +341,8 @@ test.describe('the details sheet', () => {
   test('is gone at once when closed from the keyboard', async ({ page }) => {
     await page.goto('./?ref=John.3.16');
     await waitForApp(page);
+    // At rest first: the sheet moves to its measured peek as its header arrives.
+    await settled(page.locator(PANEL));
     await noteTransitions(page);
     await page.locator(PANEL).getByRole('button', { name: 'Close', exact: true }).focus();
     await page.keyboard.press('Enter');
