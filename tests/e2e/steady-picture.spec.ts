@@ -42,8 +42,9 @@ async function openVerse(page: Page, reference: string): Promise<void> {
 }
 
 test.describe('Arcs', () => {
-  /** The arcs and the minimap beside them, not the tour's layer over them. */
-  const PICTURE = `${ACTIVE} [data-orientation]:has([role="application"]) canvas`;
+  /** The arcs themselves: not the strip beside them, nor the tour's layer over them. */
+  const PICTURE = `${ACTIVE} [role="application"] canvas`;
+  const STRIP = `${ACTIVE} [role="slider"]`;
 
   test('keep their axis upright, and their size, when a verse opens', async ({ page }) => {
     await page.goto('./');
@@ -65,6 +66,9 @@ test.describe('Arcs', () => {
     const sheet = await page.locator(PANEL).boundingBox();
     const stage = await page.locator(`${ACTIVE} [role="application"]`).boundingBox();
     expect((stage?.y ?? 0) + (stage?.height ?? 0)).toBeLessThan((sheet?.y ?? 0) + 40);
+    // The strip beside it is the index of the whole Bible: all of it stays above the sheet.
+    const strip = await page.locator(STRIP).boundingBox();
+    expect((strip?.y ?? Infinity) + (strip?.height ?? 0)).toBeLessThanOrEqual((sheet?.y ?? 0) + 1);
   });
 });
 

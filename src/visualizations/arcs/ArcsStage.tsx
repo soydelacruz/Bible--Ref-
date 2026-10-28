@@ -72,9 +72,12 @@ export function ArcsStage({
   // The axis needs names to paint its first frame, but a change of language must not tear down
   // the WebGL context: the effect below hands the controller the new ones instead.
   const namesRef = useRef({ books, genres });
-  // The frame (the stage and the minimap) is as tall as the room would be without a phone's
-  // details sheet, so the sheet coming up neither turns the axis nor rescales it: the frame slides
-  // up instead, as far as keeps the passage in sight. The room itself is measured around it.
+  // The arcs are as tall as the room would be without a phone's details sheet, so the sheet coming
+  // up neither turns the axis nor rescales it: they slide up instead, as far as keeps the passage
+  // in sight. Beside an upright axis that is the stage alone: the strip there is the index of the
+  // whole Bible, and keeps to the room so all of it stays in reach. Under an axis that runs
+  // across, it is the whole frame, so the strip comes up with the axis. The room itself is
+  // measured around them.
   const roomRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const slideRef = useRef(0);
@@ -83,11 +86,24 @@ export function ArcsStage({
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<ArcsController | null>(null);
   const viewListenerRef = useRef<ViewListener | null>(null);
+  // How much shorter the strip is than the axis: beside an upright axis it keeps to the room, so
+  // while a phone's sheet is up it is the whole Bible in less length (see `relayView`).
+  const stripCutRef = useRef(0);
+  // Hands the strip the window and its track: the axis's own, less what the strip is shorter by.
+  const relayView = useRef<ViewListener>((view, layout) => {
+    const cut = stripCutRef.current;
+    viewListenerRef.current?.(
+      view,
+      cut > 0 ? { ...layout, axisEnd: layout.axisEnd - cut } : layout,
+    );
+  });
   const steady = useSteadySize(roomRef);
   const size = useElementSize(containerRef);
   // The strip runs beside the axis, so the axis's way decides its place. Taken from the whole
   // frame, the stage left beside the strip always lays its axis out the same way.
   const { orientation } = computeArcLayout(steady.width, steady.height);
+  const upright = orientation === 'vertical';
+  const stripCut = upright ? steady.covered : 0;
   const [hover, setHover] = useState<ArcHover | null>(null);
   const [announcer, announce] = useAnnouncer<HTMLParagraphElement>();
 
@@ -160,9 +176,7 @@ export function ArcsStage({
       // Slid up under a phone's details sheet, the stage is seen only through the room it is in.
       visibleBox: () => screenBox((roomRef.current ?? container).getBoundingClientRect()),
     });
-    controller.setViewListener((view, layout) => {
-      viewListenerRef.current?.(view, layout);
-    });
+    controller.setViewListener(relayView.current);
     controllerRef.current = controller;
     if (snapshotRef) {
       snapshotRef.current = (compose) => controller.snapshot(compose);
@@ -181,6 +195,12 @@ export function ArcsStage({
       }
     };
   }, [data.versification, snapshotRef, outsideControllerRef]);
+
+  useEffect(() => {
+    stripCutRef.current = stripCut;
+    // Handed the same listener again, the controller draws once more, and the strip with it.
+    controllerRef.current?.setViewListener(relayView.current);
+  }, [stripCut]);
 
   useEffect(() => {
     namesRef.current = { books, genres };
@@ -235,17 +255,20 @@ export function ArcsStage({
   // across the screen.
   useEffect(() => {
     const frame = frameRef.current;
+    const stage = containerRef.current;
     const controller = controllerRef.current;
-    if (!frame || !controller) return;
+    if (!frame || !stage || !controller) return;
     const spot = focus && controller.restingPoint(focus);
     const wanted =
       spot &&
-      (orientation === 'vertical'
+      (upright
         ? stretchAround(spot.y, steady)
         : { top: stretchAround(spot.y, steady).top, bottom: steady.height });
     slideRef.current = slideToShow(wanted, slideRef.current, steady);
-    slidePicture(frame, slideRef.current);
-  }, [focus, steady, orientation, size]);
+    // Turned since the last slide (a phone rotated), the other one comes back down.
+    slidePicture(upright ? frame : stage, 0);
+    slidePicture(upright ? stage : frame, slideRef.current);
+  }, [focus, steady, upright, size]);
 
   useEffect(() => {
     const link = preview?.link;
@@ -280,12 +303,13 @@ export function ArcsStage({
       <div
         ref={frameRef}
         className={styles.frame}
-        style={steadyBox(steady)}
+        style={upright ? undefined : steadyBox(steady)}
         data-orientation={orientation}
       >
         <div
           ref={containerRef}
           className={styles.stage}
+          style={upright ? steadyBox(steady) : undefined}
           tabIndex={0}
           role="application"
           aria-label={t('arcs.stage')}
@@ -302,8 +326,8 @@ export function ArcsStage({
           brush={brush}
           onBrush={brushBooks}
         />
+        <p ref={announcer} className={styles.visuallyHidden} role="status" />
       </div>
-      <p ref={announcer} className={styles.visuallyHidden} role="status" />
     </div>
   );
 }
