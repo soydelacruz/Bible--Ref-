@@ -7,26 +7,31 @@ export const VIZ_SURFACE = '#0d0d0d';
  * Genre colors for the dark surface, in canonical genre order: warm Old Testament, cool New
  * Testament.
  *
- * Validated with the dataviz skill's palette validator (`--mode dark --surface #0d0d0d`):
- * - lightness band and chroma floor pass;
- * - worst adjacent-genre CVD ΔE is 8.0 (target ≥ 8), and worst normal-vision ΔE is 15.3 (floor ≥ 15);
- * - every color has at least 4.19:1 contrast against the surface.
+ * Any two genres can meet in a picture (an arc joins Law to Major Prophets), so every pair is held
+ * apart, not only neighbours: at least 20 CIEDE2000 between any two, so each reads as a color of
+ * its own rather than a shade of another. Under a deuteranopia simulation every pair keeps at
+ * least 8. Each color has at least 4.5:1 contrast against the surface, and no less against the
+ * light theme's background than the colors before these. `palette.test.ts` holds these numbers.
  *
- * Ten colors cannot all be pairwise distinct (the validator's all-pairs check caps at three),
- * so every visualization must also encode genre by position (genres are contiguous runs of
- * books) and by labels.
+ * Measured with the dataviz skill's validator (`--mode dark --surface #0d0d0d`), the adjacent
+ * pairs clear its CVD target (8.1, target ≥ 8) and its normal-vision floor (15.0, floor ≥ 15).
+ * Five colors sit up to 0.035 lighter (OKLCH) than its dark band: that room is what lets all ten
+ * stay 20 apart.
+ *
+ * Under deuteranopia some pairs are still only 8 apart, so every visualization also encodes genre
+ * by position (genres are contiguous runs of books) and by labels.
  */
 export const GENRE_COLORS: Readonly<Record<GenreId, string>> = {
-  law: '#eb568f',
-  history: '#cd4805',
-  poetry: '#b48f05',
-  'major-prophets': '#cd489d',
-  'minor-prophets': '#88a00d',
-  gospels: '#17a7b4',
-  acts: '#119245',
-  'pauline-epistles': '#0593e6',
-  'general-epistles': '#03ac8f',
-  revelation: '#a06aec',
+  law: '#ff5d93',
+  history: '#dc440e',
+  poetry: '#cd8b00',
+  'major-prophets': '#ce2eca',
+  'minor-prophets': '#9a9d4f',
+  gospels: '#39a5bf',
+  acts: '#008e22',
+  'pauline-epistles': '#027ae0',
+  'general-epistles': '#04ac90',
+  revelation: '#9e85fb',
 };
 
 export type Rgb = readonly [red: number, green: number, blue: number];
