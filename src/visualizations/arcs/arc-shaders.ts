@@ -53,6 +53,18 @@ const COMMON = /* glsl */ `
     return vec4(px.x / u_viewport.x * 2.0 - 1.0, 1.0 - px.y / u_viewport.y * 2.0, 0.0, 1.0);
   }
 
+  // An arc spans the stretch of the axis between its ends, so one with both ends past the same
+  // edge of the stage is out of sight whatever its height: zoomed in, many links are. Its vertices
+  // are put beyond the far plane, so its triangles are clipped whole and it costs no shading or
+  // blending. The margin covers the widest ribbon.
+  const float OFF_STAGE_MARGIN = 4.0;
+  const vec4 OFF_STAGE = vec4(0.0, 0.0, 2.0, 1.0);
+
+  bool isOffStage(float a, float b) {
+    float extent = u_vertical < 0.5 ? u_viewport.x : u_viewport.y;
+    return max(a, b) < -OFF_STAGE_MARGIN || min(a, b) > extent + OFF_STAGE_MARGIN;
+  }
+
   vec3 arcColor(vec2 genres, float t) {
     return mix(u_palette[int(genres.x + 0.5)], u_palette[int(genres.y + 0.5)], t);
   }
@@ -101,9 +113,16 @@ export const LINE_VERTEX_SHADER = /* glsl */ `
   out vec4 v_color;
 
   void main() {
+    float a = alongOf(a_ends.x);
+    float b = alongOf(a_ends.y);
+    if (isOffStage(a, b)) {
+      gl_Position = OFF_STAGE;
+      v_color = vec4(0.0);
+      return;
+    }
     float t = revealed(position.x, a_ends);
     float presence = a_state < -0.5 ? 1.0 - u_morph : (a_state > 0.5 ? u_morph : 1.0);
-    vec2 local = arcLocal(alongOf(a_ends.x), alongOf(a_ends.y), PI * t);
+    vec2 local = arcLocal(a, b, PI * t);
     local.y *= mix(1.0, presence, u_morphRise);
     gl_Position = toClip(toScreen(local));
     v_color = vec4(arcColor(a_genres, t), u_alpha * a_weight * revealFade() * presence * presence);
@@ -132,9 +151,15 @@ export const RIBBON_VERTEX_SHADER = /* glsl */ `
   const float TIP_LIGHT = 0.6;
 
   void main() {
-    float t = revealed(position.x, a_ends);
     float a = alongOf(a_ends.x);
     float b = alongOf(a_ends.y);
+    if (isOffStage(a, b)) {
+      gl_Position = OFF_STAGE;
+      v_color = vec4(0.0);
+      v_side = 0.0;
+      return;
+    }
+    float t = revealed(position.x, a_ends);
     vec2 point = toScreen(arcLocal(a, b, PI * t));
     vec2 tangent = toScreenDirection(arcTangent(a, b, PI * t));
     vec2 normal = length(tangent) > 1e-4 ? normalize(vec2(-tangent.y, tangent.x)) : vec2(0.0, 1.0);

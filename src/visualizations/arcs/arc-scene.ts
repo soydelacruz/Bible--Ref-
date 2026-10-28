@@ -26,9 +26,9 @@ import {
   RIBBON_VERTEX_SHADER,
 } from './arc-shaders.ts';
 import type { AxisView } from './axis-view.ts';
+import { ribbonSegments } from './ribbon-detail.ts';
 
 const LINE_SEGMENTS = 48;
-const RIBBON_SEGMENTS = 64;
 
 function createGeometry(
   kind: CurveKind,
@@ -37,7 +37,7 @@ function createGeometry(
 ): InstancedBufferGeometry {
   return createCurveGeometry(
     kind,
-    kind === 'line' ? LINE_SEGMENTS : RIBBON_SEGMENTS,
+    kind === 'line' ? LINE_SEGMENTS : ribbonSegments(instances.count),
     instances.count,
     {
       a_ends: { array: instances.endpoints, itemSize: 2 },
@@ -128,6 +128,9 @@ export class ArcScene {
     this.#hover.renderOrder = 1;
     this.#focus.renderOrder = 2;
     this.#preview.renderOrder = 3;
+    // The ribbons' shader is compiled now, in the background where the browser can, and not in the
+    // frame that first draws ribbons: the one that lets go of a brush, or focuses a passage.
+    void this.#renderer.compileAsync(this.#overlayScene, this.#camera);
   }
 
   setSize(width: number, height: number): void {

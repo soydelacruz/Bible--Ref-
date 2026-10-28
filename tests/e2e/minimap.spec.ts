@@ -212,6 +212,26 @@ test.describe('the minimap', () => {
     await expect(page.locator(LIT)).toHaveText('The books are no longer lit up');
   });
 
+  test('books lit over most of the Bible light up every one of their links', async ({
+    page,
+    hasTouch,
+  }) => {
+    // The links shown by default: so many start or end between Genesis and Zechariah that they
+    // are found over several frames rather than in the one that lets go of the brush.
+    await page.goto('./');
+    await waitForDrawing(page);
+    const at = await onStrip(page);
+
+    // From Zechariah up to Genesis: a press on Genesis's own end would take hold of the window's.
+    const press = await pressAt(page, hasTouch, at(0.738));
+    await press.moveTo(at(0.03));
+    await press.release();
+    await expect(page.locator(LIT)).toHaveText(
+      'Genesis – Zechariah lit up: 101,481 cross-references',
+    );
+    await expect(page.locator(STRIP)).toHaveAttribute('data-lit', /^0-\d+$/);
+  });
+
   test('lit books keep their links when new text arrives under them', async ({
     page,
     hasTouch,
