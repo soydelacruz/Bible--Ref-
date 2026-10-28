@@ -12,6 +12,7 @@ import { PreviousIcon } from '../../shared/ui/icons.tsx';
 import controls from '../shared/components/controls.module.css';
 import { MAX_PIXEL_RATIO } from '../shared/frames.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
+import { provideLocator, screenBox } from '../shared/passage-spot.ts';
 import { PathLayer } from '../shared/path-layer.ts';
 import { pathMode, type PathLight } from '../shared/path-light.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
@@ -60,6 +61,7 @@ import {
   type BaseScene,
 } from './clusters-drawing.ts';
 import styles from './ClustersStage.module.css';
+import { passageCenter } from './passage-center.ts';
 
 interface ClustersStageProps {
   readonly data: VizCore;
@@ -362,6 +364,20 @@ export function ClustersStage({
       forget();
     };
   }, [active, layout, emphasis, verseGenres]);
+
+  // Where a passage's dots are, for the passage beacon: as they are drawn, mid-glide included.
+  // A hidden view draws nothing (`shownRef` is empty), and says so.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return undefined;
+    return provideLocator(host, (passage) => {
+      const shown = shownRef.current?.layout;
+      const center = shown && passageCenter(shown, passageRange(passage, versification));
+      if (!center) return null;
+      const stage = screenBox(host.getBoundingClientRect());
+      return { point: { x: stage.left + center.x, y: stage.top + center.y }, bounds: stage };
+    });
+  }, [versification]);
 
   // A chain shown in the details panel: its light travels from dot to dot on a canvas of its own,
   // drawn where the dots are, mid-glide too. Out of sight it lands at once.

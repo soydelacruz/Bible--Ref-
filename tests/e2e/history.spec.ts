@@ -46,6 +46,10 @@ test.describe('browser history', () => {
   });
 
   test('Forward returns to the language that followed it', async ({ page }) => {
+    // Three changes of language, each a Bible to download and every view to draw again. On CI's
+    // software renderer, sharing a machine with the WebGL tests, a phone took ten seconds a step
+    // and ran out of time with nothing wrong; it takes about fourteen seconds alone.
+    test.slow();
     await page.goto('./?lang=pt');
     await waitForApp(page);
     await chooseLanguage(page, 'en');
@@ -109,8 +113,10 @@ test.describe('browser history', () => {
 
     // The view switch's own link: the panel also offers "Read in Threads".
     await page.locator(ACTIVE).getByRole('link', { name: 'Threads', exact: true }).click();
+    // The switch lands a frame or two after the click, once the browser has taken its picture of
+    // the page for the crossfade: wait for it, rather than read the address at once.
+    await expect(page).toHaveURL(/threads\//);
     await waitForApp(page);
-    expect(new URL(page.url()).pathname).toContain('threads');
 
     await page.goBack();
     await waitForApp(page);

@@ -19,6 +19,7 @@ import {
   simulate,
 } from '../shared/frames.ts';
 import { isAtRest, rubberBand, stepGlide } from '../shared/momentum.ts';
+import { provideLocator, type PassageSpot } from '../shared/passage-spot.ts';
 import { PathLayer } from '../shared/path-layer.ts';
 import { pathMode, type PathPlayOptions } from '../shared/path-light.ts';
 import { morphChanges, settleArcMorph, type ArcInstances, type ArcMorph } from './arc-instances.ts';
@@ -27,6 +28,7 @@ import {
   alongToVerse,
   computeArcLayout,
   pixelsPerVerse,
+  verseToAlong,
   type ArcLayout,
 } from './arc-layout.ts';
 import { ARC_PATH_TRACE, arcPathCurve, type ArcPath, type ArcPathHop } from './arc-path.ts';
@@ -193,6 +195,8 @@ export class ArcsController {
   /** Hidden (another view is shown), it draws nothing; the intro waits until it's shown. */
   #active = true;
   #hasLinks = false;
+  /** Stops answering where passages are (see `locate`). */
+  readonly #withdrawLocator: () => void;
   /** Books brushed on the minimap: lit up in the focused passage's place (see `setBrush`). */
   #brush: VerseIndexRange | null = null;
   #viewListener: ((view: AxisView, layout: ArcLayout) => void) | null = null;
@@ -257,6 +261,7 @@ export class ArcsController {
     options.container.addEventListener('keydown', this.#onKeyDown);
     window.addEventListener('keydown', this.#onAnyKey, { capture: true });
     window.addEventListener('pointerdown', this.#onAnyPointer, { capture: true });
+    this.#withdrawLocator = provideLocator(options.container, (passage) => this.locate(passage));
   }
 
   setSize(width: number, height: number): void {
@@ -481,6 +486,7 @@ export class ArcsController {
   }
 
   dispose(): void {
+    this.#withdrawLocator();
     this.#stopMotion();
     this.#cancelDim?.();
     this.#cancelGrowth?.();
@@ -548,6 +554,40 @@ export class ArcsController {
   snapshot<T>(compose: (layers: readonly HTMLCanvasElement[]) => T): T {
     this.#draw();
     return compose([this.#options.glCanvas, this.#options.overlayCanvas, this.#path.canvas]);
+  }
+
+  /**
+   * Where `passage` is on the axis at the current zoom, for the passage beacon: the middle of its
+   * stretch of the axis line, in viewport pixels, with the axis's span as the part in sight. Out
+   * of sight, it lies past the end of the axis on its side. Read-only.
+   */
+  locate(passage: Passage): PassageSpot | null {
+    const layout = this.#layout;
+    if (layout.width === 0 || layout.height === 0) {
+      return null;
+    }
+    const range = this.#rangeOf(passage);
+    const along = verseToAlong(layout, this.#shownView(), (range.start + range.end + 1) / 2);
+    const stage = this.#options.container.getBoundingClientRect();
+    return layout.orientation === 'horizontal'
+      ? {
+          point: { x: stage.left + along, y: stage.top + layout.baseline },
+          bounds: {
+            left: stage.left + layout.axisStart,
+            top: stage.top,
+            right: stage.left + layout.axisEnd,
+            bottom: stage.bottom,
+          },
+        }
+      : {
+          point: { x: stage.left + layout.baseline, y: stage.top + along },
+          bounds: {
+            left: stage.left,
+            top: stage.top + layout.axisStart,
+            right: stage.right,
+            bottom: stage.top + layout.axisEnd,
+          },
+        };
   }
 
   get #total(): number {

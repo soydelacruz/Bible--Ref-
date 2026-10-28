@@ -10,6 +10,23 @@
   visibility: hidden;
 }
 
+/* A switch without view transitions (see view-switch.ts): the next view fades in over the last
+   one, which stays shown under it until it has. Opacity alone, under 200ms. */
+.view[data-leaving] {
+  visibility: visible;
+}
+
+.view[data-active='true'][data-entering] {
+  z-index: 1;
+  animation: view-in var(--view-fade) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+  }
+}
+
 .title {
   margin: 0;
   font-family: var(--font-serif);

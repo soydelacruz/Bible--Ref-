@@ -1,0 +1,30 @@
+/* A switch between views (see view-switch.ts), with the View Transitions API. Global, because the
+   transition's layers belong to the document rather than to any component.
+
+   The page crossfades quickly: under 200ms, and 100ms from the keyboard (`--view-switch-fade`). */
+:root[data-view-switch]::view-transition-group(root),
+:root[data-view-switch]::view-transition-old(root),
+:root[data-view-switch]::view-transition-new(root) {
+  animation-duration: var(--view-switch-fade);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The passage beacon, its dot and its name, travels over it for 350ms (`BEACON_MS`), starting and
+   landing gently as things already on screen travel here: this is `easeInOutCubic`, the curve of
+   the arcs' camera flights. */
+:root[data-view-switch]::view-transition-group(passage-beacon),
+:root[data-view-switch]::view-transition-old(passage-beacon),
+:root[data-view-switch]::view-transition-new(passage-beacon),
+:root[data-view-switch]::view-transition-group(passage-beacon-label),
+:root[data-view-switch]::view-transition-old(passage-beacon-label),
+:root[data-view-switch]::view-transition-new(passage-beacon-label) {
+  animation-duration: 350ms;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* With nowhere to go, the beacon already in the picture of the last view leaves no trace. */
+:root[data-view-switch='plain']::view-transition-old(passage-beacon),
+:root[data-view-switch='plain']::view-transition-old(passage-beacon-label) {
+  animation: none;
+  opacity: 0;
+}
