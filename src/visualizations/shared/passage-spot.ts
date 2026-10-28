@@ -61,6 +61,19 @@ export function screenBox(rect: DOMRectReadOnly): ScreenBox {
   return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
 }
 
+/**
+ * The part of `box` inside `within`: a view larger than what shows of it (a picture slid up
+ * under a phone's details sheet) draws passages only where it is seen.
+ */
+export function clipBox(box: ScreenBox, within: ScreenBox): ScreenBox {
+  return {
+    left: Math.max(box.left, within.left),
+    top: Math.max(box.top, within.top),
+    right: Math.min(box.right, within.right),
+    bottom: Math.min(box.bottom, within.bottom),
+  };
+}
+
 /** Whether a spot's point is in sight: inside its bounds, edges included. */
 export function isInSight({ point, bounds }: PassageSpot): boolean {
   return (

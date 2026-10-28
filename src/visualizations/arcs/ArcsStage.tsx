@@ -13,6 +13,7 @@ import { ClickIcon, PinchIcon, TapIcon } from '../../shared/ui/icons.tsx';
 import { useLocalization } from '../../i18n/use-locale.tsx';
 import { collectConnections, connectionLinkIds, type Connection } from '../shared/connections.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
+import { screenBox } from '../shared/passage-spot.ts';
 import type { PathLight } from '../shared/path-light.ts';
 import { useAnnouncer } from '../shared/use-announcer.ts';
 import { slidePicture, slideToShow, steadyBox, stretchAround } from '../shared/steady-stage.ts';
@@ -156,6 +157,8 @@ export function ArcsStage({
       onClear: () => {
         clear();
       },
+      // Slid up under a phone's details sheet, the stage is seen only through the room it is in.
+      visibleBox: () => screenBox((roomRef.current ?? container).getBoundingClientRect()),
     });
     controller.setViewListener((view, layout) => {
       viewListenerRef.current?.(view, layout);

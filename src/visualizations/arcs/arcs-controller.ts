@@ -19,7 +19,12 @@ import {
   simulate,
 } from '../shared/frames.ts';
 import { isAtRest, rubberBand, stepGlide } from '../shared/momentum.ts';
-import { provideLocator, type PassageSpot } from '../shared/passage-spot.ts';
+import {
+  clipBox,
+  provideLocator,
+  type PassageSpot,
+  type ScreenBox,
+} from '../shared/passage-spot.ts';
 import { PathLayer } from '../shared/path-layer.ts';
 import { pathMode, type PathPlayOptions } from '../shared/path-light.ts';
 import { morphChanges, settleArcMorph, type ArcInstances, type ArcMorph } from './arc-instances.ts';
@@ -74,6 +79,11 @@ export interface ArcsControllerOptions {
   readonly onHover: (hover: ArcHover | null) => void;
   readonly onSelect: (passage: Passage) => void;
   readonly onClear: () => void;
+  /**
+   * The part of the screen the stage is seen through, where the stage is larger than that (slid
+   * up under a phone's details sheet): passages are in sight only inside it.
+   */
+  readonly visibleBox?: () => ScreenBox;
 }
 
 /** Below this many pixels per verse, pointing picks whole chapters instead of single verses. */
@@ -569,24 +579,26 @@ export class ArcsController {
     const range = this.#rangeOf(passage);
     const along = verseToAlong(layout, this.#shownView(), (range.start + range.end + 1) / 2);
     const stage = this.#options.container.getBoundingClientRect();
+    const seen = this.#options.visibleBox?.();
+    const inSight = (box: ScreenBox) => (seen ? clipBox(box, seen) : box);
     return layout.orientation === 'horizontal'
       ? {
           point: { x: stage.left + along, y: stage.top + layout.baseline },
-          bounds: {
+          bounds: inSight({
             left: stage.left + layout.axisStart,
             top: stage.top,
             right: stage.left + layout.axisEnd,
             bottom: stage.bottom,
-          },
+          }),
         }
       : {
           point: { x: stage.left + layout.baseline, y: stage.top + along },
-          bounds: {
+          bounds: inSight({
             left: stage.left,
             top: stage.top + layout.axisStart,
             right: stage.right,
             bottom: stage.top + layout.axisEnd,
-          },
+          }),
         };
   }
 
