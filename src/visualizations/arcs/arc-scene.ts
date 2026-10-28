@@ -104,6 +104,7 @@ export class ArcScene {
   };
   #focusFade = 1;
   #previewing = false;
+  #ribbonsPrepared = false;
   readonly #lines: ArcObject;
   readonly #hover: ArcObject;
   readonly #focus: ArcObject;
@@ -212,6 +213,17 @@ export class ArcScene {
   setFocusFade(fade: number): void {
     this.#focusFade = fade;
     this.#updateFocusAlpha();
+  }
+
+  /**
+   * Compiles the ribbons' shader ahead of the first ribbons drawn, in the background where the
+   * browser can. Not when the scene is made: the first frames of a visit have enough to do.
+   */
+  prepareRibbons(): void {
+    if (!this.#ribbonsPrepared) {
+      this.#ribbonsPrepared = true;
+      void this.#renderer.compileAsync(this.#overlayScene, this.#camera);
+    }
   }
 
   /** One link on its own, on top; the focused passage's links fade meanwhile. */
