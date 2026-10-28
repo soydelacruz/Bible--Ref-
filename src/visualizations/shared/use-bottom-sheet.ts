@@ -98,8 +98,10 @@ function velocityOf(samples: Drag['samples']): number {
  *
  * Collapsed, it shows its handle and the panel's header (its first `<header>`: the passage's name
  * and the line that counts its links), however tall the language and the name make it. The room
- * kept for it is measured into `--sheet-peek` on the container. When focus lands below that (one
- * of the counts jumping to its section), it opens up to show it.
+ * kept for it is measured into `--sheet-peek` on the container. Until the panel has a header (it
+ * is waiting for its text, or offering to fetch it again), it shows all of what the panel holds.
+ * When focus lands below the fold (one of the counts jumping to its section), it opens up to show
+ * it.
  *
  * When `content` goes, the sheet keeps showing it while it slides out (or fades, with less
  * motion), and only then is gone: `panel` is what to render in it, and `present` whether to
@@ -343,18 +345,21 @@ export function useBottomSheet(content: ReactNode, onClose: (() => void) | undef
   }, [closing]);
 
   // Collapsed, the sheet shows down to the end of its panel's header, which grows with a longer
-  // name or a language whose counts take two lines. The header can come later than the sheet (the
-  // panel waits for the text), so the sheet is watched for it.
+  // name or a language whose counts take two lines. Until the panel has one (it waits for the
+  // text, or says why the text could not be loaded and offers to try again), the sheet shows all
+  // of what it holds instead, as far as its full height. The header comes later than the sheet, so
+  // the sheet is watched for it.
   useLayoutEffect(() => {
     const container = containerRef.current;
     const sheet = sheetRef.current;
     if (!present || !container || !sheet) {
       return undefined;
     }
-    let header: HTMLElement | null = null;
+    let fold: Element | null = null;
     const measure = () => {
-      if (header) {
-        const peek = header.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top;
+      if (fold) {
+        const top = sheet.getBoundingClientRect().top;
+        const peek = Math.min(fold.getBoundingClientRect().bottom - top, sheet.offsetHeight);
         container.style.setProperty('--sheet-peek', `${Math.ceil(peek)}px`);
       } else {
         container.style.removeProperty('--sheet-peek');
@@ -362,16 +367,18 @@ export function useBottomSheet(content: ReactNode, onClose: (() => void) | undef
     };
     const sizes = new ResizeObserver(measure);
     const follow = () => {
-      const next = sheet.querySelector('header');
-      if (next === header) {
+      const last = sheet.lastElementChild;
+      const next =
+        sheet.querySelector('header') ?? (last === sheet.firstElementChild ? null : last);
+      if (next === fold) {
         return;
       }
-      if (header) {
-        sizes.unobserve(header);
+      if (fold) {
+        sizes.unobserve(fold);
       }
-      header = next;
-      if (header) {
-        sizes.observe(header);
+      fold = next;
+      if (fold) {
+        sizes.observe(fold);
       }
       measure();
     };
