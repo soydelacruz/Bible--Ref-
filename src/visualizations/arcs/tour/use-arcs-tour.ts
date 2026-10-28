@@ -20,7 +20,7 @@ import { computeArcLayout } from '../arc-layout.ts';
 import type { ArcPreview } from '../arcs-controller.ts';
 import type { AxisView } from '../axis-view.ts';
 import { clearStart } from './tour-framing.ts';
-import { onTourRequest } from './tour-request.ts';
+import { onTourRequest, setArcsTourAvailable } from './tour-request.ts';
 import { planFinale, planStops, type TourData, type TourPlan } from './tour-plan.ts';
 import { TourPlayer, tourBeats, type TourBeat, type TourStage } from './tour-player.ts';
 
@@ -347,7 +347,8 @@ export function useArcsTour({
     }
   };
 
-  // Asked for from outside the arcs (see `startArcsTour`): the same start as their own button's.
+  // Asked for from outside the arcs (see `startArcsTour`): the same start as their own button's,
+  // offered there only while there is a tour to take, as here.
   const requested = useEffectEvent(start);
   useEffect(
     () =>
@@ -356,6 +357,9 @@ export function useArcsTour({
       }),
     [],
   );
+  useEffect(() => {
+    setArcsTourAvailable(available);
+  }, [available]);
 
   return {
     available,

@@ -4,7 +4,7 @@ import { toPassageOsisId, type Passage } from '../core/bible/passage.ts';
 import { KJV_VERSIFICATION } from '../core/bible/versification.ts';
 import { setActiveLocale } from '../i18n/locale-choice.ts';
 import { verseIndex } from '../test-utils/fixtures.ts';
-import { onTourRequest } from '../visualizations/arcs/tour/tour-request.ts';
+import { onTourRequest, setArcsTourAvailable } from '../visualizations/arcs/tour/tour-request.ts';
 import { pendingFocusRequest, settleFocusRequest } from '../visualizations/shared/panel-focus.ts';
 import { StartHere } from './StartHere.tsx';
 import { VIEWS, type View } from './views.ts';
@@ -40,6 +40,7 @@ const strip = () => screen.getByRole('region', { name: 'Start here' });
 
 afterEach(() => {
   settleFocusRequest();
+  setArcsTourAvailable(true);
   act(() => {
     setActiveLocale('en');
   });
@@ -80,6 +81,18 @@ describe('StartHere', () => {
     stop();
     expect(listener).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('offers no tour while the filter leaves none to take', () => {
+    act(() => {
+      setArcsTourAvailable(false);
+    });
+    renderStrip();
+    expect(screen.queryByRole('button', { name: 'The tour in 45 seconds' })).toBeNull();
+    act(() => {
+      setArcsTourAvailable(true);
+    });
+    expect(screen.getByRole('button', { name: 'The tour in 45 seconds' })).toBeTruthy();
   });
 
   it('closes, leaving the keys with the arcs under it', () => {

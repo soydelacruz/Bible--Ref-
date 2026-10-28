@@ -41,7 +41,7 @@ import { InAppLink } from './InAppLink.tsx';
 import { StartHere } from './StartHere.tsx';
 import { readPreferredTranslation, useTranslationPreference } from './translation-choice.ts';
 import { useExplorerLocation, type ShowHistoryStep } from './use-explorer-location.ts';
-import { isFrontPage, useStartHere } from './use-start-here.ts';
+import { useStartHere } from './use-start-here.ts';
 import { useViewSwitch } from './use-view-switch.ts';
 import { useWander } from './use-wander.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
@@ -168,7 +168,7 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // view has its panel up at once (Clusters waits for the words), and this region outlives them.
   const [wanderStatus, announceWander] = useAnnouncer<HTMLParagraphElement>();
   // A first visit's welcome, for as long as the reader stays on the front page.
-  const startHere = useStartHere(isFrontPage(location, HOME.id));
+  const startHere = useStartHere(location, HOME.id);
 
   const title = [
     passage && formatPassage(passage, versification, books),

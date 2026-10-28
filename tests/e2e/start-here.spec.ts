@@ -52,6 +52,23 @@ test.describe('Start here', () => {
     expect(errors).toEqual([]);
   });
 
+  test('stays while the reader tries the filters, so nothing moves under the pointer', async ({
+    page,
+  }) => {
+    await firstVisit(page);
+    // On a phone the legend is folded into an icon button; the genres are behind it.
+    const legend = page.locator(ACTIVE).getByRole('button', { name: 'Show genres' });
+    if (await legend.isVisible()) {
+      await legend.click();
+    }
+    const law = page.locator(ACTIVE).getByRole('button', { name: /^Law/ }).first();
+    const before = await law.boundingBox();
+    await law.click();
+    await expect(law).toHaveAttribute('aria-pressed', 'false');
+    await expect(strip(page)).toBeVisible();
+    expect((await law.boundingBox())?.y).toBe(before?.y);
+  });
+
   test('opens John 3:16 in the arcs, and is done for good', async ({ page }) => {
     await firstVisit(page);
     await strip(page).getByRole('link', { name: 'John 3:16 in Arcs' }).click();
@@ -93,6 +110,9 @@ test.describe('Start here', () => {
     await expect(strip(page)).toBeHidden();
     // Its address stays the front page's while it plays; the strip does not come back to it.
     expect(passageInAddress(page)).toBeNull();
+    // Ended at once: it flies all the time, at every link, which a software renderer is slow at.
+    await page.keyboard.press('Escape');
+    await expect(tourCard(page)).toBeHidden();
 
     await page.reload();
     await waitForDrawing(page);

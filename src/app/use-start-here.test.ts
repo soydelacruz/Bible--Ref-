@@ -27,11 +27,17 @@ function forgetPreferences() {
   unmount();
 }
 
-/** A visit that begins at the front page or not, and can then go elsewhere. */
-function visit(atFrontPage = true) {
-  return renderHook((props: { atFrontPage: boolean }) => useStartHere(props.atFrontPage), {
-    initialProps: { atFrontPage },
-  });
+const FRONT = { view: 'arcs', passage: null, filter: DEFAULT_LINK_FILTER } as const;
+type Whereabouts = Parameters<typeof useStartHere>[0];
+
+/** A visit that begins somewhere, the front page by default, and can then go elsewhere. */
+function visit(whereabouts: Whereabouts = FRONT) {
+  return renderHook(
+    (props: { whereabouts: Whereabouts }) => useStartHere(props.whereabouts, 'arcs'),
+    {
+      initialProps: { whereabouts },
+    },
+  );
 }
 
 beforeEach(() => {
@@ -43,16 +49,14 @@ afterEach(() => {
 });
 
 describe('isFrontPage', () => {
-  const front = { view: 'arcs', passage: null, filter: DEFAULT_LINK_FILTER };
-
   it('is the home view with nothing open and the default links', () => {
-    expect(isFrontPage(front, 'arcs')).toBe(true);
+    expect(isFrontPage(FRONT, 'arcs')).toBe(true);
   });
 
   it('is not another view, a passage, or another filter', () => {
-    expect(isFrontPage({ ...front, view: 'threads' }, 'arcs')).toBe(false);
-    expect(isFrontPage({ ...front, passage: GEN_1_1 }, 'arcs')).toBe(false);
-    expect(isFrontPage({ ...front, filter: createLinkFilter(50) }, 'arcs')).toBe(false);
+    expect(isFrontPage({ ...FRONT, view: 'threads' }, 'arcs')).toBe(false);
+    expect(isFrontPage({ ...FRONT, passage: GEN_1_1 }, 'arcs')).toBe(false);
+    expect(isFrontPage({ ...FRONT, filter: createLinkFilter(50) }, 'arcs')).toBe(false);
   });
 });
 
@@ -77,20 +81,34 @@ describe('useStartHere', () => {
     expect(visit().result.current.shown).toBe(false);
   });
 
-  it('is gone for good once the reader goes anywhere from the front page', () => {
+  it.each([
+    ['a passage', { ...FRONT, passage: GEN_1_1 }],
+    ['another view', { ...FRONT, view: 'threads' }],
+  ])('is gone for good once the reader opens %s', (_, elsewhere) => {
     const { result, rerender, unmount } = visit();
-    rerender({ atFrontPage: false });
+    rerender({ whereabouts: elsewhere });
     expect(result.current.shown).toBe(false);
-    rerender({ atFrontPage: true });
+    rerender({ whereabouts: FRONT });
     expect(result.current.shown).toBe(false);
     expect(localStorage.getItem(STORED)).toBe('closed');
     unmount();
     expect(visit().result.current.shown).toBe(false);
   });
 
-  it('does not welcome a link to somewhere in particular, even once the reader is back', () => {
-    const { result, rerender } = visit(false);
-    rerender({ atFrontPage: true });
+  it('stays while the reader tries the filters, which leave them on the front page', () => {
+    const { result, rerender } = visit();
+    rerender({ whereabouts: { ...FRONT, filter: createLinkFilter(50) } });
+    expect(result.current.shown).toBe(true);
+    expect(localStorage.getItem(STORED)).toBe('open');
+  });
+
+  it.each([
+    ['a passage', { ...FRONT, passage: GEN_1_1 }],
+    ['another view', { ...FRONT, view: 'threads' }],
+    ['a filter', { ...FRONT, filter: createLinkFilter(50) }],
+  ])('does not welcome a link to %s, even once the reader is on the front page', (_, link) => {
+    const { result, rerender } = visit(link);
+    rerender({ whereabouts: FRONT });
     expect(result.current.shown).toBe(false);
     expect(localStorage.getItem(STORED)).toBeNull();
     expect(localStorage.getItem(preferenceKey(ARCS_TOUR_PREFERENCE))).toBeNull();
@@ -104,7 +122,7 @@ describe('useStartHere', () => {
 
   it('is put away by a link elsewhere, if it was still open from an earlier visit', () => {
     localStorage.setItem(STORED, 'open');
-    const { result } = visit(false);
+    const { result } = visit({ ...FRONT, passage: GEN_1_1 });
     expect(result.current.shown).toBe(false);
     expect(localStorage.getItem(STORED)).toBe('closed');
   });

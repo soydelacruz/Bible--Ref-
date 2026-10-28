@@ -3,7 +3,7 @@ import { formatPassage, versePassage, type Passage } from '../core/bible/passage
 import type { Versification } from '../core/bible/versification.ts';
 import { useLocalization } from '../i18n/use-locale.tsx';
 import { CloseIcon, PlayIcon, type IconComponent } from '../shared/ui/icons.tsx';
-import { startArcsTour } from '../visualizations/arcs/tour/tour-request.ts';
+import { startArcsTour, useArcsTourAvailable } from '../visualizations/arcs/tour/tour-request.ts';
 import controls from '../visualizations/shared/components/controls.module.css';
 import { focusPassageTitle } from '../visualizations/shared/panel-focus.ts';
 import { InAppLink } from './InAppLink.tsx';
@@ -34,6 +34,8 @@ export function StartHere({ versification, hrefOf, onOpen, onClose }: StartHereP
   const { t, books } = useLocalization();
   const labelId = useId();
   const stripRef = useRef<HTMLElement>(null);
+  // A filter can hide every stop of the tour; it is then not offered here either.
+  const tourAvailable = useArcsTourAvailable();
   const verse = versification.indexOf(JOHN_3_16);
   const ways: { readonly view: View; readonly passage: Passage; readonly where: string }[] = [
     ...(verse === undefined
@@ -78,19 +80,21 @@ export function StartHere({ versification, hrefOf, onOpen, onClose }: StartHereP
               </InAppLink>
             </li>
           ))}
-          <li>
-            <button
-              type="button"
-              className={`${controls.button} ${styles.way}`}
-              onClick={() => {
-                // The tour's card takes the keys as it opens.
-                startArcsTour();
-                onClose();
-              }}
-            >
-              <Way icon={PlayIcon} name={t('start.tour')} detail={t('start.tourLength')} />
-            </button>
-          </li>
+          {tourAvailable && (
+            <li>
+              <button
+                type="button"
+                className={`${controls.button} ${styles.way}`}
+                onClick={() => {
+                  // The tour's card takes the keys as it opens.
+                  startArcsTour();
+                  onClose();
+                }}
+              >
+                <Way icon={PlayIcon} name={t('start.tour')} detail={t('start.tourLength')} />
+              </button>
+            </li>
+          )}
         </ul>
       </div>
       <button
