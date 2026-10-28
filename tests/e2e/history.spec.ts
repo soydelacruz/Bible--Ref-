@@ -46,6 +46,10 @@ test.describe('browser history', () => {
   });
 
   test('Forward returns to the language that followed it', async ({ page }) => {
+    // Three changes of language, each a Bible to download and every view to draw again. On CI's
+    // software renderer, sharing a machine with the WebGL tests, a phone took ten seconds a step
+    // and ran out of time with nothing wrong; it takes about fourteen seconds alone.
+    test.slow();
     await page.goto('./?lang=pt');
     await waitForApp(page);
     await chooseLanguage(page, 'en');
