@@ -15,6 +15,7 @@ import { getTranslationManifest } from '../translations/registry.ts';
 import controls from '../visualizations/shared/components/controls.module.css';
 import { DEFAULT_LINK_FILTER, type LinkFilter } from '../visualizations/shared/link-filter.ts';
 import { Credits } from '../visualizations/shared/components/Credits.tsx';
+import { LoadingArcs } from '../visualizations/shared/components/LoadingArcs.tsx';
 import { TextPending } from '../visualizations/shared/components/TextPending.tsx';
 import { TranslationMenu } from '../visualizations/shared/components/TranslationMenu.tsx';
 import { HeaderActions, VizPage } from '../visualizations/shared/components/VizPage.tsx';
@@ -36,6 +37,7 @@ import {
 import { InAppLink } from './InAppLink.tsx';
 import { readPreferredTranslation, useTranslationPreference } from './translation-choice.ts';
 import { useExplorerLocation, type ShowHistoryStep } from './use-explorer-location.ts';
+import { useViewOpening } from './use-view-opening.ts';
 import { useViewSwitch } from './use-view-switch.ts';
 import { useWander } from './use-wander.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
@@ -55,12 +57,35 @@ function viewElement(id: ViewId): Element | null {
   return document.querySelector(`[data-view="${id}"]`);
 }
 
+/** Starts downloading a view's code. */
+function loadView(id: ViewId): Promise<unknown> {
+  return (VIEWS.find((view) => view.id === id) ?? HOME).load();
+}
+
+/** Tells the host when what a view shows first is on the page, and when it goes. */
+function Mounted({
+  view,
+  onMounted,
+}: {
+  readonly view: ViewId;
+  readonly onMounted: (view: ViewId, isMounted: boolean) => void;
+}) {
+  useEffect(() => {
+    onMounted(view, true);
+    return () => {
+      onMounted(view, false);
+    };
+  }, [view, onMounted]);
+  return null;
+}
+
 /**
  * The app: every visualization over one shared passage, with a switch between them.
  *
- * All of them stay mounted and only the active one is shown, so switching is instant and each
- * keeps its own state (the arcs' zoom, the reading position, the filters). The site's name links
- * home and starts over: it remounts every view in its default state.
+ * A view is mounted the first time it is opened, and then stays mounted with only the active one
+ * shown, so switching back is instant and each keeps its own state (the arcs' zoom, the reading
+ * position, the filters) — while a reader who never opens a view downloads and draws none of it.
+ * The site's name links home and starts over: it remounts every open view in its default state.
  */
 export function Explorer({ core }: { readonly core: VizCore }) {
   const { t, books } = useLocalization();
@@ -74,12 +99,13 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // link show".
   const [preferredTranslation, rememberTranslation] = useTranslationPreference(preferredLocale);
   const switchView = useViewSwitch();
+  const opening = useViewOpening(loadView);
   /**
    * Shows `next`, in another view than `previous`, so that the reader sees the views change and,
    * when the focused passage goes along, where it went (see `runViewSwitch`). Within one view it
    * shows at once: each view moves to a passage its own way (the arcs fly, the threads scroll).
    */
-  const goToView = (
+  const switchViews = (
     previous: ExplorerLocation<ViewId>,
     next: ExplorerLocation<ViewId>,
     update: () => void,
@@ -101,9 +127,17 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   const showHistoryStep: ShowHistoryStep<ViewId> = (previous, next, show, event) => {
     if (event.hasUAVisualTransition) {
       show();
-    } else {
-      goToView(previous, next, show);
+      return;
     }
+    // A view not opened yet is opened first (see `goTo`). The address has already moved, so a
+    // step that is still waiting when it moves again — a link followed, a passage opened — is
+    // out of date, and the newer one owns the screen.
+    const address = window.location.href;
+    opening.whenOpen(next.view, () => {
+      if (window.location.href === address) {
+        switchViews(previous, next, show);
+      }
+    });
   };
   // The URL holds the view, the passage, the filter and the translation: one filter for every
   // view, so they agree on which links exist, and a shared link shows exactly what its author saw.
@@ -138,11 +172,34 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   const complete = useCompleteData(early);
   const [isSwitchingTranslation, switchTranslation] = useTransition();
   // Where the reader is by the time a text arrives, which is not where they were when they asked
-  // for it: a download takes a second or two, and they can read on meanwhile.
+  // for it: a download takes a second or two, and they can read on meanwhile. Likewise by the
+  // time a view opened for the first time is ready to be shown.
   const locationRef = useRef(location);
   useEffect(() => {
     locationRef.current = location;
   }, [location]);
+  /**
+   * Shows the location `toward` makes of the one on screen: in another view, with a switch
+   * between the two (see `switchViews`).
+   *
+   * A view not opened yet is mounted out of sight first, and shown once it is ready, as though it
+   * had been there all along (see `useViewOpening`). That takes a moment, which the passage on
+   * screen may not wait out — a tour moves on, a text arrives — so `toward` is asked only then,
+   * of the location on screen by that time. Whatever the reader asks for meanwhile, in this view
+   * or another, takes its place: the last request is the one shown.
+   */
+  const goTo = (
+    toward: (current: ExplorerLocation<ViewId>) => ExplorerLocation<ViewId>,
+    show: (next: ExplorerLocation<ViewId>) => void,
+  ) => {
+    opening.whenOpen(toward(location).view, () => {
+      const previous = locationRef.current;
+      const next = toward(previous);
+      switchViews(previous, next, () => {
+        show(next);
+      });
+    });
+  };
   // The last text asked for, so that a slow first choice cannot overrule a quick second one.
   const requestedTranslation = useRef(location.translation);
   const [translationError, setTranslationError] = useState<string | null>(null);
@@ -268,18 +325,20 @@ export function Explorer({ core }: { readonly core: VizCore }) {
           href={hrefOf(HOME, null)}
           className={styles.home}
           onFollow={() => {
-            const next = {
-              view: HOME.id,
-              passage: null,
-              filter: DEFAULT_LINK_FILTER,
-              translation: location.translation,
-              locale: localeId,
-            };
-            goToView(location, next, () => {
-              focusTarget.current = 'h1 a';
-              navigate(next);
-              setGeneration((value) => value + 1);
-            });
+            goTo(
+              (current) => ({
+                view: HOME.id,
+                passage: null,
+                filter: DEFAULT_LINK_FILTER,
+                translation: current.translation,
+                locale: current.locale,
+              }),
+              (next) => {
+                focusTarget.current = 'h1 a';
+                navigate(next);
+                setGeneration((value) => value + 1);
+              },
+            );
           }}
         >
           <span className={styles.fullName}>{t('app.name')}</span>
@@ -291,11 +350,13 @@ export function Explorer({ core }: { readonly core: VizCore }) {
         current={location.view}
         hrefOf={(view) => hrefOf(view, passage)}
         onOpen={(view) => {
-          const next = { ...location, view: view.id, passage };
-          goToView(location, next, () => {
-            focusTarget.current = '[aria-current="page"]';
-            navigate(next);
-          });
+          goTo(
+            (current) => ({ ...current, view: view.id }),
+            (next) => {
+              focusTarget.current = '[aria-current="page"]';
+              navigate(next);
+            },
+          );
         }}
       />
     </>
@@ -337,16 +398,21 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     </VizPage>
   );
 
-  const views = VIEWS.map((view) => {
+  // Only the views opened so far are mounted: one the reader never opens is never downloaded or
+  // drawn.
+  const mounted = VIEWS.filter((view) => view === active || opening.opened.has(view.id));
+  const views = mounted.map((view) => {
     const isActive = view === active;
     const props = {
       active: isActive,
       passage,
       onNavigate: (target: Passage | null, options?: { readonly replace?: boolean }) => {
-        const next = { ...location, view: view.id, passage: target };
-        goToView(location, next, () => {
-          navigate(next, options);
-        });
+        goTo(
+          (current) => ({ ...current, view: view.id, passage: target }),
+          (next) => {
+            navigate(next, options);
+          },
+        );
       },
       filter,
       onFilterChange: (next: LinkFilter) => {
@@ -381,10 +447,12 @@ export function Explorer({ core }: { readonly core: VizCore }) {
             href={hrefOf(other, target)}
             className={controls.button}
             onFollow={() => {
-              const next = { ...location, view: other.id, passage: target };
-              goToView(location, next, () => {
-                navigate(next);
-              });
+              goTo(
+                (current) => ({ ...current, view: other.id, passage: target }),
+                (next) => {
+                  navigate(next);
+                },
+              );
             }}
           >
             <other.icon />
@@ -404,22 +472,30 @@ export function Explorer({ core }: { readonly core: VizCore }) {
             switch away. */}
         <ErrorBoundary
           fallback={(error) => (
-            <VizPage masthead={masthead} credits={credits}>
-              <p role="alert" className={styles.error}>
-                {t('error.viewFailed')(t(view.titleKey), error.message)}
-              </p>
-            </VizPage>
+            <>
+              <VizPage masthead={masthead} credits={credits}>
+                <p role="alert" className={styles.error}>
+                  {t('error.viewFailed')(t(view.titleKey), error.message)}
+                </p>
+              </VizPage>
+              <Mounted view={view.id} onMounted={opening.onMounted} />
+            </>
           )}
         >
-          {'drawsBeforeText' in view ? (
-            <view.Component data={early} {...props} />
-          ) : (
-            // A boundary of its own: such a view is first drawn when the words arrive, and the
-            // moment its code takes to start must not blank the views already on screen.
-            <Suspense fallback={waitingFrame}>
-              {complete === null ? waitingFrame : <view.Component data={complete} {...props} />}
-            </Suspense>
-          )}
+          {/* A boundary of its own: a view's code is downloaded the first time it is opened, and
+              the moment that takes blanks no other view. Out of sight it goes unseen; in sight,
+              the loading arcs stand in for the view. */}
+          <Suspense fallback={<LoadingArcs label={t('loading.view')(t(view.titleKey))} />}>
+            {'drawsBeforeText' in view ? (
+              <view.Component data={early} {...props} />
+            ) : complete === null ? (
+              // A view made of words is first drawn when they arrive.
+              waitingFrame
+            ) : (
+              <view.Component data={complete} {...props} />
+            )}
+            <Mounted view={view.id} onMounted={opening.onMounted} />
+          </Suspense>
         </ErrorBoundary>
       </div>
     );

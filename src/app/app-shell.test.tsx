@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DebugPage } from '../features/debug/DebugPage.tsx';
 import { debugDataLoader } from '../features/debug/debug-data.ts';
 import { mount } from '../shared/lib/mount.tsx';
@@ -55,17 +55,6 @@ function serve({ failing = false } = {}) {
   vi.stubGlobal('fetch', fetch);
   return fetch;
 }
-
-// Listing the views starts loading each one's code (see visualizations/*/index.ts), and nothing
-// here renders them to wait for it. Wait for it once, so the file cannot finish, and its
-// environment be torn down, while those imports are still loading.
-beforeAll(async () => {
-  await Promise.all([
-    import('../visualizations/arcs/ArcsExplorer.tsx'),
-    import('../visualizations/threads/ThreadsExplorer.tsx'),
-    import('../visualizations/clusters/ClustersExplorer.tsx'),
-  ]);
-});
 
 afterEach(() => {
   vi.unstubAllGlobals();

@@ -89,6 +89,23 @@ test.describe('the offline cache', () => {
     await restoreTheNetwork(context);
   });
 
+  test('a view never opened online opens offline too', async ({ page, context }) => {
+    // A view's code is downloaded the first time it is opened, and this reader opened only the
+    // arcs. The worker keeps every view's code as it installs, so the others are there anyway.
+    await installWorker(page);
+    await cutTheNetwork(context);
+    await page.reload();
+    await waitForApp(page);
+    await page.locator(ACTIVE).getByRole('link', { name: 'Threads', exact: true }).click();
+    await expect(page).toHaveURL(/threads\//);
+    await expect(page.locator(`${ACTIVE} li[data-selected="true"]`)).toContainText(
+      /For God so loved the world/,
+    );
+    await page.locator(ACTIVE).getByRole('link', { name: 'Clusters', exact: true }).click();
+    await expect(page.locator(`${ACTIVE} canvas[role="img"]`)).toBeVisible();
+    await restoreTheNetwork(context);
+  });
+
   test('a translation chosen while online is there offline too', async ({ page, context }) => {
     await installWorker(page);
     await openHeaderMenu(page, /Translation/);
