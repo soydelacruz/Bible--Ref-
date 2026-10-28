@@ -150,6 +150,18 @@ export const RIBBON_VERTEX_SHADER = /* glsl */ `
   const float TIP_LENGTH = 0.18;
   const float TIP_LIGHT = 0.6;
 
+  // How far round its arc, as a share of the half turn, the ribbon's point at t of its
+  // segments lies. A half circle's points are spread evenly. A flattened arc, the long links when
+  // zoomed in, bends hardest at its ends and least at its top, so its points gather at the ends,
+  // as many as keep the segments as close to the curve there as at the top: then fewer segments
+  // draw it as smoothly (see ribbonSegments).
+  float sweepAt(float t, float a, float b) {
+    float radius = 0.5 * abs(b - a);
+    float evenness = radius > 0.0 ? sqrt(min(radius, u_maxHeight) / radius) : 1.0;
+    float gathering = (1.0 - evenness) / (1.0 + evenness);
+    return t - gathering * sin(2.0 * PI * t) / (2.0 * PI);
+  }
+
   void main() {
     float a = alongOf(a_ends.x);
     float b = alongOf(a_ends.y);
@@ -159,12 +171,13 @@ export const RIBBON_VERTEX_SHADER = /* glsl */ `
       v_side = 0.0;
       return;
     }
-    float t = revealed(position.x, a_ends);
+    float sweep = sweepAt(position.x, a, b);
+    float t = revealed(sweep, a_ends);
     vec2 point = toScreen(arcLocal(a, b, PI * t));
     vec2 tangent = toScreenDirection(arcTangent(a, b, PI * t));
     vec2 normal = length(tangent) > 1e-4 ? normalize(vec2(-tangent.y, tangent.x)) : vec2(0.0, 1.0);
     gl_Position = toClip(point + normal * position.y * u_width * 0.5);
-    float tip = (1.0 - smoothstep(0.0, TIP_LENGTH, behindTip(position.x, a_ends))) * (1.0 - u_reveal);
+    float tip = (1.0 - smoothstep(0.0, TIP_LENGTH, behindTip(sweep, a_ends))) * (1.0 - u_reveal);
     vec3 color = mix(arcColor(a_genres, t), vec3(1.0), tip * TIP_LIGHT);
     v_color = vec4(color, u_alpha * mix(0.55, 1.0, a_weight) * revealFade());
     v_side = position.y;

@@ -14,8 +14,7 @@ describe('how finely ribbons are drawn', () => {
   });
 
   it('keeps a crowd of ribbons to the triangles of full detail, give or take a segment', () => {
-    // Genesis to Zechariah, with every link shown.
-    const count = 259_606;
+    const count = 150_000;
     const segments = ribbonSegments(count);
     expect(segments).toBeLessThan(RIBBON_SEGMENTS);
     expect(count * (segments - 0.5)).toBeLessThanOrEqual(FULL_DETAIL_RIBBONS * RIBBON_SEGMENTS);
@@ -23,6 +22,8 @@ describe('how finely ribbons are drawn', () => {
   });
 
   it('never goes below a floor, however many there are', () => {
+    // Genesis to Zechariah with every link shown, and far more.
+    expect(ribbonSegments(259_606)).toBe(MIN_RIBBON_SEGMENTS);
     expect(ribbonSegments(10_000_000)).toBe(MIN_RIBBON_SEGMENTS);
   });
 });

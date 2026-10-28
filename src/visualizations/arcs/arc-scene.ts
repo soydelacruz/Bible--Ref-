@@ -128,9 +128,6 @@ export class ArcScene {
     this.#hover.renderOrder = 1;
     this.#focus.renderOrder = 2;
     this.#preview.renderOrder = 3;
-    // The ribbons' shader is compiled now, in the background where the browser can, and not in the
-    // frame that first draws ribbons: the one that lets go of a brush, or focuses a passage.
-    void this.#renderer.compileAsync(this.#overlayScene, this.#camera);
   }
 
   setSize(width: number, height: number): void {
