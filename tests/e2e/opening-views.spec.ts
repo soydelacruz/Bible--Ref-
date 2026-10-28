@@ -126,6 +126,9 @@ test.describe('opening a view', () => {
   });
 
   test('the first switch into the arcs still carries the passage to them', async ({ page }) => {
+    // The beacon lands as the switch ends, which waits for the arcs' first picture: on CI's
+    // software renderer, drawing every link takes ten seconds or more.
+    test.slow();
     await page.goto('./threads/?ref=John.3.16');
     await waitForApp(page);
     // Every beacon shown from now on, and whether it landed.
@@ -155,6 +158,6 @@ test.describe('opening a view', () => {
     await expectShown(page, 'arcs');
     await expect(page).toHaveURL(/ref=John\.3\.16/);
     await expect(page.locator(PANEL).getByRole('heading', { name: 'John 3:16' })).toBeVisible();
-    await expect.poll(beacons).toEqual([{ name: 'John 3:16', landed: true }]);
+    await expect.poll(beacons, { timeout: 60_000 }).toEqual([{ name: 'John 3:16', landed: true }]);
   });
 });
