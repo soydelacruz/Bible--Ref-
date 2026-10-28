@@ -15,7 +15,8 @@ import { collectConnections, connectionLinkIds, type Connection } from '../share
 import type { LinkFilter } from '../shared/link-filter.ts';
 import type { PathLight } from '../shared/path-light.ts';
 import { useAnnouncer } from '../shared/use-announcer.ts';
-import { useElementSize } from '../shared/use-element-size.ts';
+import { slidePicture, slideToShow, steadyBox, stretchAround } from '../shared/steady-stage.ts';
+import { useElementSize, useSteadySize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
 import { buildArcInstances, buildArcMorph } from './arc-instances.ts';
 import { computeArcLayout } from './arc-layout.ts';
@@ -70,17 +71,22 @@ export function ArcsStage({
   // The axis needs names to paint its first frame, but a change of language must not tear down
   // the WebGL context: the effect below hands the controller the new ones instead.
   const namesRef = useRef({ books, genres });
+  // The frame (the stage and the minimap) is as tall as the room would be without a phone's
+  // details sheet, so the sheet coming up neither turns the axis nor rescales it: the frame slides
+  // up instead, as far as keeps the passage in sight. The room itself is measured around it.
+  const roomRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+  const slideRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const glCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<ArcsController | null>(null);
   const viewListenerRef = useRef<ViewListener | null>(null);
-  const frameSize = useElementSize(frameRef);
+  const steady = useSteadySize(roomRef);
   const size = useElementSize(containerRef);
   // The strip runs beside the axis, so the axis's way decides its place. Taken from the whole
   // frame, the stage left beside the strip always lays its axis out the same way.
-  const { orientation } = computeArcLayout(frameSize.width, frameSize.height);
+  const { orientation } = computeArcLayout(steady.width, steady.height);
   const [hover, setHover] = useState<ArcHover | null>(null);
   const [announcer, announce] = useAnnouncer<HTMLParagraphElement>();
 
@@ -221,6 +227,23 @@ export function ArcsStage({
     controllerRef.current?.setFocus(focus && passageRange(focus, data.versification));
   }, [focus, data.versification]);
 
+  // After the focus, so the camera is already on its way: the passage is kept in sight above a
+  // phone's details sheet where the camera will land, the axis and its labels too when it runs
+  // across the screen.
+  useEffect(() => {
+    const frame = frameRef.current;
+    const controller = controllerRef.current;
+    if (!frame || !controller) return;
+    const spot = focus && controller.restingPoint(focus);
+    const wanted =
+      spot &&
+      (orientation === 'vertical'
+        ? stretchAround(spot.y, steady)
+        : { top: stretchAround(spot.y, steady).top, bottom: steady.height });
+    slideRef.current = slideToShow(wanted, slideRef.current, steady);
+    slidePicture(frame, slideRef.current);
+  }, [focus, steady, orientation, size]);
+
   useEffect(() => {
     const link = preview?.link;
     controllerRef.current?.setPreview(
@@ -250,26 +273,33 @@ export function ArcsStage({
   }, [pathLight, linkIndex, verseGenres]);
 
   return (
-    <div ref={frameRef} className={styles.frame} data-orientation={orientation}>
+    <div ref={roomRef} style={{ position: 'absolute', inset: 0 }}>
       <div
-        ref={containerRef}
-        className={styles.stage}
-        tabIndex={0}
-        role="application"
-        aria-label={t('arcs.stage')}
+        ref={frameRef}
+        className={styles.frame}
+        style={steadyBox(steady)}
+        data-orientation={orientation}
       >
-        <canvas ref={glCanvasRef} className={styles.canvas} />
-        <canvas ref={overlayCanvasRef} className={styles.canvas} aria-hidden="true" />
-        {hover && <HoverTooltip hover={hover} data={data} filter={filter} size={size} />}
+        <div
+          ref={containerRef}
+          className={styles.stage}
+          tabIndex={0}
+          role="application"
+          aria-label={t('arcs.stage')}
+        >
+          <canvas ref={glCanvasRef} className={styles.canvas} />
+          <canvas ref={overlayCanvasRef} className={styles.canvas} aria-hidden="true" />
+          {hover && <HoverTooltip hover={hover} data={data} filter={filter} size={size} />}
+        </div>
+        <Minimap
+          controllerRef={controllerRef}
+          viewListenerRef={viewListenerRef}
+          versification={data.versification}
+          orientation={orientation}
+          brush={brush}
+          onBrush={brushBooks}
+        />
       </div>
-      <Minimap
-        controllerRef={controllerRef}
-        viewListenerRef={viewListenerRef}
-        versification={data.versification}
-        orientation={orientation}
-        brush={brush}
-        onBrush={brushBooks}
-      />
       <p ref={announcer} className={styles.visuallyHidden} role="status" />
     </div>
   );

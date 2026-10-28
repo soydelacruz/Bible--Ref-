@@ -135,20 +135,24 @@ export function placeClusterLabels(layout: ClusterLayout, setting: LabelSetting)
     const height = LABEL_SIZE[kind];
     const clearOfCores = (box: LabelBox) =>
       layout.groups.every((other, i) => i === index || !reachesCore(box, other));
-    let placed: ClusterLabel | null = null;
-    search: for (const text of texts) {
-      const width = measure(text, kind);
-      for (const strict of [true, false]) {
-        for (const spot of SPOTS) {
-          const own = textBox(group, spot, width, height);
-          const box = padded(own);
-          if (!fits(box) || (strict && !clearOfCores(box))) continue;
-          const key = `${group.book}.${String(group.chapter ?? '')}`;
-          placed = { key, text, kind, x: (own.x0 + own.x1) / 2, y: own.y1, box, group: index };
-          break search;
+    // The first place that fits, in the order of preference: full name, then clear of the other
+    // clusters' middles, then the spots around the cluster.
+    const place = (): ClusterLabel | null => {
+      for (const text of texts) {
+        const width = measure(text, kind);
+        for (const strict of [true, false]) {
+          for (const spot of SPOTS) {
+            const own = textBox(group, spot, width, height);
+            const box = padded(own);
+            if (!fits(box) || (strict && !clearOfCores(box))) continue;
+            const key = `${group.book}.${String(group.chapter ?? '')}`;
+            return { key, text, kind, x: (own.x0 + own.x1) / 2, y: own.y1, box, group: index };
+          }
         }
       }
-    }
+      return null;
+    };
+    const placed = place();
     if (placed) labels.push(placed);
   }
   return labels;

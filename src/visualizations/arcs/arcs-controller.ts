@@ -590,6 +590,24 @@ export class ArcsController {
         };
   }
 
+  /**
+   * Where a passage's middle will be on the stage once the camera is at rest, in the stage's own
+   * pixels: where it lands from a flight under way, or where it is now. For a host that slides
+   * the stage to keep the passage in sight (see `slideToShow`).
+   */
+  restingPoint(passage: Passage): { readonly x: number; readonly y: number } | null {
+    const layout = this.#layout;
+    if (layout.width === 0 || layout.height === 0) {
+      return null;
+    }
+    const range = this.#rangeOf(passage);
+    const view = this.#motion?.target ?? this.#view;
+    const along = verseToAlong(layout, view, (range.start + range.end + 1) / 2);
+    return layout.orientation === 'horizontal'
+      ? { x: along, y: layout.baseline }
+      : { x: layout.baseline, y: along };
+  }
+
   get #total(): number {
     return this.#options.versification.verseCount;
   }
