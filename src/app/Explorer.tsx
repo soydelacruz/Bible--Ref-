@@ -218,6 +218,29 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // After the switch or the home link, keyboard focus follows into the newly shown view: this is
   // the element to focus there.
   const focusTarget = useRef<string | null>(null);
+  // Focus goes there once it exists: a view opened for the first time can be shown before its
+  // code has arrived (the loading arcs stand in for it), and is focused into when it is drawn.
+  const focusInto = useCallback((view: ViewId) => {
+    const selector = focusTarget.current;
+    const target =
+      selector === null
+        ? null
+        : document.querySelector<HTMLElement>(`[data-view="${view}"] ${selector}`);
+    if (target) {
+      focusTarget.current = null;
+      target.focus();
+    }
+  }, []);
+  const { onMounted: onViewOpened } = opening;
+  const onViewMounted = useCallback(
+    (view: ViewId, isMounted: boolean) => {
+      onViewOpened(view, isMounted);
+      if (isMounted && view === locationRef.current.view) {
+        focusInto(view);
+      }
+    },
+    [onViewOpened, focusInto],
+  );
   const active = VIEWS.find((view) => view.id === location.view) ?? HOME;
   const wander = useWander(core, filter, passage);
   // The compass turns on the first press only.
@@ -270,12 +293,8 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   );
 
   useEffect(() => {
-    const selector = focusTarget.current;
-    if (selector !== null) {
-      focusTarget.current = null;
-      document.querySelector<HTMLElement>(`[data-view="${location.view}"] ${selector}`)?.focus();
-    }
-  }, [location.view, generation]);
+    focusInto(location.view);
+  }, [location.view, generation, focusInto]);
 
   const plainTranslation = plainTranslationFor(preferredTranslation);
   const plainLocale = plainLocaleFor(preferredLocale);
@@ -485,7 +504,7 @@ export function Explorer({ core }: { readonly core: VizCore }) {
                   {t('error.viewFailed')(t(view.titleKey), error.message)}
                 </p>
               </VizPage>
-              <Mounted view={view.id} onMounted={opening.onMounted} />
+              <Mounted view={view.id} onMounted={onViewMounted} />
             </>
           )}
         >
@@ -501,7 +520,7 @@ export function Explorer({ core }: { readonly core: VizCore }) {
             ) : (
               <view.Component data={complete} {...props} />
             )}
-            <Mounted view={view.id} onMounted={opening.onMounted} />
+            <Mounted view={view.id} onMounted={onViewMounted} />
           </Suspense>
         </ErrorBoundary>
       </div>

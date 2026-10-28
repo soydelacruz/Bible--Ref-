@@ -123,6 +123,10 @@ test.describe('opening a view', () => {
     await expect(page.locator(`${ACTIVE} canvas[role="img"]`)).toBeVisible();
     await expect(page.locator(PANEL).getByRole('heading', { name: 'John 3:16' })).toBeVisible();
     await expect(page.getByText('Loading Clusters…')).toHaveCount(0);
+    // Focus follows into the view once it is there, as it does into one opened at once.
+    await expect(
+      page.locator(ACTIVE).getByRole('link', { name: 'Clusters', exact: true }),
+    ).toBeFocused();
   });
 
   test('the first switch into the arcs still carries the passage to them', async ({ page }) => {
