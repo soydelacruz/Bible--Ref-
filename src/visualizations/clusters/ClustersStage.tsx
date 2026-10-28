@@ -39,11 +39,14 @@ import {
   passageHighlight,
   type Highlight,
 } from './cluster-highlight.ts';
+import { labelAt, type ClusterLabel } from './cluster-labels.ts';
 import {
   computeClusterLayout,
   selectClusterGraph,
   targetAt,
   type ClusterGroup,
+  type ClusterLayout,
+  type ClusterTarget,
 } from './cluster-layout.ts';
 import {
   CLUSTER_PATH_TRACE,
@@ -148,6 +151,8 @@ export function ClustersStage({
   // While the dots glide they are nowhere a pointer can rely on: what is under it is worked out
   // from where they land, so pointing waits until they have.
   const glidingRef = useRef(false);
+  // The names of the picture, where they were placed: pointing at one points at its cluster.
+  const labelsRef = useRef<{ layout: ClusterLayout; labels: readonly ClusterLabel[] } | null>(null);
 
   useEffect(
     () => () => {
@@ -238,11 +243,9 @@ export function ClustersStage({
       },
       fontFamily: getComputedStyle(document.body).fontFamily,
     };
-    const target: ShownScene = {
-      layout,
-      linkIds: graph.linkIds,
-      labels: placeLabels(context, scene),
-    };
+    const labels = placeLabels(context, scene);
+    labelsRef.current = { layout, labels };
+    const target: ShownScene = { layout, linkIds: graph.linkIds, labels };
     // The picture at rest, drawn on this canvas alone once the glide (if any) has landed.
     const glideCanvas = glideRef.current;
     const rest = () => {
@@ -426,6 +429,18 @@ export function ClustersStage({
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
 
+  /**
+   * What is under a point: a verse or a cluster, or a cluster's name. A name may stand beside or
+   * below its cluster where above had no room; one that crosses another cluster's dots leaves
+   * them to the dots.
+   */
+  const pointAt = (layout: ClusterLayout, x: number, y: number): ClusterTarget | null => {
+    const placed = labelsRef.current;
+    const inDisc = layout.groups.some((group) => Math.hypot(x - group.x, y - group.y) <= group.r);
+    const named = !inDisc && placed?.layout === layout ? labelAt(placed.labels, x, y) : null;
+    return named === null ? targetAt(layout, x, y) : { kind: 'group', group: named };
+  };
+
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!layout || event.pointerType === 'touch') return;
     if (glidingRef.current) {
@@ -433,7 +448,7 @@ export function ClustersStage({
       return;
     }
     const { x, y } = point(event);
-    const target = targetAt(layout, x, y);
+    const target = pointAt(layout, x, y);
     setHover(
       target && {
         verse: target.kind === 'verse' ? target.verse : null,
@@ -447,7 +462,7 @@ export function ClustersStage({
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!layout || glidingRef.current) return;
     const { x, y } = point(event);
-    const target = targetAt(layout, x, y);
+    const target = pointAt(layout, x, y);
     const group = target && layout.groups[target.group];
     setHover(null);
     if (target?.kind === 'verse') {

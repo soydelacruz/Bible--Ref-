@@ -12,6 +12,12 @@ import {
   type PlacedLabel,
   type ShownLabel,
 } from './cluster-glide.ts';
+import {
+  LABEL_SIZE,
+  placeClusterLabels,
+  type ClusterLabel,
+  type LabelText,
+} from './cluster-labels.ts';
 import type { ClusterGroup, ClusterLayout, ClusterSide } from './cluster-layout.ts';
 
 /**
@@ -26,12 +32,22 @@ export function hazeAlpha(links: number): number {
 const DOT_ALPHA = 0.9;
 const LABEL_COLOR = 'rgba(235, 235, 235, 0.78)';
 const HEADING_COLOR = 'rgba(235, 235, 235, 0.55)';
+/**
+ * A rim of the surface around every letter: a name that crosses the dots of a neighbouring
+ * cluster stays readable over them.
+ */
+const HALO_COLOR = 'rgba(13, 13, 13, 0.75)';
+const HALO_WIDTH = 2.5;
 
 /** How each kind of label is set: a book's name, a chapter's number, a band's heading. */
 const LABEL_STYLES = {
-  name: { font: '11px', color: LABEL_COLOR, baseline: 'bottom' },
-  chapter: { font: '10px', color: LABEL_COLOR, baseline: 'bottom' },
-  heading: { font: '600 11px', color: HEADING_COLOR, baseline: 'alphabetic' },
+  name: { font: `${String(LABEL_SIZE.name)}px`, color: LABEL_COLOR, baseline: 'bottom' },
+  chapter: { font: `${String(LABEL_SIZE.chapter)}px`, color: LABEL_COLOR, baseline: 'bottom' },
+  heading: {
+    font: `600 ${String(LABEL_SIZE.heading)}px`,
+    color: HEADING_COLOR,
+    baseline: 'alphabetic',
+  },
 } as const satisfies Record<
   PlacedLabel['kind'],
   { font: string; color: string; baseline: CanvasTextBaseline }
@@ -43,7 +59,7 @@ export interface BaseScene {
   readonly linkIds: Int32Array;
   readonly verseGenres: Uint8Array;
   /** A cluster's name, in full and in short (for where the full name has no room). */
-  readonly label: (group: ClusterGroup) => { readonly full: string; readonly short: string };
+  readonly label: (group: ClusterGroup) => LabelText;
   /** The heading over each band, e.g. "Old Testament". */
   readonly headings: Readonly<Partial<Record<ClusterSide, string>>>;
   readonly fontFamily: string;
@@ -118,46 +134,26 @@ function setLabelStyle(
 }
 
 /**
- * Where the names of the clusters and the headings of the bands go. The biggest clusters are named
- * first; a name that would run into one already placed is left out (pointing at its cluster still
- * names it). Worked out once per picture, so a glide can move the names rather than re-deal them.
+ * Where the names of the clusters and the headings of the bands go, measured in the type they are
+ * drawn in (see `placeClusterLabels`): no two overlap, and a name with no room is shortened or
+ * left out. Worked out once per picture, so a glide moves the names rather than re-deals them.
  */
-export function placeLabels(context: CanvasRenderingContext2D, scene: BaseScene): PlacedLabel[] {
-  const { layout, fontFamily } = scene;
-  const labels: PlacedLabel[] = [];
-  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  const bySize = [...layout.groups].sort((a, b) => b.r - a.r);
-  for (const group of bySize) {
-    const kind = group.chapter === null ? 'name' : 'chapter';
-    const height = kind === 'name' ? 11 : 10;
-    setLabelStyle(context, kind, fontFamily);
-    const { full, short } = scene.label(group);
-    const room = Math.max(2 * group.r + 24, 48);
-    const text = context.measureText(full).width <= room ? full : short;
-    const width = context.measureText(text).width;
-    const y = group.y - group.r - 3;
-    const box = { x0: group.x - width / 2 - 2, x1: group.x + width / 2 + 2, y0: y - height, y1: y };
-    const clashes = placed.some(
-      (other) => box.x0 < other.x1 && other.x0 < box.x1 && box.y0 < other.y1 && other.y0 < box.y1,
-    );
-    if (clashes) continue;
-    placed.push(box);
-    labels.push({ key: `${group.book}.${String(group.chapter ?? '')}`, text, kind, x: group.x, y });
-  }
-
-  for (const side of ['start', 'center', 'end'] as const) {
-    const band = layout.bands[side];
-    const heading = scene.headings[side];
-    if (!band || !heading) continue;
-    labels.push({
-      key: side,
-      text: heading.toUpperCase(),
-      kind: 'heading',
-      x: (band.x0 + band.x1) / 2,
-      y: Math.max(14, band.y0 - 4),
-    });
-  }
-  return labels;
+export function placeLabels(context: CanvasRenderingContext2D, scene: BaseScene): ClusterLabel[] {
+  const widths = new Map<string, number>();
+  return placeClusterLabels(scene.layout, {
+    measure: (text, kind) => {
+      const key = `${kind}\u0000${text}`;
+      let width = widths.get(key);
+      if (width === undefined) {
+        setLabelStyle(context, kind, scene.fontFamily);
+        width = context.measureText(text).width;
+        widths.set(key, width);
+      }
+      return width;
+    },
+    name: scene.label,
+    headings: scene.headings,
+  });
 }
 
 function drawLabels(
@@ -166,11 +162,15 @@ function drawLabels(
   fontFamily: string,
 ): void {
   context.textAlign = 'center';
+  context.lineJoin = 'round';
+  context.lineWidth = HALO_WIDTH;
+  context.strokeStyle = HALO_COLOR;
   for (const label of labels) {
     const alpha = 'alpha' in label ? label.alpha : 1;
     if (alpha <= 0) continue;
     setLabelStyle(context, label.kind, fontFamily);
     context.globalAlpha = alpha;
+    context.strokeText(label.text, label.x, label.y);
     context.fillText(label.text, label.x, label.y);
   }
   context.globalAlpha = 1;
