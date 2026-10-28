@@ -68,6 +68,14 @@ async function waitForLanding(page: Page): Promise<GlideChange[]> {
   return glideChanges(page);
 }
 
+/**
+ * Waits for the picture to show what was last asked for. The clusters are laid out in a worker, so
+ * the picture catches up a moment after a book is opened, and says so meanwhile (`aria-busy`).
+ */
+async function waitForPicture(page: Page): Promise<void> {
+  await expect(page.locator(PICTURE)).not.toHaveAttribute('aria-busy', 'true');
+}
+
 /** A fingerprint of the picture at rest, pixel for pixel. */
 async function pictureDigest(page: Page): Promise<string> {
   return page.locator(PICTURE).evaluate(async (canvas: HTMLCanvasElement) => {
@@ -113,9 +121,11 @@ test.describe('the clusters glide between pictures', () => {
     await openClusters(page);
     await chooseBook(page, 'Isaiah');
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeVisible();
+    await waitForPicture(page);
     const still = await pictureDigest(page);
     await page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' }).click();
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
+    await waitForPicture(page);
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await watchGlides(page);
@@ -131,9 +141,11 @@ test.describe('the clusters glide between pictures', () => {
     await openClusters(page);
     await chooseBook(page, 'Isaiah');
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeVisible();
+    await waitForPicture(page);
     const still = await pictureDigest(page);
     await page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' }).click();
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
+    await waitForPicture(page);
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await watchGlides(page);

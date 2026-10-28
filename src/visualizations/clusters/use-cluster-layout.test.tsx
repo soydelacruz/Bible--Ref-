@@ -26,35 +26,44 @@ afterEach(() => {
 interface Props {
   readonly graph: ClusterGraph | null;
   readonly size: { readonly width: number; readonly height: number };
+  readonly active?: boolean;
 }
 
 function renderLayout(initialProps: Props) {
   return renderHook(
-    ({ graph, size }: Props) => useClusterLayout(graph, versification, null, size),
+    ({ graph, size, active = true }: Props) =>
+      useClusterLayout(graph, versification, null, size, active),
     { initialProps },
   );
 }
 
 describe('useClusterLayout', () => {
-  it('gives the graph with its layout once the layout is worked out', async () => {
+  it('lays out a view shown with nothing laid out yet at once, for the beacon to find', () => {
     const { result } = renderLayout({ graph: GRAPH, size: SIZE });
-    expect(result.current).toBeNull();
-    await waitFor(() => {
-      expect(result.current?.graph).toBe(GRAPH);
-    });
+    expect(result.current?.graph).toBe(GRAPH);
     expect(result.current?.layout).toEqual(computeClusterLayout(GRAPH, versification, null, SIZE));
   });
 
-  it('keeps the last pair while the next is on its way, so the stage draws a whole picture', async () => {
+  it('lays out a hidden view off the main thread, and shows nothing until it is shown', async () => {
+    const { result, rerender } = renderLayout({ graph: GRAPH, size: SIZE, active: false });
+    expect(result.current).toBeNull();
+    // Let the background layout land.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(result.current).toBeNull();
+    rerender({ graph: GRAPH, size: SIZE, active: true });
+    expect(result.current?.graph).toBe(GRAPH);
+  });
+
+  it('keeps the last pair while the next is on its way, and says one is coming', async () => {
     const { result, rerender } = renderLayout({ graph: GRAPH, size: SIZE });
-    await waitFor(() => {
-      expect(result.current?.graph).toBe(GRAPH);
-    });
+    expect(result.current?.pending).toBeUndefined();
     rerender({ graph: OTHER, size: SIZE });
     expect(result.current?.graph).toBe(GRAPH);
+    expect(result.current?.pending).toBe(true);
     await waitFor(() => {
       expect(result.current?.graph).toBe(OTHER);
     });
+    expect(result.current?.pending).toBeUndefined();
   });
 
   it('ends on the newest size however many it was asked for meanwhile', async () => {
@@ -67,24 +76,34 @@ describe('useClusterLayout', () => {
     });
   });
 
-  it('forgets its picture while there is nothing to draw, so a view coming back starts afresh', async () => {
-    const { result, rerender } = renderLayout({ graph: GRAPH, size: SIZE });
+  it('goes on to the newest ask when the one it was working out is already in place', async () => {
+    // Hidden, the worker starts on GRAPH; shown before it answers, GRAPH is laid out at once; then
+    // OTHER is asked for while the worker is still busy with GRAPH.
+    const { result, rerender } = renderLayout({ graph: GRAPH, size: SIZE, active: false });
+    rerender({ graph: GRAPH, size: SIZE, active: true });
+    const shown = result.current;
+    rerender({ graph: OTHER, size: SIZE, active: true });
     await waitFor(() => {
-      expect(result.current).not.toBeNull();
+      expect(result.current?.graph).toBe(OTHER);
     });
+    // The worker's GRAPH did not replace the one laid out at once: there was nothing to glide.
+    expect(shown?.graph).toBe(GRAPH);
+  });
+
+  it('forgets its picture while there is nothing to draw', () => {
+    const { result, rerender } = renderLayout({ graph: GRAPH, size: SIZE });
+    expect(result.current).not.toBeNull();
     rerender({ graph: null, size: SIZE });
     expect(result.current).toBeNull();
     rerender({ graph: GRAPH, size: { width: 0, height: 0 } });
     expect(result.current).toBeNull();
     rerender({ graph: OTHER, size: SIZE });
-    expect(result.current).toBeNull();
-    await waitFor(() => {
-      expect(result.current?.graph).toBe(OTHER);
-    });
+    expect(result.current?.graph).toBe(OTHER);
   });
 
   it('drops a layout that lands after the view has gone', async () => {
     const { result, rerender, unmount } = renderLayout({ graph: GRAPH, size: SIZE });
+    rerender({ graph: OTHER, size: SIZE });
     rerender({ graph: null, size: SIZE });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(result.current).toBeNull();

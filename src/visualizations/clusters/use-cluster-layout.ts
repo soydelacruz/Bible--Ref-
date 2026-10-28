@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BookId } from '../../core/bible/books.ts';
 import { CANONICAL_VERSIFICATION, type Versification } from '../../core/bible/versification.ts';
 import { WorkerClient } from '../../core/lib/worker-rpc.ts';
@@ -54,6 +54,8 @@ export async function layoutClusters(
 export interface PlacedClusters {
   readonly graph: ClusterGraph;
   readonly layout: ClusterLayout;
+  /** Whether a newer layout is on its way, so the picture is about to change. */
+  readonly pending?: boolean;
 }
 
 interface Wanted {
@@ -63,62 +65,92 @@ interface Wanted {
   readonly size: Size;
 }
 
+/** A layout, and what it was asked for with. */
+interface Placed extends PlacedClusters {
+  readonly wanted: Wanted;
+}
+
 /**
- * The layout of `graph`, worked out off the main thread. Until it arrives, the previous graph and
- * its layout are kept, so the stage goes on drawing a picture that is whole, and glides from it
- * when the new one lands. One layout is worked out at a time: while one is running, newer asks
- * replace each other, and only the latest is worked out next — a window being dragged wider asks
- * for dozens.
+ * The layout of `graph`, worked out off the main thread, while the view is hidden too: a switch to
+ * the view then finds its picture ready, and the passage beacon finds the passage in it. Until a
+ * new layout arrives, the previous graph and its layout are kept, so the stage goes on drawing a
+ * picture that is whole, and glides from it when the new one lands. One layout is worked out at a
+ * time: while one is running, newer asks replace each other, and only the latest is worked out
+ * next — a window being dragged wider asks for dozens.
  *
- * `null` while there is no graph or no room to draw it: a view coming back is then drawn as it
- * is, rather than glided into from how it was when it left.
+ * A view shown with nothing laid out yet — before the worker has answered, or where there is none —
+ * is laid out here and now, as it always was: the beacon looks for the passage the moment the view
+ * is shown.
+ *
+ * `null` while the view is hidden, or has no graph or no room to draw it.
  */
 export function useClusterLayout(
   graph: ClusterGraph | null,
   versification: Versification,
   openBook: BookId | null,
   size: Size,
+  active: boolean,
 ): PlacedClusters | null {
-  const [placed, setPlaced] = useState<PlacedClusters | null>(null);
-  const wanted = useRef<Wanted | null>(null);
-  const running = useRef(false);
-  const shown = graph !== null && size.width > 0 && size.height > 0;
-  if (!shown && placed !== null) {
+  const [placed, setPlaced] = useState<Placed | null>(null);
+  const wanted = useMemo(
+    (): Wanted | null =>
+      graph && size.width > 0 && size.height > 0 ? { graph, versification, openBook, size } : null,
+    [graph, versification, openBook, size],
+  );
+  if (wanted === null && placed !== null) {
     setPlaced(null);
   }
+  if (active && wanted !== null && placed === null) {
+    const layout = computeClusterLayout(wanted.graph, versification, openBook, size);
+    setPlaced({ graph: wanted.graph, layout, wanted });
+  }
+
+  // What the effects below go by: the newest ask, whether a layout is being worked out, and what
+  // the one in place was made for.
+  const latest = useRef<Wanted | null>(null);
+  const running = useRef(false);
+  const inPlace = useRef<Wanted | null>(null);
+  useEffect(() => {
+    inPlace.current = placed?.wanted ?? null;
+  }, [placed]);
 
   useEffect(() => {
-    const next = shown ? { graph, versification, openBook, size } : null;
-    wanted.current = next;
-    if (next === null || running.current) {
-      return;
-    }
-    const run = (inputs: Wanted) => {
+    latest.current = wanted;
+    const next = () => {
+      const inputs = latest.current;
+      if (inputs === null || running.current || inputs === inPlace.current) {
+        return;
+      }
       running.current = true;
       void layoutClusters(inputs.graph, inputs.versification, inputs.openBook, inputs.size).then(
         (layout) => {
           running.current = false;
-          const latest = wanted.current;
-          if (latest === null) {
+          if (latest.current === null) {
             return;
           }
-          // Shown even when a newer one is wanted: it is nearer to that than what is on screen.
-          setPlaced({ graph: inputs.graph, layout });
-          if (latest !== inputs) {
-            run(latest);
-          }
+          // Kept even when a newer one is wanted, which is worked out next: it is nearer to that
+          // than what is on screen. Not over the same layout worked out here meanwhile, though,
+          // which would glide the dots nowhere.
+          inPlace.current = inputs;
+          setPlaced((current) =>
+            current?.wanted === inputs ? current : { graph: inputs.graph, layout, wanted: inputs },
+          );
+          next();
         },
       );
     };
-    run(next);
-  }, [shown, graph, versification, openBook, size]);
+    next();
+  }, [wanted]);
 
   useEffect(
     () => () => {
-      wanted.current = null;
+      latest.current = null;
     },
     [],
   );
 
-  return placed;
+  if (!active || placed === null) {
+    return null;
+  }
+  return placed.wanted === wanted ? placed : { ...placed, pending: true };
 }
