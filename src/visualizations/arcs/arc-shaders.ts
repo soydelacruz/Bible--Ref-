@@ -53,6 +53,18 @@ const COMMON = /* glsl */ `
     return vec4(px.x / u_viewport.x * 2.0 - 1.0, 1.0 - px.y / u_viewport.y * 2.0, 0.0, 1.0);
   }
 
+  // An arc spans the stretch of the axis between its ends, so one with both ends past the same
+  // edge of the stage is out of sight whatever its height: zoomed in, many links are. Its vertices
+  // are put beyond the far plane, so its triangles are clipped whole and it costs no shading or
+  // blending. The margin covers the widest ribbon.
+  const float OFF_STAGE_MARGIN = 4.0;
+  const vec4 OFF_STAGE = vec4(0.0, 0.0, 2.0, 1.0);
+
+  bool isOffStage(float a, float b) {
+    float extent = u_vertical < 0.5 ? u_viewport.x : u_viewport.y;
+    return max(a, b) < -OFF_STAGE_MARGIN || min(a, b) > extent + OFF_STAGE_MARGIN;
+  }
+
   vec3 arcColor(vec2 genres, float t) {
     return mix(u_palette[int(genres.x + 0.5)], u_palette[int(genres.y + 0.5)], t);
   }
@@ -101,9 +113,16 @@ export const LINE_VERTEX_SHADER = /* glsl */ `
   out vec4 v_color;
 
   void main() {
+    float a = alongOf(a_ends.x);
+    float b = alongOf(a_ends.y);
+    if (isOffStage(a, b)) {
+      gl_Position = OFF_STAGE;
+      v_color = vec4(0.0);
+      return;
+    }
     float t = revealed(position.x, a_ends);
     float presence = a_state < -0.5 ? 1.0 - u_morph : (a_state > 0.5 ? u_morph : 1.0);
-    vec2 local = arcLocal(alongOf(a_ends.x), alongOf(a_ends.y), PI * t);
+    vec2 local = arcLocal(a, b, PI * t);
     local.y *= mix(1.0, presence, u_morphRise);
     gl_Position = toClip(toScreen(local));
     v_color = vec4(arcColor(a_genres, t), u_alpha * a_weight * revealFade() * presence * presence);
@@ -131,15 +150,34 @@ export const RIBBON_VERTEX_SHADER = /* glsl */ `
   const float TIP_LENGTH = 0.18;
   const float TIP_LIGHT = 0.6;
 
+  // How far round its arc, as a share of the half turn, the ribbon's point at t of its
+  // segments lies. A half circle's points are spread evenly. A flattened arc, the long links when
+  // zoomed in, bends hardest at its ends and least at its top, so its points gather at the ends,
+  // as many as keep the segments as close to the curve there as at the top: then fewer segments
+  // draw it as smoothly (see ribbonSegments).
+  float sweepAt(float t, float a, float b) {
+    float radius = 0.5 * abs(b - a);
+    float evenness = radius > 0.0 ? sqrt(min(radius, u_maxHeight) / radius) : 1.0;
+    float gathering = (1.0 - evenness) / (1.0 + evenness);
+    return t - gathering * sin(2.0 * PI * t) / (2.0 * PI);
+  }
+
   void main() {
-    float t = revealed(position.x, a_ends);
     float a = alongOf(a_ends.x);
     float b = alongOf(a_ends.y);
+    if (isOffStage(a, b)) {
+      gl_Position = OFF_STAGE;
+      v_color = vec4(0.0);
+      v_side = 0.0;
+      return;
+    }
+    float sweep = sweepAt(position.x, a, b);
+    float t = revealed(sweep, a_ends);
     vec2 point = toScreen(arcLocal(a, b, PI * t));
     vec2 tangent = toScreenDirection(arcTangent(a, b, PI * t));
     vec2 normal = length(tangent) > 1e-4 ? normalize(vec2(-tangent.y, tangent.x)) : vec2(0.0, 1.0);
     gl_Position = toClip(point + normal * position.y * u_width * 0.5);
-    float tip = (1.0 - smoothstep(0.0, TIP_LENGTH, behindTip(position.x, a_ends))) * (1.0 - u_reveal);
+    float tip = (1.0 - smoothstep(0.0, TIP_LENGTH, behindTip(sweep, a_ends))) * (1.0 - u_reveal);
     vec3 color = mix(arcColor(a_genres, t), vec3(1.0), tip * TIP_LIGHT);
     v_color = vec4(color, u_alpha * mix(0.55, 1.0, a_weight) * revealFade());
     v_side = position.y;

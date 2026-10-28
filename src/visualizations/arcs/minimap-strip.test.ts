@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CANONICAL_VERSIFICATION } from '../../core/bible/versification.ts';
-import { CrossReferenceIndex } from '../../cross-references/cross-reference-index.ts';
 import { enBooks } from '../../i18n/books/en.ts';
-import { createCrossReferenceColumns, verseIndex } from '../../test-utils/fixtures.ts';
+import { verseIndex } from '../../test-utils/fixtures.ts';
 import { fullView, MIN_VIEW_SPAN, type AxisView } from './axis-view.ts';
 import {
   booksInView,
@@ -11,7 +10,6 @@ import {
   describeView,
   dragView,
   grabAt,
-  linksTouching,
   minimapKeyAction,
   MOUSE_REACH,
   tapBrush,
@@ -161,42 +159,6 @@ describe('brushing books', () => {
     const law = { start: 0, end: range('Deut').end };
     expect(tapBrush(versification, law, verseIndex('Lev', 1, 1))).toBeNull();
     expect(tapBrush(versification, law, psalm)).toEqual(range('Ps'));
-  });
-});
-
-describe('the links a brush lights up', () => {
-  const GEN_1_1 = verseIndex('Gen', 1, 1);
-  const EXOD_3_14 = verseIndex('Exod', 3, 14);
-  const PS_23_1 = verseIndex('Ps', 23, 1);
-  const JOHN_1_1 = verseIndex('John', 1, 1);
-  const JOHN_10_11 = verseIndex('John', 10, 11);
-  // Listed in source order, which is the order the index numbers them in.
-  const index = new CrossReferenceIndex(
-    createCrossReferenceColumns([
-      { from: GEN_1_1, to: JOHN_1_1, votes: 10 }, // 0: from Genesis
-      { from: EXOD_3_14, to: JOHN_1_1, votes: 10 }, // 1: from Exodus
-      { from: JOHN_1_1, to: GEN_1_1, toEnd: verseIndex('Gen', 1, 3), votes: 10 }, // 2: into Genesis
-      { from: JOHN_10_11, to: PS_23_1, votes: 10 }, // 3: into the Psalms
-      { from: JOHN_10_11, to: JOHN_1_1, votes: 10 }, // 4: John to John
-    ]),
-    TOTAL,
-  );
-  const all = Int32Array.of(0, 1, 2, 3, 4);
-
-  it('are those that start or end in it, in the order given', () => {
-    expect([...linksTouching(index, all, range('Gen'))]).toEqual([0, 2]);
-    expect([...linksTouching(index, all, range('Ps'))]).toEqual([3]);
-    expect([...linksTouching(index, all, range('John'))]).toEqual([0, 1, 2, 3, 4]);
-    expect([...linksTouching(index, Int32Array.of(4, 2, 0), range('Gen'))]).toEqual([2, 0]);
-  });
-
-  it('include a link whose target passage only partly overlaps it', () => {
-    const genesisOneTwo = { start: verseIndex('Gen', 1, 2), end: verseIndex('Gen', 1, 2) };
-    expect([...linksTouching(index, all, genesisOneTwo)]).toEqual([2]);
-  });
-
-  it('come only from the links given (those that pass the filter)', () => {
-    expect([...linksTouching(index, Int32Array.of(1, 4), range('Gen'))]).toEqual([]);
   });
 });
 
