@@ -39,12 +39,7 @@ import {
   passageHighlight,
   type Highlight,
 } from './cluster-highlight.ts';
-import {
-  computeClusterLayout,
-  selectClusterGraph,
-  targetAt,
-  type ClusterGroup,
-} from './cluster-layout.ts';
+import { selectClusterGraph, targetAt, type ClusterGroup } from './cluster-layout.ts';
 import {
   CLUSTER_PATH_TRACE,
   clusterPathCurve,
@@ -62,6 +57,7 @@ import {
 } from './clusters-drawing.ts';
 import styles from './ClustersStage.module.css';
 import { passageCenter } from './passage-center.ts';
+import { useClusterLayout } from './use-cluster-layout.ts';
 
 interface ClustersStageProps {
   readonly data: VizCore;
@@ -159,18 +155,16 @@ export function ClustersStage({
 
   // The host keeps every view mounted, and a hidden one keeps its size: nothing is worked out
   // until the view is on screen, so the other views pay nothing for it.
-  const graph = useMemo(
+  const selected = useMemo(
     () => (active ? selectClusterGraph(index, verseGenres, filter, versification, openBook) : null),
     [active, index, verseGenres, filter, versification, openBook],
   );
+  // Laid out in a worker. The graph drawn is the one its layout was made for, so the two stay a
+  // pair while the next layout is on its way.
+  const placed = useClusterLayout(selected, versification, openBook, size);
+  const graph = placed?.graph ?? null;
+  const layout = placed?.layout ?? null;
   const drawn = useMemo(() => graph && drawnLinks(index.linkCount, graph.linkIds), [index, graph]);
-  const layout = useMemo(
-    () =>
-      graph && size.width > 0 && size.height > 0
-        ? computeClusterLayout(graph, versification, openBook, size)
-        : null,
-    [graph, versification, openBook, size],
-  );
 
   const focusStart = focus ? passageRange(focus, versification).start : null;
   const focusEnd = focus ? passageRange(focus, versification).end : null;
