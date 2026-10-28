@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { BookId } from '../../core/bible/books.ts';
 import { KJV_CHAPTER_VERSE_COUNTS } from '../../core/bible/kjv-versification.ts';
 import { CANONICAL_VERSIFICATION, Versification } from '../../core/bible/versification.ts';
 import { serveRequests } from '../../core/lib/worker-rpc.ts';
@@ -27,12 +28,13 @@ interface Props {
   readonly graph: ClusterGraph | null;
   readonly size: { readonly width: number; readonly height: number };
   readonly active?: boolean;
+  readonly openBook?: BookId | null;
 }
 
 function renderLayout(initialProps: Props) {
   return renderHook(
-    ({ graph, size, active = true }: Props) =>
-      useClusterLayout(graph, versification, null, size, active),
+    ({ graph, size, active = true, openBook = null }: Props) =>
+      useClusterLayout(graph, versification, openBook, size, active),
     { initialProps },
   );
 }
@@ -64,6 +66,17 @@ describe('useClusterLayout', () => {
       expect(result.current?.graph).toBe(OTHER);
     });
     expect(result.current?.pending).toBeUndefined();
+  });
+
+  it('names the book of the picture on screen, not the one whose layout is on its way', async () => {
+    const { result, rerender } = renderLayout({ graph: GRAPH, size: SIZE });
+    expect(result.current?.openBook).toBeNull();
+    rerender({ graph: OTHER, size: SIZE, openBook: 'Ps' });
+    expect(result.current?.openBook).toBeNull();
+    await waitFor(() => {
+      expect(result.current?.graph).toBe(OTHER);
+    });
+    expect(result.current?.openBook).toBe('Ps');
   });
 
   it('ends on the newest size however many it was asked for meanwhile', async () => {

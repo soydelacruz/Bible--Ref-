@@ -54,6 +54,11 @@ export async function layoutClusters(
 export interface PlacedClusters {
   readonly graph: ClusterGraph;
   readonly layout: ClusterLayout;
+  /**
+   * The book open in this picture. Its heading goes with the layout, not with the book just
+   * asked for, whose layout may still be on its way.
+   */
+  readonly openBook: BookId | null;
   /** Whether a newer layout is on its way, so the picture is about to change. */
   readonly pending?: boolean;
 }
@@ -102,7 +107,7 @@ export function useClusterLayout(
   }
   if (active && wanted !== null && placed === null) {
     const layout = computeClusterLayout(wanted.graph, versification, openBook, size);
-    setPlaced({ graph: wanted.graph, layout, wanted });
+    setPlaced({ graph: wanted.graph, layout, openBook, wanted });
   }
 
   // What the effects below go by: the newest ask, whether a layout is being worked out, and what
@@ -113,6 +118,12 @@ export function useClusterLayout(
   useEffect(() => {
     inPlace.current = placed?.wanted ?? null;
   }, [placed]);
+
+  // A view laid out here still has the worker started, so that the next layout (the first book
+  // opened) does not wait for it to load.
+  useEffect(() => {
+    layoutWorker.warm();
+  }, []);
 
   useEffect(() => {
     latest.current = wanted;
@@ -133,7 +144,9 @@ export function useClusterLayout(
           // which would glide the dots nowhere.
           inPlace.current = inputs;
           setPlaced((current) =>
-            current?.wanted === inputs ? current : { graph: inputs.graph, layout, wanted: inputs },
+            current?.wanted === inputs
+              ? current
+              : { graph: inputs.graph, layout, openBook: inputs.openBook, wanted: inputs },
           );
           next();
         },

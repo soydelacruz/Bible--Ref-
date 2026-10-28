@@ -160,11 +160,12 @@ export function ClustersStage({
     () => selectClusterGraph(index, verseGenres, filter, versification, openBook),
     [index, verseGenres, filter, versification, openBook],
   );
-  // The graph drawn is the one its layout was made for, so the two stay a pair while the next
-  // layout is on its way. Nothing while the view is hidden.
+  // The graph drawn, and the book named over it, are the ones its layout was made for, so they
+  // stay together while the next layout is on its way. Nothing while the view is hidden.
   const placed = useClusterLayout(selected, versification, openBook, size, active);
   const graph = placed?.graph ?? null;
   const layout = placed?.layout ?? null;
+  const shownBook = placed?.openBook ?? null;
   const drawn = useMemo(() => graph && drawnLinks(index.linkCount, graph.linkIds), [index, graph]);
 
   const focusStart = focus ? passageRange(focus, versification).start : null;
@@ -229,7 +230,7 @@ export function ClustersStage({
       headings: {
         start: t('testament.OT'),
         end: t('testament.NT'),
-        ...(openBook && { center: books[openBook].name }),
+        ...(shownBook && { center: books[shownBook].name }),
       },
       fontFamily: getComputedStyle(document.body).fontFamily,
     };
@@ -312,7 +313,7 @@ export function ClustersStage({
       glideCanvas.removeAttribute('data-gliding');
       glidingRef.current = false;
     };
-  }, [active, layout, index, graph, verseGenres, books, t, openBook]);
+  }, [active, layout, index, graph, verseGenres, books, t, shownBook]);
 
   // What stands out: a passage's links grow out from it; a book's appear at once. Either swells
   // in quickly under the pointer, and follows the dots while they glide.
