@@ -72,7 +72,10 @@ describe('writing the datasets', () => {
     expect(await readdir(join(directory, 'translations'))).toEqual([
       prepared.file.replace('translations/', ''),
     ]);
-    expect(await readFile(join(directory, prepared.file))).toEqual(Buffer.from(prepared.bytes));
+    // By hash: comparing the bytes themselves takes the matcher seconds for a whole Bible.
+    expect(sha256Hex(await readFile(join(directory, prepared.file)))).toBe(
+      sha256Hex(prepared.bytes),
+    );
   });
 
   it('starts from nothing on a fresh clone', async () => {
