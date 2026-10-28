@@ -1,0 +1,71 @@
+/* The passage beacon (see view-switch.ts): a glowing dot with the focused passage's name over it,
+   which a switch between views carries from where the last view draws the passage to where the
+   next one does. Never a target: it only shows the way.
+
+   Its `left` and `top` are the point it marks, the dot's center. The dot and the name are each a
+   layer of their own in the switch, above the page, so they travel while the page crossfades
+   under them — and the name can lean away from the side of the screen at one end and not at the
+   other without the dot doubling on the way. */
+.beacon {
+  --dot-size: 0.625rem;
+  --gap: 0.375rem;
+
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.dot {
+  position: absolute;
+  inset-block-start: calc(var(--dot-size) / -2);
+  inset-inline-start: calc(var(--dot-size) / -2);
+  inline-size: var(--dot-size);
+  block-size: var(--dot-size);
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow:
+    0 0 0 0.1875rem color-mix(in srgb, var(--color-accent) 30%, transparent),
+    0 0 0.75rem 0.25rem color-mix(in srgb, var(--color-accent) 55%, transparent);
+  view-transition-name: passage-beacon;
+}
+
+.label {
+  position: absolute;
+  inset-block-end: calc(var(--dot-size) / 2 + var(--gap));
+  inset-inline-start: 0;
+  padding: 0.0625rem var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 0.35);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  view-transition-name: passage-beacon-label;
+}
+
+/* Near the side of the screen the name leans away from it, rather than running off. */
+.beacon[data-align='start'] .label {
+  inset-inline-start: calc(var(--dot-size) / -2);
+  transform: none;
+}
+
+.beacon[data-align='end'] .label {
+  inset-inline: auto calc(var(--dot-size) / -2);
+  transform: none;
+}
+
+/* Landed, it lingers a moment over the passage and fades: opacity alone, 350ms in all
+   (`BEACON_LANDING_MS`). No longer layers of their own, so a switch begun meanwhile takes it
+   away with the rest of the page. */
+.beacon[data-landed] {
+  opacity: 0;
+  transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1) 100ms;
+}
+
+.beacon[data-landed] .dot,
+.beacon[data-landed] .label {
+  view-transition-name: none;
+}

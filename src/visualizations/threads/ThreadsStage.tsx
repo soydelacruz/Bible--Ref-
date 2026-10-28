@@ -7,6 +7,7 @@ import { NextIcon, PreviousIcon } from '../../shared/ui/icons.tsx';
 import { collectConnections, type Connection } from '../shared/connections.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
 import { GENRE_COLORS } from '../shared/palette.ts';
+import { provideLocator, screenBox } from '../shared/passage-spot.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizData } from '../shared/viz-data.ts';
 import { FrameScheduler, MAX_PIXEL_RATIO } from '../shared/frames.ts';
@@ -69,6 +70,8 @@ export function ThreadsStage({
 }: ThreadsStageProps) {
   const { t, n, books, genreName } = useLocalization();
   const { versification, translation, crossReferences, verseGenres } = data;
+  const stageRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const readingRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -280,6 +283,39 @@ export function ThreadsStage({
     // The pane is remade for each chapter, so a new chapter observes the new one.
   }, [selectedVerse, chapterKey]);
 
+  // Where a passage is in the reading, for the passage beacon: a verse's number, or the chapter's
+  // heading. A verse is in sight below the chapter bar, which hides what scrolls under it.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return undefined;
+    }
+    return provideLocator(stage, (passage) => {
+      const reading = readingRef.current;
+      const bar = barRef.current;
+      const mark =
+        passage.kind === 'verse'
+          ? verseElements.current.get(passage.verse)?.querySelector('button')
+          : passage.book === book && passage.chapter === chapter
+            ? titleRef.current
+            : null;
+      if (!reading || !bar || !mark) {
+        return null;
+      }
+      const pane = screenBox(reading.getBoundingClientRect());
+      const rect = mark.getBoundingClientRect();
+      const top = passage.kind === 'verse' ? bar.getBoundingClientRect().bottom : pane.top;
+      return {
+        // The number's figures sit at the end of its column; the heading's name at its start.
+        point: {
+          x: passage.kind === 'verse' ? rect.right - rect.height / 2 : rect.left,
+          y: rect.top + rect.height / 2,
+        },
+        bounds: { ...pane, top },
+      };
+    });
+  }, [book, chapter]);
+
   const verseAtSpine = (event: MouseEvent<HTMLElement>): VerseIndex | null => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -295,7 +331,7 @@ export function ThreadsStage({
     end + 1 < versification.verseCount ? chapterPassageOf(end + 1, versification) : null;
 
   return (
-    <div className={styles.stage}>
+    <div ref={stageRef} className={styles.stage}>
       {/* Keyed by chapter: a new chapter is a new scroll container, so it starts at the top. */}
       <div key={`${book}.${chapter}`} ref={readingRef} className={styles.reading}>
         <header className={styles.chapterHeader}>
@@ -305,7 +341,7 @@ export function ThreadsStage({
               {genreName(genre.id)} ·{' '}
               {genre.testament === 'OT' ? t('testament.OT') : t('testament.NT')}
             </p>
-            <h2 className={styles.title}>
+            <h2 ref={titleRef} className={styles.title}>
               {books[book].name} {chapter}
             </h2>
           </div>

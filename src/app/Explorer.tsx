@@ -9,7 +9,7 @@ import {
   useState,
   useTransition,
 } from 'react';
-import { formatPassage, versePassage, type Passage } from '../core/bible/passage.ts';
+import { formatPassage, isSamePassage, versePassage, type Passage } from '../core/bible/passage.ts';
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx';
 import { getTranslationManifest } from '../translations/registry.ts';
 import controls from '../visualizations/shared/components/controls.module.css';
@@ -27,10 +27,16 @@ import {
   type VizCore,
 } from '../visualizations/shared/viz-data.ts';
 import styles from './Explorer.module.css';
-import { explorerUrl, plainLocaleFor, plainTranslationFor } from './explorer-location.ts';
+import {
+  explorerUrl,
+  plainLocaleFor,
+  plainTranslationFor,
+  type ExplorerLocation,
+} from './explorer-location.ts';
 import { InAppLink } from './InAppLink.tsx';
 import { readPreferredTranslation, useTranslationPreference } from './translation-choice.ts';
-import { useExplorerLocation } from './use-explorer-location.ts';
+import { useExplorerLocation, type ShowHistoryStep } from './use-explorer-location.ts';
+import { useViewSwitch } from './use-view-switch.ts';
 import { useWander } from './use-wander.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
 import { WanderButton } from './WanderButton.tsx';
@@ -40,9 +46,14 @@ import { cacheDatasets } from './register-offline-cache.ts';
 import { setActiveLocale, useLocalePreference, usePreferredLocale } from '../i18n/locale-choice.ts';
 import { getLocale } from '../i18n/registry.ts';
 import { useLocalization } from '../i18n/use-locale.tsx';
-import { VIEWS, type View } from './views.ts';
+import { VIEWS, type View, type ViewId } from './views.ts';
 
 const [HOME] = VIEWS;
+
+/** What holds a view: the switch looks for the focused passage in it. */
+function viewElement(id: ViewId): Element | null {
+  return document.querySelector(`[data-view="${id}"]`);
+}
 
 /**
  * The app: every visualization over one shared passage, with a switch between them.
@@ -62,6 +73,38 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // reader's own language, because this answers "what may a link leave out", not "what does this
   // link show".
   const [preferredTranslation, rememberTranslation] = useTranslationPreference(preferredLocale);
+  const switchView = useViewSwitch();
+  /**
+   * Shows `next`, in another view than `previous`, so that the reader sees the views change and,
+   * when the focused passage goes along, where it went (see `runViewSwitch`). Within one view it
+   * shows at once: each view moves to a passage its own way (the arcs fly, the threads scroll).
+   */
+  const goToView = (
+    previous: ExplorerLocation<ViewId>,
+    next: ExplorerLocation<ViewId>,
+    update: () => void,
+  ) => {
+    if (previous.view === next.view) {
+      update();
+      return;
+    }
+    const kept = isSamePassage(previous.passage, next.passage) ? previous.passage : null;
+    switchView({
+      update,
+      from: viewElement(previous.view),
+      to: viewElement(next.view),
+      carried: kept && { passage: kept, label: formatPassage(kept, versification, books) },
+    });
+  };
+  // Back and Forward cross between views as the switch does — unless the browser has shown the
+  // step its own way (a swipe back, on a phone), which a second animation would only repeat.
+  const showHistoryStep: ShowHistoryStep<ViewId> = (previous, next, show, event) => {
+    if (event.hasUAVisualTransition) {
+      show();
+    } else {
+      goToView(previous, next, show);
+    }
+  };
   // The URL holds the view, the passage, the filter and the translation: one filter for every
   // view, so they agree on which links exist, and a shared link shows exactly what its author saw.
   //
@@ -74,6 +117,7 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     versification,
     readPreferredTranslation,
     preferredLocale,
+    showHistoryStep,
   );
   // The address is what the app speaks, not the other way round. It already answers both cases —
   // a URL naming a language, and one that does not, which falls back to the reader's own — and
@@ -224,15 +268,18 @@ export function Explorer({ core }: { readonly core: VizCore }) {
           href={hrefOf(HOME, null)}
           className={styles.home}
           onFollow={() => {
-            focusTarget.current = 'h1 a';
-            navigate({
+            const next = {
               view: HOME.id,
               passage: null,
               filter: DEFAULT_LINK_FILTER,
               translation: location.translation,
               locale: localeId,
+            };
+            goToView(location, next, () => {
+              focusTarget.current = 'h1 a';
+              navigate(next);
+              setGeneration((value) => value + 1);
             });
-            setGeneration((value) => value + 1);
           }}
         >
           <span className={styles.fullName}>{t('app.name')}</span>
@@ -244,8 +291,11 @@ export function Explorer({ core }: { readonly core: VizCore }) {
         current={location.view}
         hrefOf={(view) => hrefOf(view, passage)}
         onOpen={(view) => {
-          focusTarget.current = '[aria-current="page"]';
-          navigate({ ...location, view: view.id, passage });
+          const next = { ...location, view: view.id, passage };
+          goToView(location, next, () => {
+            focusTarget.current = '[aria-current="page"]';
+            navigate(next);
+          });
         }}
       />
     </>
@@ -293,7 +343,10 @@ export function Explorer({ core }: { readonly core: VizCore }) {
       active: isActive,
       passage,
       onNavigate: (target: Passage | null, options?: { readonly replace?: boolean }) => {
-        navigate({ ...location, view: view.id, passage: target }, options);
+        const next = { ...location, view: view.id, passage: target };
+        goToView(location, next, () => {
+          navigate(next, options);
+        });
       },
       filter,
       onFilterChange: (next: LinkFilter) => {
@@ -328,7 +381,10 @@ export function Explorer({ core }: { readonly core: VizCore }) {
             href={hrefOf(other, target)}
             className={controls.button}
             onFollow={() => {
-              navigate({ ...location, view: other.id, passage: target });
+              const next = { ...location, view: other.id, passage: target };
+              goToView(location, next, () => {
+                navigate(next);
+              });
             }}
           >
             <other.icon />

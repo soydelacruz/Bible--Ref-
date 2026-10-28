@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { versePassage } from '../core/bible/passage.ts';
 import { KJV_VERSIFICATION } from '../core/bible/versification.ts';
 import { DEFAULT_TRANSLATION_ID } from '../translations/registry.ts';
@@ -93,6 +93,36 @@ describe('useExplorerLocation', () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
     expect(result.current[0].passage).toEqual(JOHN_3_16);
+  });
+
+  it('lets the host show a step through the history its own way', () => {
+    window.history.replaceState(null, '', `${BASE}?ref=John.3.16`);
+    const showStep = vi.fn();
+    const { result } = renderHook(() =>
+      useExplorerLocation(ROUTES, KJV_VERSIFICATION, () => DEFAULT_TRANSLATION_ID, 'en', showStep),
+    );
+    const before = result.current[0];
+
+    const event = new PopStateEvent('popstate');
+    act(() => {
+      window.history.replaceState(null, '', `${BASE}threads/?ref=John.3.16`);
+      window.dispatchEvent(event);
+    });
+    // Nothing changes until the host shows it.
+    expect(result.current[0]).toBe(before);
+    const [previous, next, show, received] = showStep.mock.lastCall as [
+      typeof before,
+      typeof before,
+      () => void,
+      PopStateEvent,
+    ];
+    expect(previous).toBe(before);
+    expect(next.view).toBe('threads');
+    expect(next.passage).toEqual(JOHN_3_16);
+    expect(received).toBe(event);
+
+    act(show);
+    expect(result.current[0].view).toBe('threads');
   });
 
   it('stops following it once unmounted', () => {

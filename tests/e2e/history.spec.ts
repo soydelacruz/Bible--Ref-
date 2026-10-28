@@ -109,8 +109,10 @@ test.describe('browser history', () => {
 
     // The view switch's own link: the panel also offers "Read in Threads".
     await page.locator(ACTIVE).getByRole('link', { name: 'Threads', exact: true }).click();
+    // The switch lands a frame or two after the click, once the browser has taken its picture of
+    // the page for the crossfade: wait for it, rather than read the address at once.
+    await expect(page).toHaveURL(/threads\//);
     await waitForApp(page);
-    expect(new URL(page.url()).pathname).toContain('threads');
 
     await page.goBack();
     await waitForApp(page);

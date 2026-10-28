@@ -17,6 +17,15 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Close the details and return to the whole picture       | `reading.spec.ts` |
 | Switch between Arcs and Threads, keeping the passage    | `reading.spec.ts` |
 
+## Switching views
+
+| Flow                                                                      | Covered by               |
+| ------------------------------------------------------------------------- | ------------------------ |
+| A beacon carries the focused passage to where the next view draws it      | `passage-beacon.spec.ts` |
+| …into Threads and into Clusters, and back across with Back                | `passage-beacon.spec.ts` |
+| Only a crossfade: from the keyboard, with less motion, or with no passage | `passage-beacon.spec.ts` |
+| …and where the browser has no view transitions, the next view fades in    | `passage-beacon.spec.ts` |
+
 ## Reading in Threads
 
 | Flow                                                             | Covered by        |
