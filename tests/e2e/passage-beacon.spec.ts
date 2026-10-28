@@ -187,7 +187,7 @@ test.describe('the passage beacon', () => {
 
     await switchTo(page, 'Clusters');
     await expect(page).toHaveURL(/clusters\//);
-    await expect(page.locator(ACTIVE).locator('canvas').first()).toBeVisible();
+    await expect(page.locator(`${ACTIVE} canvas[role="img"]`)).toBeVisible();
     expect((await traced(page)).beacons).toEqual([]);
   });
 

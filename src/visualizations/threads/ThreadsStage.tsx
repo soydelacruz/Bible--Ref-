@@ -27,6 +27,8 @@ export type ThreadDirection = 'outgoing' | 'incoming' | 'both';
 
 interface ThreadsStageProps {
   readonly data: VizData;
+  /** Whether the view is on screen: out of sight, the selected verse is brought in at once. */
+  readonly active: boolean;
   readonly book: BookId;
   readonly chapter: number;
   readonly selectedVerse: VerseIndex | null;
@@ -59,6 +61,7 @@ interface SpineHover {
 /** A chapter to read on the left; threads from each verse to where its links land on the right. */
 export function ThreadsStage({
   data,
+  active,
   book,
   chapter,
   selectedVerse,
@@ -76,6 +79,12 @@ export function ThreadsStage({
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const verseElements = useRef(new Map<VerseIndex, HTMLElement>());
+  // Read when the selected verse is brought into view, which showing the view must not do again:
+  // the reader's own scrolling is kept.
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
   const canvasSize = useElementSize(canvasHostRef);
   const barRef = useRef<HTMLDivElement>(null);
   // The NET's notes are marked in the NET's own words, so they show only while it is the text.
@@ -270,7 +279,10 @@ export function ThreadsStage({
         barBottom: bar.getBoundingClientRect().bottom,
       });
       if (block) {
-        const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Out of sight there is nothing to watch, and a switch to the view must find the verse
+        // where it lands: the passage beacon goes to it then.
+        const still =
+          !activeRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         element.scrollIntoView({ block, behavior: still ? 'auto' : 'smooth' });
       }
     };

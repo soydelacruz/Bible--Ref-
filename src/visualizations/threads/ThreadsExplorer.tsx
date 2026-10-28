@@ -52,6 +52,7 @@ function chapterOf(passage: Passage | null, data: VizData): { book: BookId; chap
 
 export function ThreadsExplorer({
   data,
+  active,
   passage,
   onNavigate,
   filter,
@@ -154,6 +155,7 @@ export function ThreadsExplorer({
     >
       <ThreadsStage
         data={data}
+        active={active}
         book={book}
         chapter={chapter}
         selectedVerse={selectedVerse}
