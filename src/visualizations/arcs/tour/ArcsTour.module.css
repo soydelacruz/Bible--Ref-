@@ -249,7 +249,7 @@
   }
 }
 
-/* The legend and the summary step aside while the tour plays, and the card takes their corner. */
+/* The summary steps aside while the tour plays, and the card takes its corner. */
 .chrome {
   transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }

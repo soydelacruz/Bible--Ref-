@@ -111,8 +111,6 @@ export const en = {
 
   'genres.label': 'Genres',
   'genres.labelChanged': 'Genres (changed)',
-  'genres.show': 'Show genres',
-  'genres.hide': 'Hide genres',
   'genres.hideOne': (name: string) => `Hide ${name}`,
   'genres.showOne': (name: string) => `Show ${name}`,
   'testament.OT': 'Old Testament',
