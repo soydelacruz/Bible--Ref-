@@ -12,20 +12,25 @@ import {
   tableBuffers,
   type CrossReferenceTables,
 } from './cross-reference-tables.ts';
+import { BOOKS, type BookId } from '../bible/books.ts';
 import {
   parseCrossReferencesMetadata,
   parseOriginalWordsFile,
+  parseStudyNotesFile,
   parseTranslationTextFile,
   type CrossReferencesMetadata,
   type ExpectedDataset,
   type OriginalWordsFile,
+  type StudyNotesFile,
   type TranslationTextFile,
 } from './formats.ts';
 import {
   CROSS_REFERENCE_SOURCE_IDS,
+  NOTE_SOURCE_IDS,
   TRANSLATION_IDS,
   WORD_SOURCE_IDS,
   type CrossReferenceSourceId,
+  type NoteSourceId,
   type TranslationId,
   type WordSourceId,
 } from './ids.ts';
@@ -44,7 +49,13 @@ export type DecodeRequest =
       readonly verseCount: number;
     }
   | { readonly kind: 'translation'; readonly expected: ExpectedDataset<TranslationId> }
-  | { readonly kind: 'original-words'; readonly expected: ExpectedDataset<WordSourceId> };
+  | { readonly kind: 'original-words'; readonly expected: ExpectedDataset<WordSourceId> }
+  | { readonly kind: 'study-notes'; readonly expected: ExpectedStudyNotes };
+
+/** A book's notes from one source. */
+export type ExpectedStudyNotes = ExpectedDataset<NoteSourceId> & { readonly book: BookId };
+
+const BOOK_IDS: readonly BookId[] = BOOKS.map(({ id }) => id);
 
 /** The cross-references, read and indexed: what they are, and the tables of their index. */
 export interface CrossReferenceDatasetTables {
@@ -117,6 +128,13 @@ export function decodeOriginalWords(
   return parseOriginalWordsFile(parseJson(buffer, 'original-words'), expected);
 }
 
+export function decodeStudyNotes(
+  buffer: ArrayBuffer,
+  expected: ExpectedStudyNotes,
+): StudyNotesFile {
+  return parseStudyNotesFile(parseJson(buffer, 'study-notes'), expected);
+}
+
 /** Does what `request` asks with `buffer`, on whichever thread this is. */
 export async function decodeDataset(
   request: DecodeRequest,
@@ -131,6 +149,8 @@ export async function decodeDataset(
       return { value: decodeTranslationText(buffer, request.expected), transfer: [] };
     case 'original-words':
       return { value: decodeOriginalWords(buffer, request.expected), transfer: [] };
+    case 'study-notes':
+      return { value: decodeStudyNotes(buffer, request.expected), transfer: [] };
   }
 }
 
@@ -148,7 +168,7 @@ export function parseDecodeMessage(message: unknown): {
   const versification = expectOneOf(expected['versification'], ['kjv'], 'request.versification');
   const kind = expectOneOf(
     record['kind'],
-    ['cross-references', 'translation', 'original-words'],
+    ['cross-references', 'translation', 'original-words', 'study-notes'],
     'request.kind',
   );
   switch (kind) {
@@ -178,6 +198,18 @@ export function parseDecodeMessage(message: unknown): {
         request: {
           kind,
           expected: { id: expectOneOf(expected['id'], WORD_SOURCE_IDS, 'id'), versification },
+        },
+      };
+    case 'study-notes':
+      return {
+        buffer,
+        request: {
+          kind,
+          expected: {
+            id: expectOneOf(expected['id'], NOTE_SOURCE_IDS, 'id'),
+            versification,
+            book: expectOneOf(expected['book'], BOOK_IDS, 'book'),
+          },
         },
       };
   }

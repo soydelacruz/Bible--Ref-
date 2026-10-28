@@ -36,11 +36,6 @@ export class DatasetUnavailableError extends Error {
   }
 }
 
-export interface FetchedDataset {
-  readonly json: unknown;
-  readonly report: Omit<DatasetLoadReport, 'processMs'>;
-}
-
 interface FetchedBytes {
   readonly buffer: ArrayBuffer;
   readonly report: Omit<DatasetLoadReport, 'parseMs' | 'processMs'>;
@@ -79,24 +74,6 @@ async function fetchDatasetBytes(
   onDownloaded?.();
   const downloadMs = performance.now() - downloadStart;
   return { buffer, report: { path, url, bytes: buffer.byteLength, downloadMs } };
-}
-
-function parseJson(path: string, buffer: ArrayBuffer): unknown {
-  try {
-    return JSON.parse(new TextDecoder().decode(buffer));
-  } catch {
-    throw new DatasetUnavailableError(path, 'the response is not valid JSON');
-  }
-}
-
-/** Fetches a generated dataset file (a path relative to the site root) and parses its JSON. */
-export async function fetchDataset(
-  path: string,
-  options: FetchDatasetOptions = {},
-): Promise<FetchedDataset> {
-  const { buffer, report } = await fetchDatasetBytes(path, options);
-  const { value: json, ms: parseMs } = measure(() => parseJson(path, buffer));
-  return { json, report: { ...report, parseMs } };
 }
 
 /** Measures how long a synchronous step takes. */
@@ -192,27 +169,10 @@ async function loadHealing<T>(
   }
 }
 
-/** Fetches a JSON dataset and validates it with `parse`, on this thread (see `loadHealing`). */
-export function loadDataset<T>(
-  path: string,
-  parse: (json: unknown) => T,
-  options: FetchDatasetOptions = {},
-): Promise<Loaded<T>> {
-  return loadHealing(
-    path,
-    ({ buffer, report }) => {
-      const { value: json, ms: parseMs } = measure(() => parseJson(path, buffer));
-      const { value, ms: processMs } = measure(() => parse(json));
-      return Promise.resolve({ value, report: { ...report, parseMs, processMs } });
-    },
-    options,
-  );
-}
-
 /**
- * Reads the large datasets off the main thread: reading the links or a Bible's text took the page
- * away from the reader for half a second or more on a phone, at first load and at every change of
- * text. Started with the first download, so its script loads while the data does.
+ * Reads the datasets off the main thread: reading the links or a Bible's text took the page away
+ * from the reader for half a second or more on a phone, at first load and at every change of text.
+ * Started with the first download, so its script loads while the data does.
  */
 const datasetWorker = new WorkerClient(() =>
   typeof Worker === 'function'
@@ -225,7 +185,7 @@ const datasetWorker = new WorkerClient(() =>
 /**
  * Fetches a dataset and has the dataset worker read it (see `decoders.ts`), handing it the bytes
  * rather than copying them; `accept` then takes what the worker built. Where no worker runs, the
- * same reading happens here. Heals a stale cached copy like `loadDataset`.
+ * same reading happens here. Heals a stale cached copy (see `loadHealing`).
  */
 export function loadDatasetOffThread<T>(
   path: string,

@@ -2,6 +2,7 @@ import { gzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import {
   createCrossReferencesFile,
+  createStudyNotesFile,
   createTranslationFile,
   PROVENANCE,
 } from '../../test-utils/fixtures.ts';
@@ -13,6 +14,7 @@ import {
   decodeCrossReferenceTables,
   decodeDataset,
   decodeOriginalWords,
+  decodeStudyNotes,
   decodeTranslationText,
   parseDecodeMessage,
   type DecodeRequest,
@@ -116,6 +118,18 @@ describe('reading a translation and the words', () => {
   });
 });
 
+describe('reading a book’s notes', () => {
+  const expected = { id: 'net', versification: 'kjv', book: 'Gen' } as const;
+
+  it('parses and checks them', () => {
+    expect(decodeStudyNotes(json(createStudyNotesFile('Gen')), expected).book).toBe('Gen');
+  });
+
+  it('refuses another book’s', () => {
+    expect(() => decodeStudyNotes(json(createStudyNotesFile('Exod')), expected)).toThrow('book');
+  });
+});
+
 describe('decodeDataset', () => {
   it('hands back every table of the links’ index without copying it', async () => {
     const { value, transfer } = await decodeDataset(LINKS_REQUEST, linksFile());
@@ -136,6 +150,11 @@ describe('decodeDataset', () => {
       json(WORDS),
     );
     expect(words.transfer).toEqual([]);
+    const notes = await decodeDataset(
+      { kind: 'study-notes', expected: { id: 'net', versification: 'kjv', book: 'Gen' } },
+      json(createStudyNotesFile('Gen')),
+    );
+    expect(notes.transfer).toEqual([]);
   });
 });
 
@@ -149,6 +168,7 @@ describe('a request as the worker receives it', () => {
     for (const request of [
       { kind: 'translation', expected: { id: 'kjv', versification: 'kjv' } },
       { kind: 'original-words', expected: { id: 'stepbible', versification: 'kjv' } },
+      { kind: 'study-notes', expected: { id: 'net', versification: 'kjv', book: 'John' } },
     ] as const) {
       expect(parseDecodeMessage({ ...request, buffer })).toEqual({ request, buffer });
     }
