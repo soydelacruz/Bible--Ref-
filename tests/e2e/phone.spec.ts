@@ -249,8 +249,8 @@ test.describe('the details sheet', () => {
 
   for (const [name, query] of [
     ['a verse', '?ref=John.3.16'],
-    // A name that takes two lines beside the buttons, in a language whose counts run longer.
-    ['a long name in a longer language', '?ref=1Thess.5.16&lang=pt'],
+    // A header a line taller: in Portuguese the genre beside the buttons takes two lines.
+    ['a taller header, in a longer language', '?ref=1Thess.5.16&lang=pt'],
   ] as const) {
     test(`peeks with ${name}: its name and the line counting its links, and no more`, async ({
       page,

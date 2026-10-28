@@ -164,7 +164,7 @@ not. Pictures are a separate suite — below.
 | ----------------------------------------------------------------------- | --------------- |
 | Every control in the header, the menus and the details is 44px or more  | `phone.spec.ts` |
 | The sheet peeks with the passage's name and its count of links, no more | `phone.spec.ts` |
-| …however long the name, in a longer language                            | `phone.spec.ts` |
+| …however tall its header grows, in a longer language                    | `phone.spec.ts` |
 | The footer is never behind the sheet, collapsed or opened up            | `phone.spec.ts` |
 | Closed, the details slide away; with less motion they fade              | `phone.spec.ts` |
 | …and closed from the keyboard, they are gone at once                    | `phone.spec.ts` |
