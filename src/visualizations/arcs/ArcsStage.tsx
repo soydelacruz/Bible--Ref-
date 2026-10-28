@@ -23,7 +23,8 @@ import { buildArcInstances, buildArcMorph } from './arc-instances.ts';
 import { computeArcLayout } from './arc-layout.ts';
 import { buildArcPath } from './arc-path.ts';
 import { ArcsController, type ArcHover } from './arcs-controller.ts';
-import { describeBooks, linksTouching } from './minimap-strip.ts';
+import { LitLinksSearch, runLitLinksSearch, type LitLinks } from './lit-links.ts';
+import { describeBooks } from './minimap-strip.ts';
 import { Minimap, type ViewListener } from './Minimap.tsx';
 import styles from './ArcsStage.module.css';
 
@@ -117,27 +118,32 @@ export function ArcsStage({
     setBrush(null);
   }
   const { index } = data.crossReferences;
-  const brushLinks = useMemo(
-    () => brush && linksTouching(index, linkIds, brush),
-    [brush, index, linkIds],
-  );
+  // Books the reader lit up are announced once their links are found, with how many there are; a
+  // new filter finding them again says nothing.
+  const announcesLit = useRef(false);
   const brushBooks = (range: VerseIndexRange | null) => {
     if (touring) {
       return;
     }
     setBrush(range);
-    if (range) {
-      const count = linksTouching(index, linkIds, range).length;
-      announce(
-        t('arcs.minimap.lit')(
-          describeBooks(range, data.versification, books),
-          t('arcs.connections')(n(count), count),
-        ),
-      );
-    } else if (brush) {
+    announcesLit.current = range !== null;
+    if (!range && brush) {
       announce(t('arcs.minimap.cleared'));
     }
   };
+  const showLit = useEffectEvent((lit: LitLinks) => {
+    controllerRef.current?.setBrush(lit.range, lit.instances);
+    if (announcesLit.current) {
+      announcesLit.current = false;
+      const count = lit.ids.length;
+      announce(
+        t('arcs.minimap.lit')(
+          describeBooks(lit.range, data.versification, books),
+          t('arcs.connections')(n(count), count),
+        ),
+      );
+    }
+  });
 
   const select = useEffectEvent((passage: Passage | null) => {
     setBrush(null);
@@ -238,13 +244,18 @@ export function ArcsStage({
   }, [data, filter]);
 
   // After the link resolver, which re-resolves the passage's links into the focus, and before the
-  // focus, so that clearing the books for a newly opened passage never cuts its links' growth.
+  // focus, so that clearing the books for a newly opened passage never cuts its links' growth. Lit
+  // books' links are found a slice per frame (see `LitLinksSearch`), so letting go of a brush over
+  // most of the Bible never holds up a frame; the books lit before stay lit until then.
   useEffect(() => {
-    controllerRef.current?.setBrush(
-      brush,
-      brushLinks && buildArcInstances(index, brushLinks, data.verseGenres),
-    );
-  }, [brush, brushLinks, index, data.verseGenres]);
+    if (!brush) {
+      controllerRef.current?.setBrush(null, null);
+      return undefined;
+    }
+    return runLitLinksSearch(new LitLinksSearch(index, linkIds, brush, data.verseGenres), (lit) => {
+      showLit(lit);
+    });
+  }, [brush, index, linkIds, data.verseGenres]);
 
   useEffect(() => {
     controllerRef.current?.setFocus(focus && passageRange(focus, data.versification));

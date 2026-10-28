@@ -391,6 +391,19 @@ export const en = {
   'tour.finale.line':
     'One chain of cross-references, from the first promise to “I am Alpha and Omega”.',
 
+  // The first visit's Start here strip, under the header: what the picture is, and three ways in.
+  // Each way is its name and then, quieter, where it goes: "John 3:16" "in Arcs", "The tour" "in
+  // 45 seconds". On a phone the two are stacked, so each also has to read alone.
+  'start.label': 'Start here',
+  'start.caption':
+    'Each arc joins two passages that refer to each other, coloured by the genre of their books.',
+  'start.inArcs': 'in Arcs',
+  'start.inThreads': 'in Threads',
+  'start.tour': 'The tour',
+  'start.tourLength': 'in 45 seconds',
+  // The strip's close button; it does not come back.
+  'start.close': 'Don’t show this again',
+
   'credits.links': 'Cross-references:',
   'credits.fromTsk': ', from the Treasury of Scripture Knowledge',
   'credits.reindexed': ', re-indexed',
