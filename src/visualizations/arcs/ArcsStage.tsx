@@ -8,14 +8,21 @@ import {
   type RefObject,
 } from 'react';
 import { formatPassage, passageRange, type Passage } from '../../core/bible/passage.ts';
+import type { VerseIndexRange } from '../../core/bible/versification.ts';
 import { ClickIcon, PinchIcon, TapIcon } from '../../shared/ui/icons.tsx';
 import { useLocalization } from '../../i18n/use-locale.tsx';
 import { collectConnections, connectionLinkIds, type Connection } from '../shared/connections.ts';
 import type { LinkFilter } from '../shared/link-filter.ts';
+import type { PathLight } from '../shared/path-light.ts';
+import { useAnnouncer } from '../shared/use-announcer.ts';
 import { useElementSize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
 import { buildArcInstances, buildArcMorph } from './arc-instances.ts';
+import { computeArcLayout } from './arc-layout.ts';
+import { buildArcPath } from './arc-path.ts';
 import { ArcsController, type ArcHover } from './arcs-controller.ts';
+import { describeBooks, linksTouching } from './minimap-strip.ts';
+import { Minimap, type ViewListener } from './Minimap.tsx';
 import styles from './ArcsStage.module.css';
 
 const NO_LINKS = new Int32Array(0);
@@ -33,9 +40,18 @@ interface ArcsStageProps {
   readonly onSelect: (passage: Passage | null) => void;
   /** Filled with a way to take a picture of the diagram as it is, once it can be drawn. */
   readonly snapshotRef?: RefObject<ArcsController['snapshot'] | null>;
+  /** A chain of links the details panel shows, to travel its arcs as light (see `playPath`). */
+  readonly pathLight?: PathLight;
+  /** Filled with the controller while the stage is up, for what moves the camera on its own (the tour). */
+  readonly controllerRef?: RefObject<ArcsController | null>;
+  /** A tour is playing: it lights up its own links, so no books are lit up from the minimap. */
+  readonly touring?: boolean;
 }
 
-/** The arc diagram: a WebGL layer for arcs, a 2D overlay for the axis, and a hover tooltip. */
+/**
+ * The arc diagram: a WebGL layer for arcs, a 2D overlay for the axis, a hover tooltip, and the
+ * minimap beside the axis — under it, or down the side of a phone's upright one.
+ */
 export function ArcsStage({
   data,
   active,
@@ -45,20 +61,72 @@ export function ArcsStage({
   preview,
   onSelect,
   snapshotRef,
+  pathLight,
+  controllerRef: outsideControllerRef,
+  touring = false,
 }: ArcsStageProps) {
-  const { t, books, locale } = useLocalization();
+  const { t, books, locale, n } = useLocalization();
   const genres = locale.genres;
   // The axis needs names to paint its first frame, but a change of language must not tear down
   // the WebGL context: the effect below hands the controller the new ones instead.
   const namesRef = useRef({ books, genres });
+  const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const glCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<ArcsController | null>(null);
+  const viewListenerRef = useRef<ViewListener | null>(null);
+  const frameSize = useElementSize(frameRef);
   const size = useElementSize(containerRef);
+  // The strip runs beside the axis, so the axis's way decides its place. Taken from the whole
+  // frame, the stage left beside the strip always lays its axis out the same way.
+  const { orientation } = computeArcLayout(frameSize.width, frameSize.height);
   const [hover, setHover] = useState<ArcHover | null>(null);
+  const [announcer, announce] = useAnnouncer<HTMLParagraphElement>();
+
+  // Books brushed on the minimap light up in the focused passage's place. They belong to what was
+  // on screen when they were brushed: opening or closing a passage, from anywhere, or starting a
+  // tour (which lights up its own links) puts them away for good, as the newer thing asked for.
+  const [brush, setBrush] = useState<VerseIndexRange | null>(null);
+  const [brushedOver, setBrushedOver] = useState({ focus, touring });
+  if (focus !== brushedOver.focus || touring !== brushedOver.touring) {
+    setBrushedOver({ focus, touring });
+    setBrush(null);
+  }
+  const { index } = data.crossReferences;
+  const brushLinks = useMemo(
+    () => brush && linksTouching(index, linkIds, brush),
+    [brush, index, linkIds],
+  );
+  const brushBooks = (range: VerseIndexRange | null) => {
+    if (touring) {
+      return;
+    }
+    setBrush(range);
+    if (range) {
+      const count = linksTouching(index, linkIds, range).length;
+      announce(
+        t('arcs.minimap.lit')(
+          describeBooks(range, data.versification, books),
+          t('arcs.connections')(n(count), count),
+        ),
+      );
+    } else if (brush) {
+      announce(t('arcs.minimap.cleared'));
+    }
+  };
+
   const select = useEffectEvent((passage: Passage | null) => {
+    setBrush(null);
     onSelect(passage);
+  });
+  // Escape on the stage puts away what was asked for last: lit books, then the passage.
+  const clear = useEffectEvent(() => {
+    if (brush) {
+      brushBooks(null);
+    } else {
+      onSelect(null);
+    }
   });
 
   useEffect(() => {
@@ -80,12 +148,18 @@ export function ArcsStage({
         select(passage);
       },
       onClear: () => {
-        select(null);
+        clear();
       },
+    });
+    controller.setViewListener((view, layout) => {
+      viewListenerRef.current?.(view, layout);
     });
     controllerRef.current = controller;
     if (snapshotRef) {
       snapshotRef.current = (compose) => controller.snapshot(compose);
+    }
+    if (outsideControllerRef) {
+      outsideControllerRef.current = controller;
     }
     return () => {
       controller.dispose();
@@ -93,8 +167,11 @@ export function ArcsStage({
       if (snapshotRef) {
         snapshotRef.current = null;
       }
+      if (outsideControllerRef) {
+        outsideControllerRef.current = null;
+      }
     };
-  }, [data.versification, snapshotRef]);
+  }, [data.versification, snapshotRef, outsideControllerRef]);
 
   useEffect(() => {
     namesRef.current = { books, genres };
@@ -131,6 +208,15 @@ export function ArcsStage({
     );
   }, [data, filter]);
 
+  // After the link resolver, which re-resolves the passage's links into the focus, and before the
+  // focus, so that clearing the books for a newly opened passage never cuts its links' growth.
+  useEffect(() => {
+    controllerRef.current?.setBrush(
+      brush,
+      brushLinks && buildArcInstances(index, brushLinks, data.verseGenres),
+    );
+  }, [brush, brushLinks, index, data.verseGenres]);
+
   useEffect(() => {
     controllerRef.current?.setFocus(focus && passageRange(focus, data.versification));
   }, [focus, data.versification]);
@@ -151,17 +237,40 @@ export function ArcsStage({
     );
   }, [preview, data]);
 
+  const { index: linkIndex } = data.crossReferences;
+  const { verseGenres } = data;
+  useEffect(() => {
+    const controller = controllerRef.current;
+    if (!pathLight || !controller) {
+      return undefined;
+    }
+    return pathLight.attach((steps, options) =>
+      controller.playPath(buildArcPath(linkIndex, steps, verseGenres), options),
+    );
+  }, [pathLight, linkIndex, verseGenres]);
+
   return (
-    <div
-      ref={containerRef}
-      className={styles.stage}
-      tabIndex={0}
-      role="application"
-      aria-label={t('arcs.stage')}
-    >
-      <canvas ref={glCanvasRef} className={styles.canvas} />
-      <canvas ref={overlayCanvasRef} className={styles.canvas} aria-hidden="true" />
-      {hover && <HoverTooltip hover={hover} data={data} filter={filter} size={size} />}
+    <div ref={frameRef} className={styles.frame} data-orientation={orientation}>
+      <div
+        ref={containerRef}
+        className={styles.stage}
+        tabIndex={0}
+        role="application"
+        aria-label={t('arcs.stage')}
+      >
+        <canvas ref={glCanvasRef} className={styles.canvas} />
+        <canvas ref={overlayCanvasRef} className={styles.canvas} aria-hidden="true" />
+        {hover && <HoverTooltip hover={hover} data={data} filter={filter} size={size} />}
+      </div>
+      <Minimap
+        controllerRef={controllerRef}
+        viewListenerRef={viewListenerRef}
+        versification={data.versification}
+        orientation={orientation}
+        brush={brush}
+        onBrush={brushBooks}
+      />
+      <p ref={announcer} className={styles.visuallyHidden} role="status" />
     </div>
   );
 }

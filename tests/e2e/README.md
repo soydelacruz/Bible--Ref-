@@ -26,6 +26,15 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Only a crossfade: from the keyboard, with less motion, or with no passage | `passage-beacon.spec.ts` |
 | …and where the browser has no view transitions, the next view fades in    | `passage-beacon.spec.ts` |
 
+## The arcs' tour
+
+| Flow                                                               | Covered by          |
+| ------------------------------------------------------------------ | ------------------- |
+| A first visit is offered the tour; it plays, pauses and resumes    | `arcs-tour.spec.ts` |
+| Closing it leaves the reader at its stop, details open             | `arcs-tour.spec.ts` |
+| Offered only once; the arcs' own controls start it, Escape ends it | `arcs-tour.spec.ts` |
+| A touch of the arcs ends it, handing its stop back once let go     | `arcs-tour.spec.ts` |
+
 ## Reading in Threads
 
 | Flow                                                             | Covered by        |
@@ -47,6 +56,24 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | See the genre breakdown of a passage's links             | `cross-references.spec.ts` |
 | Raise the vote threshold and see fewer, better links     | `cross-references.spec.ts` |
 | Hide a genre from the legend, and bring it back          | `cross-references.spec.ts` |
+| Find the chain of links to another passage, and walk it  | `search-and-paths.spec.ts` |
+| …which travels the arcs as light, lighting each step     | `path-light.spec.ts`       |
+| …and between the dots in Clusters, the same way          | `path-light.spec.ts`       |
+| …drawn whole, every step lit, with reduced motion        | `path-light.spec.ts`       |
+| …played again on request, and gone when cleared          | `path-light.spec.ts`       |
+
+## The whole Bible beside the arcs
+
+| Flow                                                               | Covered by            |
+| ------------------------------------------------------------------ | --------------------- |
+| Drag the minimap's window, and the arcs follow under the pointer   | `minimap.spec.ts`     |
+| Drag an edge of the window to zoom                                 | `minimap.spec.ts`     |
+| Drag across books to light up their links, beside the open passage | `minimap.spec.ts`     |
+| Escape, or a tap on the lit books, puts them away                  | `minimap.spec.ts`     |
+| The keys move, zoom and light up, and say what is in view          | `minimap.spec.ts`     |
+| …in the reader's language                                          | `minimap.spec.ts`     |
+| A finger gets a target as big as a fingertip                       | `minimap.spec.ts`     |
+| The window keeps up with a camera flight, frame by frame           | `arcs-motion.spec.ts` |
 
 ## The Hebrew and Greek
 

@@ -9,8 +9,9 @@ import {
   type BookSegment,
   type FlightFrame,
 } from '../loading-arcs.ts';
-import { GENRE_HEX, GENRE_RGB, type Rgb } from '../palette.ts';
+import { GENRE_HEX } from '../palette.ts';
 import { MAX_PIXEL_RATIO } from '../frames.ts';
+import { paintLight, type Point } from '../light-painter.ts';
 import { computeVerseGenres } from '../verse-genres.ts';
 import styles from './LoadingArcs.module.css';
 
@@ -25,8 +26,6 @@ const MAX_FLIGHTS = 28;
 const LAUNCH_PAUSE_MS = { min: 70, max: 220 };
 /** Thickness of the axis, in CSS pixels. */
 const AXIS_THICKNESS = 3;
-/** Pieces of the moving light, brighter toward its head. */
-const LIGHT_PIECES = 10;
 
 interface Layout {
   readonly width: number;
@@ -38,57 +37,7 @@ interface Layout {
   readonly maxHeight: number;
 }
 
-type Point = readonly [x: number, y: number];
-
-const rgba = ([red, green, blue]: Rgb, alpha: number) =>
-  `rgb(${String(Math.round(red * 255))} ${String(Math.round(green * 255))} ${String(Math.round(blue * 255))} / ${String(alpha)})`;
-
-const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
-  a[2] + (b[2] - a[2]) * t,
-];
-
 const genreHex = (genre: number) => GENRE_HEX[genre] ?? '#ffffff';
-const genreRgb = (genre: number): Rgb => GENRE_RGB[genre] ?? [1, 1, 1];
-
-/** Strokes the part of an arc between `from` and `to` (0–1 along it). */
-function strokeArc(
-  context: CanvasRenderingContext2D,
-  pointAt: (t: number) => Point,
-  from: number,
-  to: number,
-  width: number,
-  alpha: number,
-): void {
-  const steps = Math.max(2, Math.ceil((to - from) * 64));
-  context.beginPath();
-  for (let step = 0; step <= steps; step += 1) {
-    const [x, y] = pointAt(from + ((to - from) * step) / steps);
-    if (step === 0) context.moveTo(x, y);
-    else context.lineTo(x, y);
-  }
-  context.lineWidth = width;
-  context.globalAlpha = alpha;
-  context.stroke();
-}
-
-/** A soft round glow, white at its heart. */
-function glow(
-  context: CanvasRenderingContext2D,
-  [x, y]: Point,
-  radius: number,
-  color: Rgb,
-  intensity: number,
-): void {
-  const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, `rgb(255 255 255 / ${String(0.9 * intensity)})`);
-  gradient.addColorStop(0.25, rgba(color, 0.55 * intensity));
-  gradient.addColorStop(1, rgba(color, 0));
-  context.globalAlpha = 1;
-  context.fillStyle = gradient;
-  context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-}
 
 function paintFlight(
   context: CanvasRenderingContext2D,
@@ -104,29 +53,7 @@ function paintFlight(
     return [layout.left + x * layout.axisWidth, layout.axisY - y * height];
   };
   // Colored from the source genre to the target genre, as in Arcs.
-  const gradient = context.createLinearGradient(fromX, 0, toX, 0);
-  gradient.addColorStop(0, genreHex(flight.fromGenre));
-  gradient.addColorStop(1, genreHex(flight.toGenre));
-  context.strokeStyle = gradient;
-
-  if (frame.trace > 0 && frame.head > 0) {
-    strokeArc(context, pointAt, 0, frame.head, 1.2, 0.16 * frame.trace);
-  }
-  if (frame.light > 0 && frame.head > frame.tail) {
-    for (let piece = 0; piece < LIGHT_PIECES; piece += 1) {
-      const from = frame.tail + ((frame.head - frame.tail) * piece) / LIGHT_PIECES;
-      const to = frame.tail + ((frame.head - frame.tail) * (piece + 1)) / LIGHT_PIECES;
-      const intensity = frame.light * ((piece + 1) / LIGHT_PIECES) ** 1.6;
-      strokeArc(context, pointAt, from, to, 9, 0.05 * intensity);
-      strokeArc(context, pointAt, from, to, 3.5, 0.2 * intensity);
-      strokeArc(context, pointAt, from, to, 1.4, 0.9 * intensity);
-    }
-    const headColor = mix(genreRgb(flight.fromGenre), genreRgb(flight.toGenre), frame.head);
-    glow(context, pointAt(frame.head), 10, headColor, frame.light);
-  }
-  if (frame.landing > 0) {
-    glow(context, [toX, layout.axisY], 24, genreRgb(flight.toGenre), frame.landing);
-  }
+  paintLight(context, { pointAt, fromGenre: flight.fromGenre, toGenre: flight.toGenre }, frame);
 }
 
 function paint(

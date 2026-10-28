@@ -212,6 +212,8 @@ export const pt: LocaleMessages = {
   'path.placeholder': 'Outra passagem, p. ex. Ap 12:9',
   'path.find': 'Buscar caminho',
   'path.clear': 'Limpar caminho',
+  'path.replay': 'Ver de novo',
+  'path.replay.hint': 'Iluminar o caminho de novo, ligação por ligação',
   'path.summary': (from, to, count, plural) =>
     plural === 1
       ? `De ${from} a ${to} em ${count} ligação:`
@@ -314,6 +316,39 @@ export const pt: LocaleMessages = {
     'Diagrama em arcos das referências cruzadas. Arraste ou use as setas para mover, role ou ' +
     '+/- para ampliar, clique numa passagem para lê-la, Esc para limpar. Numa tela sensível ao ' +
     'toque, toque e segure para pré-visualizar uma passagem.',
+  'arcs.minimap': 'Bíblia inteira',
+  'arcs.minimap.inView': (range) => `${range} em vista`,
+  'arcs.minimap.help':
+    'Arraste a janela ao longo da Bíblia, ou as bordas dela para ampliar, e arraste sobre livros ' +
+    'para iluminar suas referências cruzadas. As setas movem a janela, + e − a ampliam, Enter ' +
+    'ilumina os livros em vista e Esc apaga a iluminação.',
+  // A gerund, so it reads the same for one book or many.
+  'arcs.minimap.lit': (books, count) => `Iluminando ${books}: ${count}`,
+  'arcs.minimap.cleared': 'Os livros não estão mais iluminados',
+  'tour.invite': 'Primeira vez nos arcos? Um passeio de 45 segundos mostra o que eles ligam.',
+  'tour.start': 'Fazer o passeio',
+  'tour.dismiss': 'Agora não',
+  'tour.region': 'Passeio guiado',
+  'tour.progress': (position, count) => `Passeio · ${position} de ${count}`,
+  'tour.paused': 'Pausado',
+  'tour.pause': 'Pausar o passeio',
+  'tour.resume': 'Continuar o passeio',
+  'tour.close': 'Encerrar o passeio',
+  'tour.announce': (position, count, title, passages) =>
+    `Passeio, ${position} de ${count}: ${title}. ${passages}`,
+  'tour.stop.beginning.title': 'No princípio',
+  'tour.stop.beginning.line': 'As primeiras palavras da Bíblia voltam como as primeiras de João.',
+  'tour.stop.shema.title': 'Ouve, Israel',
+  'tour.stop.shema.line': 'Perguntado qual é o primeiro mandamento, Jesus responde com o Shemá.',
+  'tour.stop.forsaken.title': 'Deus meu, Deus meu',
+  'tour.stop.forsaken.line': 'Um salmo de Davi, clamado da cruz; muito dele ecoa ali.',
+  'tour.stop.servant.title': 'Como um cordeiro',
+  'tour.stop.servant.line': 'O servo sofredor de Isaías, lido em voz alta no caminho de Gaza.',
+  'tour.stop.spirit.title': 'Derramarei o meu Espírito',
+  'tour.stop.spirit.line': 'A promessa de Joel, citada por Pedro no Pentecostes.',
+  'tour.finale.title': 'Do Éden ao fim',
+  'tour.finale.line':
+    'Uma só cadeia de referências cruzadas, da primeira promessa a “Eu sou o Alfa e o Ômega”.',
 
   // Feminine plural, as "reindexadas" below agrees with it.
   'credits.links': 'Referências cruzadas:',

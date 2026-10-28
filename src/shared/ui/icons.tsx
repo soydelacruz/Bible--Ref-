@@ -31,6 +31,7 @@ import {
   LuNotebookText,
   LuOrbit,
   LuPalette,
+  LuPause,
   LuPlay,
   LuRainbow,
   LuRefreshCw,
@@ -79,8 +80,9 @@ export const ArcsIcon = decorative(LuRainbow);
 export const ReadingIcon = decorative(LuBookOpenText);
 export const ClustersIcon = decorative(LuOrbit);
 
-// A guided tour that plays by itself, and stopping it.
+// A guided tour that plays by itself, pausing it, and stopping it.
 export const PlayIcon = decorative(LuPlay);
+export const PauseIcon = decorative(LuPause);
 export const StopIcon = decorative(LuSquare);
 
 // Navigation

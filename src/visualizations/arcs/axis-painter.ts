@@ -5,8 +5,9 @@ import type { VerseIndexRange, Versification } from '../../core/bible/versificat
 import type { BookNames } from '../../i18n/books/types.ts';
 import { elementAt } from '../../core/lib/array.ts';
 import { GENRE_HEX } from '../shared/palette.ts';
-import { verseToAlong, type ArcLayout } from './arc-layout.ts';
+import { verseToAlong, type ArcLayout, type Orientation } from './arc-layout.ts';
 import type { AxisView } from './axis-view.ts';
+import { MOUSE_REACH, verseToTrack, windowOnTrack, type MinimapTrack } from './minimap-strip.ts';
 
 export interface AxisPaint {
   readonly layout: ArcLayout;
@@ -19,6 +20,11 @@ export interface AxisPaint {
   readonly hover: VerseIndexRange | null;
   /** A passage a previewed link points to: a band quieter than hover's, under the focus. */
   readonly passage: VerseIndexRange | null;
+  /**
+   * Books lit up from the minimap: a quiet band too, since a solid one would hide whole books'
+   * colors; the focused passage keeps its own mark.
+   */
+  readonly brush?: VerseIndexRange | null;
 }
 
 const TEXT = '#ecebe6';
@@ -50,8 +56,8 @@ function fillAlong(
 }
 
 /**
- * Paints the axis overlay: genre-colored book bars, chapter ticks, labels that fit, the hover and
- * focus markers, and an overview strip with the visible window when zoomed in.
+ * Paints the axis overlay: genre-colored book bars, chapter ticks, labels that fit, and the hover
+ * and focus markers. The whole Bible, with the window in view, is the minimap's (`paintMinimap`).
  */
 export function paintAxis(context: CanvasRenderingContext2D, paint: AxisPaint): void {
   const { layout, view, versification } = paint;
@@ -111,6 +117,7 @@ export function paintAxis(context: CanvasRenderingContext2D, paint: AxisPaint): 
     const half = Math.max((clampAlong(to) - clampAlong(from)) / 2, width);
     fillAlong(context, layout, center - half, center + half, barFrom - 2, barTo + 2);
   };
+  highlight(paint.brush ?? null, 'rgb(236 235 230 / 0.3)', 1.5);
   highlight(paint.passage, 'rgb(236 235 230 / 0.3)', 1.5);
   highlight(paint.hover, 'rgb(236 235 230 / 0.45)', 1.5);
   highlight(paint.focus, TEXT, 2);
@@ -119,12 +126,11 @@ export function paintAxis(context: CanvasRenderingContext2D, paint: AxisPaint): 
   if (layout.orientation === 'horizontal') {
     paintGenreLabels(context, paint, along);
   }
-  paintOverview(context, paint);
 }
 
 function paintBookLabels(
   context: CanvasRenderingContext2D,
-  { layout, versification, names, focus, hover, passage }: AxisPaint,
+  { layout, versification, names, focus, hover, passage, brush = null }: AxisPaint,
   along: (verse: number) => number,
 ): void {
   const horizontal = layout.orientation === 'horizontal';
@@ -154,7 +160,8 @@ function paintBookLabels(
     const isActive =
       touches(focus, range.start, range.end) ||
       touches(hover, range.start, range.end) ||
-      touches(passage, range.start, range.end);
+      touches(passage, range.start, range.end) ||
+      touches(brush, range.start, range.end);
     context.fillStyle = isActive ? TEXT : MUTED;
     const center = (from + to) / 2;
     if (horizontal) {
@@ -191,31 +198,80 @@ function paintGenreLabels(
   }
 }
 
-function paintOverview(
-  context: CanvasRenderingContext2D,
-  { layout, view, versification }: AxisPaint,
-): void {
+export interface MinimapPaint {
+  /** Along the strip as the axis runs: across the stage's foot, or down its side. */
+  readonly orientation: Orientation;
+  /** The strip's size, in CSS pixels. */
+  readonly width: number;
+  readonly height: number;
+  /** Where the track lies along the strip: the same span as the axis. */
+  readonly track: MinimapTrack;
+  /** The window as the axis shows it. */
+  readonly view: AxisView;
+  readonly versification: Versification;
+  /** Books lit up, or being brushed. */
+  readonly brush: VerseIndexRange | null;
+}
+
+const MINIMAP_BAR = 6;
+const MINIMAP_FRAME = 12;
+const MINIMAP_GRIP = 14;
+/** The least width of the window's frame, so a deep zoom still shows where it is. */
+const MINIMAP_MIN_WINDOW = MOUSE_REACH.body;
+/** Books out of view recede under the page's own color. */
+const MINIMAP_OUT_OF_VIEW = 'rgb(13 13 13 / 0.62)';
+
+/**
+ * Paints the minimap: the whole Bible's books in their genre colors, as the axis shows them, the
+ * part out of view receding; a frame over the window, with a grip on each edge to zoom by; and a
+ * line under any books brushed.
+ */
+export function paintMinimap(context: CanvasRenderingContext2D, paint: MinimapPaint): void {
+  const { orientation, width, height, track, view, versification, brush } = paint;
   const total = versification.verseCount;
-  if (view.end - view.start >= total - 0.5) return;
-  const horizontal = layout.orientation === 'horizontal';
-  const length = horizontal ? layout.width - 64 : layout.height - 64;
-  const offset = 32;
-  const position = (verse: number) => offset + (verse / total) * length;
-  for (const genre of GENRES) {
-    const books = getGenreBooks(genre.id);
-    const first = books[0];
-    const last = books.at(-1);
-    if (!first || !last) continue;
-    const from = position(versification.bookRange(first).start);
-    const to = position(versification.bookRange(last).end + 1);
-    context.fillStyle = elementAt(GENRE_HEX, genre.ordinal);
-    if (horizontal) context.fillRect(from, 6, to - from, 3);
-    else context.fillRect(layout.width - 9, from, 3, to - from);
+  context.clearRect(0, 0, width, height);
+  const middle = (orientation === 'horizontal' ? height : width) / 2;
+  const fill = (alongFrom: number, alongTo: number, acrossFrom: number, acrossTo: number) => {
+    if (orientation === 'horizontal') {
+      context.fillRect(alongFrom, acrossFrom, alongTo - alongFrom, acrossTo - acrossFrom);
+    } else {
+      context.fillRect(acrossFrom, alongFrom, acrossTo - acrossFrom, alongTo - alongFrom);
+    }
+  };
+  const at = (verse: number) => verseToTrack(track, total, verse);
+  const barFrom = middle - MINIMAP_BAR / 2;
+  const barTo = middle + MINIMAP_BAR / 2;
+
+  for (const book of BOOKS) {
+    const range = versification.bookRange(book.id);
+    const from = at(range.start);
+    const to = at(range.end + 1);
+    const gap = to - from > 4 ? 0.5 : 0;
+    context.globalAlpha = book.ordinal % 2 === 0 ? 1 : 0.72;
+    context.fillStyle = elementAt(GENRE_HEX, getBookGenre(book.id).ordinal);
+    fill(from + gap, to - gap, barFrom, barTo);
   }
-  context.strokeStyle = TEXT;
-  context.lineWidth = 1;
-  const from = position(view.start);
-  const to = position(view.end);
-  if (horizontal) context.strokeRect(from - 0.5, 2.5, Math.max(to - from, 3) + 1, 10);
-  else context.strokeRect(layout.width - 13.5, from - 0.5, 10, Math.max(to - from, 3) + 1);
+  context.globalAlpha = 1;
+
+  const frame = windowOnTrack(track, total, view, MINIMAP_MIN_WINDOW);
+  context.fillStyle = MINIMAP_OUT_OF_VIEW;
+  if (frame.start > track.start) fill(track.start, frame.start, barFrom, barTo);
+  if (frame.end < track.end) fill(frame.end, track.end, barFrom, barTo);
+
+  // The frame, its hairlines, and a grip on each edge.
+  const frameFrom = middle - MINIMAP_FRAME / 2;
+  const frameTo = middle + MINIMAP_FRAME / 2;
+  context.fillStyle = TEXT;
+  fill(frame.start, frame.end, frameFrom, frameFrom + 1);
+  fill(frame.start, frame.end, frameTo - 1, frameTo);
+  fill(frame.start, frame.start + 1, frameFrom, frameTo);
+  fill(frame.end - 1, frame.end, frameFrom, frameTo);
+  fill(frame.start - 1.5, frame.start + 1.5, middle - MINIMAP_GRIP / 2, middle + MINIMAP_GRIP / 2);
+  fill(frame.end - 1.5, frame.end + 1.5, middle - MINIMAP_GRIP / 2, middle + MINIMAP_GRIP / 2);
+
+  // Lit books: a line under the frame, clear of it.
+  if (brush) {
+    const from = at(brush.start);
+    fill(from, Math.max(at(brush.end + 1), from + 2), frameTo + 2, frameTo + 4);
+  }
 }
