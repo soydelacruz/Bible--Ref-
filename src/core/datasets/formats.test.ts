@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { createStudyNotesFile, createTranslationFile } from '../../test-utils/fixtures.ts';
 import {
-  createCrossReferenceColumns,
-  createStudyNotesFile,
-  createTranslationFile,
-} from '../../test-utils/fixtures.ts';
-import {
-  parseCrossReferencesFile,
+  compareLinksInVerse,
+  parseCrossReferencesMetadata,
   parseStudyNotesFile,
   parseTranslationTextFile,
 } from './formats.ts';
@@ -27,8 +24,8 @@ describe('dataset file parsing', () => {
     ).toThrow('schemaVersion: expected one of 1, got 2');
   });
 
-  it('accepts a valid cross-reference file', () => {
-    const file = {
+  it("accepts a cross-reference file's metadata", () => {
+    const metadata = {
       format: 'cross-references',
       schemaVersion: 1,
       versification: 'kjv',
@@ -41,34 +38,46 @@ describe('dataset file parsing', () => {
       notices: [{ level: 'info', message: 'Remapped', count: 1, examples: ['x'] }],
       sourceId: 'openbible',
       sourceRowCount: 1,
-      links: createCrossReferenceColumns([{ from: 0, to: 1, votes: 3 }], 2),
+      license: { name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' },
+      attribution: 'OpenBible.info',
     };
     expect(
-      parseCrossReferencesFile(roundTrip(file), { id: 'openbible', versification: 'kjv' }),
-    ).toEqual(file);
+      parseCrossReferencesMetadata(roundTrip(metadata), { id: 'openbible', versification: 'kjv' }),
+    ).toEqual(metadata);
   });
 
-  it('rejects malformed link columns', () => {
+  it("refuses another source's cross-references", () => {
     expect(() =>
-      parseCrossReferencesFile(
+      parseCrossReferencesMetadata(
         {
           format: 'cross-references',
           schemaVersion: 1,
           versification: 'kjv',
-          provenance: {
-            url: '',
-            sha256: '',
-            retrievedAt: '',
-            snapshotDate: null,
-          },
+          provenance: { url: '', sha256: '', retrievedAt: '', snapshotDate: null },
           notices: [],
-          sourceId: 'openbible',
+          sourceId: 'elsewhere',
           sourceRowCount: 0,
-          links: { offsets: [0], targetStart: [], targetEnd: [], votes: ['1'] },
         },
         { id: 'openbible', versification: 'kjv' },
       ),
-    ).toThrow('links.votes[0]: expected an integer');
+    ).toThrow('sourceId: expected one of "openbible", got "elsewhere"');
+  });
+});
+
+describe("a verse's links", () => {
+  it('come most votes first, then by where they point', () => {
+    const links = [
+      { targetStart: 9, targetEnd: 9, votes: 1 },
+      { targetStart: 4, targetEnd: 6, votes: 7 },
+      { targetStart: 4, targetEnd: 4, votes: 7 },
+      { targetStart: 2, targetEnd: 2, votes: 7 },
+    ];
+    expect(links.toSorted(compareLinksInVerse)).toEqual([
+      { targetStart: 2, targetEnd: 2, votes: 7 },
+      { targetStart: 4, targetEnd: 4, votes: 7 },
+      { targetStart: 4, targetEnd: 6, votes: 7 },
+      { targetStart: 9, targetEnd: 9, votes: 1 },
+    ]);
   });
 });
 

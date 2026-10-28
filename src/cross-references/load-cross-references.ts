@@ -1,12 +1,9 @@
 import { CANONICAL_VERSIFICATION } from '../core/bible/versification.ts';
-import {
-  parseCrossReferencesFile,
-  type DatasetProvenance,
-  type ImportNotice,
-} from '../core/datasets/formats.ts';
+import { acceptCrossReferenceTables } from '../core/datasets/decoders.ts';
+import type { DatasetProvenance, ImportNotice } from '../core/datasets/formats.ts';
 import { crossReferencesDatasetPath } from '../core/datasets/paths.ts';
 import {
-  loadDataset,
+  loadDatasetOffThread,
   type DatasetLoadReport,
   type FetchDatasetOptions,
 } from '../shared/lib/fetch-dataset.ts';
@@ -27,23 +24,27 @@ export interface LoadedCrossReferences {
   readonly report: DatasetLoadReport;
 }
 
+/**
+ * The links of one source. Read and indexed in the dataset worker; what arrives here is the
+ * index's tables, ready to use.
+ */
 export async function loadCrossReferences(
   manifest: CrossReferenceSourceManifest,
   options: FetchDatasetOptions = {},
 ): Promise<LoadedCrossReferences> {
-  const { value: dataset, report } = await loadDataset(
+  const expected = { id: manifest.id, versification: CANONICAL_VERSIFICATION.id };
+  const { verseCount } = CANONICAL_VERSIFICATION;
+  const { value: dataset, report } = await loadDatasetOffThread(
     crossReferencesDatasetPath(manifest.id),
-    (json): CrossReferenceDataset => {
-      const file = parseCrossReferencesFile(json, {
-        id: manifest.id,
-        versification: CANONICAL_VERSIFICATION.id,
-      });
+    { kind: 'cross-references', expected, verseCount },
+    (value): CrossReferenceDataset => {
+      const { metadata, tables } = acceptCrossReferenceTables(value, expected, verseCount);
       return {
         manifest,
-        provenance: file.provenance,
-        notices: file.notices,
-        sourceRowCount: file.sourceRowCount,
-        index: new CrossReferenceIndex(file.links, CANONICAL_VERSIFICATION.verseCount),
+        provenance: metadata.provenance,
+        notices: metadata.notices,
+        sourceRowCount: metadata.sourceRowCount,
+        index: new CrossReferenceIndex(tables, verseCount),
       };
     },
     options,

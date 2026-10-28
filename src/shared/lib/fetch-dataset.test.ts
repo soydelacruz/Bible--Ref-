@@ -1,6 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { encodeCrossReferences } from '../../core/datasets/cross-references-binary.ts';
+import {
+  acceptCrossReferenceTables,
+  decodeDataset,
+  parseDecodeMessage,
+  type DecodeRequest,
+} from '../../core/datasets/decoders.ts';
 import { ValidationError } from '../../core/lib/validation.ts';
-import { DatasetUnavailableError, fetchDataset, loadDataset, measure } from './fetch-dataset.ts';
+import { serveRequests } from '../../core/lib/worker-rpc.ts';
+import { createCrossReferencesFile } from '../../test-utils/fixtures.ts';
+import {
+  DatasetUnavailableError,
+  fetchDataset,
+  loadDataset,
+  loadDatasetOffThread,
+  measure,
+} from './fetch-dataset.ts';
 
 function respondWith(body: string, init: ResponseInit = {}): void {
   vi.stubGlobal(
@@ -237,5 +252,79 @@ describe('loadDataset', () => {
     );
     const { value } = await loadDataset('data/thing.json', unreadable);
     expect(value).toEqual({ new: true });
+  });
+});
+
+describe('loadDatasetOffThread', () => {
+  const VERSES = 10;
+  const file = createCrossReferencesFile([{ from: 1, to: 4, votes: 2 }], VERSES);
+  const request: DecodeRequest = {
+    kind: 'cross-references',
+    expected: { id: 'openbible', versification: 'kjv' },
+    verseCount: VERSES,
+  };
+  const accept = (value: unknown) => acceptCrossReferenceTables(value, request.expected, VERSES);
+
+  function serveFiles(...bodies: (string | Uint8Array<ArrayBuffer>)[]) {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(bodies.shift() ?? '', { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  /** A worker in this thread, on a real message channel, running the dataset worker's code. */
+  class InThreadWorker {
+    static readonly started: string[] = [];
+    readonly #port: MessagePort;
+
+    constructor(url: URL) {
+      InThreadWorker.started.push(url.href);
+      const { port1, port2 } = new MessageChannel();
+      serveRequests(port1, (message) => {
+        const { request: asked, buffer } = parseDecodeMessage(message);
+        return decodeDataset(asked, buffer);
+      });
+      port1.start();
+      this.#port = port2;
+    }
+
+    addEventListener(type: string, listener: (event: MessageEvent<unknown>) => void): void {
+      if (type === 'message') {
+        this.#port.addEventListener('message', listener);
+        this.#port.start();
+      }
+    }
+
+    postMessage(message: unknown, transfer: Transferable[]): void {
+      this.#port.postMessage(message, transfer);
+    }
+  }
+
+  it('reads the file on this thread where there is no worker, and times both parts', async () => {
+    serveFiles(encodeCrossReferences(file));
+    const { value, report } = await loadDatasetOffThread('data/links.bin', request, accept);
+    expect(Array.from(value.tables.targetStarts)).toEqual([4]);
+    expect(report.parseMs).toBeGreaterThanOrEqual(0);
+    expect(report.processMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('has the dataset worker read it where there is one', async () => {
+    vi.stubGlobal('Worker', InThreadWorker);
+    vi.resetModules();
+    const fresh = await import('./fetch-dataset.ts');
+    serveFiles(encodeCrossReferences(file));
+    const { value } = await fresh.loadDatasetOffThread('data/links.bin', request, accept);
+    expect(Array.from(value.tables.sources)).toEqual([1]);
+    expect(InThreadWorker.started).toEqual([
+      expect.stringContaining('core/datasets/dataset.worker.ts'),
+    ]);
+  });
+
+  it('fetches again a cached copy an earlier release left, which this one cannot read', async () => {
+    const fetchMock = serveFiles('{"format":"cross-references"}', encodeCrossReferences(file));
+    const { value } = await loadDatasetOffThread('data/links.bin', request, accept);
+    expect(value.metadata.sourceRowCount).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

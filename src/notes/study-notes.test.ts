@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_VERSIFICATION } from '../core/bible/versification.ts';
 import type { StudyNote } from '../core/datasets/formats.ts';
+import { studyNotesDatasetPath } from '../core/datasets/paths.ts';
 import { createStudyNotesFile, verseIndex } from '../test-utils/fixtures.ts';
 import { loadStudyNotes } from './load-study-notes.ts';
 import { getNoteSourceManifest, NOTE_SOURCE_MANIFESTS } from './registry.ts';
@@ -84,9 +85,9 @@ describe('loadStudyNotes', () => {
   it('fetches one book’s file and indexes it', async () => {
     const fetch = serve(createStudyNotesFile('Gen', NOTES));
     const { notes, report } = await loadStudyNotes(NET, 'Gen');
-    expect(String(fetch.mock.calls[0]?.[0])).toContain('data/notes/net/Gen.json');
+    expect(String(fetch.mock.calls[0]?.[0])).toContain(studyNotesDatasetPath('net', 'Gen'));
     expect(notes.notesOn(GEN_1_1)).toHaveLength(2);
-    expect(report.path).toBe('data/notes/net/Gen.json');
+    expect(report.path).toBe(studyNotesDatasetPath('net', 'Gen'));
   });
 
   it('refuses the file of another book', async () => {

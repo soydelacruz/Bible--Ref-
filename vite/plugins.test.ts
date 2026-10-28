@@ -10,7 +10,12 @@ import { offline } from './offline.ts';
 import { PAGES } from './site.ts';
 import { preloadScript, siteHead } from './site-head.ts';
 import { DEFAULT_LOCALE_ID, LOCALE_IDS } from '../src/i18n/locale-id.ts';
-import { translationDatasetPath } from '../src/core/datasets/paths.ts';
+import { DATASET_FILES } from '../src/core/datasets/dataset-files.ts';
+import {
+  crossReferencesDatasetPath,
+  DATASET_HASH_LENGTH,
+  translationDatasetPath,
+} from '../src/core/datasets/paths.ts';
 import { defaultTranslationFor } from '../src/translations/default-for-locale.ts';
 import { initialChoice } from '../src/app/initial-choice.ts';
 import { TRANSLATION_MANIFESTS } from '../src/translations/registry.ts';
@@ -254,6 +259,14 @@ describe('offline', () => {
     expect(files).not.toContain('sw.js');
     expect(worker).toContain('const VERSION = "');
     expect(worker).toContain('const PAGES = ');
+    // Every dataset by the name this build gives it, so the worker can tell this release's
+    // files from an earlier one's.
+    const datasets = JSON.parse(
+      /const DATASET_FILES = (\[.*?\]);/s.exec(worker)?.[1] ?? '[]',
+    ) as string[];
+    expect(datasets).toHaveLength(Object.keys(DATASET_FILES).length);
+    expect(datasets).toContain(crossReferencesDatasetPath('openbible'));
+    expect(worker).toContain(`const HASH_LENGTH = ${String(DATASET_HASH_LENGTH)};`);
   });
 });
 

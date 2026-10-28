@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { crossReferencesDatasetPath, translationDatasetPath } from '../../core/datasets/paths.ts';
 import {
-  createCrossReferenceColumns,
   createStudyNotesFile,
+  crossReferencesFileBytes,
   createTranslationFile,
   PROVENANCE,
   verseIndex,
@@ -24,16 +24,7 @@ import { vizCrossReferenceSource, vizDatasetPaths } from './viz-datasets.ts';
 
 const GEN_1_1 = verseIndex('Gen', 1, 1);
 
-const CROSS_REFERENCES = {
-  format: 'cross-references',
-  schemaVersion: 1,
-  versification: 'kjv',
-  provenance: PROVENANCE,
-  notices: [],
-  sourceId: 'openbible',
-  sourceRowCount: 1,
-  links: createCrossReferenceColumns([{ from: GEN_1_1, to: GEN_1_1 + 1, votes: 5 }]),
-};
+const CROSS_REFERENCES = crossReferencesFileBytes([{ from: GEN_1_1, to: GEN_1_1 + 1, votes: 5 }]);
 
 const WORDS = {
   format: 'original-words',
@@ -64,7 +55,7 @@ function serveDatasets(overrides: Record<string, unknown> = {}) {
       return Promise.resolve(new Response(JSON.stringify(body)));
     }
     if (url.includes('cross-references')) {
-      return Promise.resolve(new Response(JSON.stringify(CROSS_REFERENCES)));
+      return Promise.resolve(new Response(CROSS_REFERENCES));
     }
     if (url.includes('words')) {
       return Promise.resolve(new Response(JSON.stringify(WORDS)));
@@ -151,7 +142,7 @@ describe('textStatus', () => {
   });
 
   it('says why a download failed, until it is forgotten for a retry', async () => {
-    serveDatasets({ 'translations/bsb.json': { not: 'a translation' } });
+    serveDatasets({ 'translations/bsb.': { not: 'a translation' } });
     await expect(translationLoader('bsb').load()).rejects.toThrow();
     expect(textStatus('bsb').state).toBe('failed');
     resetTranslation('bsb');
@@ -159,7 +150,7 @@ describe('textStatus', () => {
   });
 
   it('tells its subscribers when a text arrives, fails, or is forgotten', async () => {
-    serveDatasets({ 'translations/kjv.json': { not: 'a translation' } });
+    serveDatasets({ 'translations/kjv.': { not: 'a translation' } });
     const listener = vi.fn();
     const unsubscribe = subscribeToTexts(listener);
     await translationLoader('bsb').load();
@@ -185,7 +176,7 @@ describe('textStatus', () => {
     await abandoned;
     expect(textStatus('bsb')).toEqual({ state: 'loading' });
 
-    serveDatasets({ 'translations/kjv.json': { not: 'a translation' } });
+    serveDatasets({ 'translations/kjv.': { not: 'a translation' } });
     const failing = translationLoader('kjv').load();
     resetTranslation('kjv');
     await failing.catch(() => undefined);
@@ -214,7 +205,7 @@ describe('afterLinksDownloaded', () => {
 
 describe('studyNotesLoader', () => {
   it('fetches a book’s notes once, and keeps one loader a book', async () => {
-    const fetch = serveDatasets({ 'notes/net/Gen.json': createStudyNotesFile('Gen') });
+    const fetch = serveDatasets({ 'notes/net/Gen.': createStudyNotesFile('Gen') });
     expect(studyNotesLoader('Gen')).toBe(studyNotesLoader('Gen'));
     expect(studyNotesLoader('Gen')).not.toBe(studyNotesLoader('Exod'));
     const notes = await studyNotesLoader('Gen').load();

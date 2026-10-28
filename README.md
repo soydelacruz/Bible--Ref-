@@ -255,6 +255,15 @@ and checked against its pin, so a dataset is never built from a file nobody vouc
 `npm run dev` and `npm run build` turn them into the app's datasets in `public/data/` (generated,
 git-ignored), validated against the canonical KJV versification (31,102 verses).
 
+Each dataset file is named by its content (`translations/kjv.1a2b3c4d5e6f.json`), so its address
+always means the same bytes: browsers and the offline cache keep it for good, and a build that
+changes it publishes it under a new name. The build writes the names it chose to
+[`src/core/datasets/dataset-files.ts`](src/core/datasets/dataset-files.ts), which is committed:
+a change to the data shows there as a new hash, in the same pull request. The cross-references,
+the largest download, are a compact binary file (layout in
+[`cross-references-binary.ts`](src/core/datasets/cross-references-binary.ts)); the texts are JSON.
+The page reads both in a Web Worker, so a first visit or a change of Bible never stops it.
+
 One eBible.org text is committed all the same: the World English Bible's. The KJV, ASV and YLT are
 finished texts, but the WEB is a living translation whose editors keep correcting it, and each
 revision replaces the file eBible.org serves. Downloaded by the build, every revision stopped
@@ -271,7 +280,8 @@ npm run data:fetch -- --update web   # or only the sources named
 npm run data:build                   # rebuild, then review the numbers on /debug/
 ```
 
-Then commit `data/raw/` and `data/sources.json`, and say in the pull request what changed upstream.
+Then commit `data/raw/`, `data/sources.json` and `src/core/datasets/dataset-files.ts`, and say in
+the pull request what changed upstream.
 
 ## Development
 

@@ -1,6 +1,7 @@
 import { parseOsisId, type VerseIndex } from '../../../src/core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../../../src/core/bible/versification.ts';
 import {
+  compareLinksInVerse,
   DATASET_SCHEMA_VERSION,
   type CrossReferencesFile,
   type DatasetProvenance,
@@ -37,13 +38,9 @@ interface Link {
   readonly votes: number;
 }
 
+/** By source verse, then in the order the binary file restores within a verse. */
 function compareLinks(a: Link, b: Link): number {
-  return (
-    a.from - b.from ||
-    b.votes - a.votes ||
-    a.targetStart - b.targetStart ||
-    a.targetEnd - b.targetEnd
-  );
+  return a.from - b.from || compareLinksInVerse(a, b);
 }
 
 export function importOpenBibleCrossReferences(

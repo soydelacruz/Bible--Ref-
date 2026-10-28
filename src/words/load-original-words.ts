@@ -5,7 +5,7 @@ import {
   type ImportNotice,
 } from '../core/datasets/formats.ts';
 import { originalWordsDatasetPath } from '../core/datasets/paths.ts';
-import { loadDataset, type DatasetLoadReport } from '../shared/lib/fetch-dataset.ts';
+import { loadDatasetOffThread, type DatasetLoadReport } from '../shared/lib/fetch-dataset.ts';
 import { OriginalWordIndex } from './original-words.ts';
 import type { WordSourceManifest } from './word-source-manifest.ts';
 
@@ -26,13 +26,12 @@ export interface LoadedOriginalWords {
 export async function loadOriginalWords(
   manifest: WordSourceManifest,
 ): Promise<LoadedOriginalWords> {
-  const { value: dataset, report } = await loadDataset(
+  const expected = { id: manifest.id, versification: CANONICAL_VERSIFICATION.id };
+  const { value: dataset, report } = await loadDatasetOffThread(
     originalWordsDatasetPath(manifest.id),
-    (json): OriginalWordsDataset => {
-      const file = parseOriginalWordsFile(json, {
-        id: manifest.id,
-        versification: CANONICAL_VERSIFICATION.id,
-      });
+    { kind: 'original-words', expected },
+    (value): OriginalWordsDataset => {
+      const file = parseOriginalWordsFile(value, expected);
       return {
         manifest,
         provenance: file.provenance,

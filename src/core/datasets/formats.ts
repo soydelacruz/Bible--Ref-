@@ -80,22 +80,43 @@ export interface TranslationTextFile extends DatasetFileBase<'translation-text'>
  * Cross-reference links in columnar, compressed-sparse-row (CSR) layout, grouped by source verse:
  * the links of source verse `v` occupy positions `offsets[v]` to `offsets[v + 1] - 1` of the
  * other columns. Targets are inclusive verse-index ranges (`targetStart === targetEnd` for a
- * single verse).
+ * single verse). Within a verse the links are in `compareLinksInVerse` order.
  */
 export interface CrossReferenceColumns {
-  readonly offsets: readonly number[];
-  readonly targetStart: readonly number[];
-  readonly targetEnd: readonly number[];
-  readonly votes: readonly number[];
+  readonly offsets: ArrayLike<number>;
+  readonly targetStart: ArrayLike<number>;
+  readonly targetEnd: ArrayLike<number>;
+  readonly votes: ArrayLike<number>;
 }
 
-export interface CrossReferencesFile extends DatasetFileBase<'cross-references'> {
+/** One link of a verse, as far as its place among the verse's links goes. */
+export interface LinkInVerse {
+  readonly targetStart: number;
+  readonly targetEnd: number;
+  readonly votes: number;
+}
+
+/**
+ * The order of a verse's links in the dataset: most votes first, then by target. It is a total
+ * order (a verse never links to the same target twice), so the binary file is free to store a
+ * verse's links in whatever order packs best and sort them back.
+ */
+export function compareLinksInVerse(a: LinkInVerse, b: LinkInVerse): number {
+  return b.votes - a.votes || a.targetStart - b.targetStart || a.targetEnd - b.targetEnd;
+}
+
+/** Everything a cross-reference file says about itself: all of it but the links. */
+export interface CrossReferencesMetadata extends DatasetFileBase<'cross-references'> {
   readonly sourceId: CrossReferenceSourceId;
   /** Number of data rows in the raw source file. */
   readonly sourceRowCount: number;
   /** As on a translation, and for the same reason: this file is served and cached on its own. */
   readonly license?: LicenseInfo;
   readonly attribution?: string;
+}
+
+/** The links and what they are; stored in the binary format of `cross-references-binary.ts`. */
+export interface CrossReferencesFile extends CrossReferencesMetadata {
   readonly links: CrossReferenceColumns;
 }
 
@@ -255,12 +276,12 @@ export function parseTranslationTextFile(
   };
 }
 
-export function parseCrossReferencesFile(
+/** Validates the metadata block of a cross-reference file (see `cross-references-binary.ts`). */
+export function parseCrossReferencesMetadata(
   json: unknown,
   expected: ExpectedDataset<CrossReferenceSourceId>,
-): CrossReferencesFile {
+): CrossReferencesMetadata {
   const { record, base } = parseFileBase(json, 'cross-references', expected.versification);
-  const links = expectRecord(record['links'], 'links');
   const license = record['license'];
   const attribution = record['attribution'];
   return {
@@ -269,12 +290,6 @@ export function parseCrossReferencesFile(
     sourceRowCount: expectInteger(record['sourceRowCount'], 'sourceRowCount'),
     ...(license === undefined ? {} : { license: expectLicense(license) }),
     ...(attribution === undefined ? {} : { attribution: expectString(attribution, 'attribution') }),
-    links: {
-      offsets: expectIntegerArray(links['offsets'], 'links.offsets'),
-      targetStart: expectIntegerArray(links['targetStart'], 'links.targetStart'),
-      targetEnd: expectIntegerArray(links['targetEnd'], 'links.targetEnd'),
-      votes: expectIntegerArray(links['votes'], 'links.votes'),
-    },
   };
 }
 
