@@ -12,6 +12,7 @@ import {
 } from '../../shared/link-filter.ts';
 import { TourLayer } from './ArcsTour.tsx';
 import { HOLD_MS } from './tour-player.ts';
+import { startArcsTour } from './tour-request.ts';
 import { coveredShare, useArcsTour, type PlayPath, type TourCamera } from './use-arcs-tour.ts';
 
 const GEN_1_1 = verseIndex('Gen', 1, 1);
@@ -192,6 +193,20 @@ describe('the invitation', () => {
     await elapse(0);
     expect(progress()).toBe('Tour · 1 of 3');
     expect(camera.showStop).toHaveBeenCalled();
+  });
+
+  it('starts when asked from outside the arcs, as from their own button', async () => {
+    const { unmount } = firstVisit(<Harness camera={fakeCamera()} />);
+    act(() => {
+      startArcsTour();
+    });
+    await elapse(0);
+    expect(progress()).toBe('Tour · 1 of 3');
+    expect(localStorage.getItem(preferenceKey(ARCS_TOUR_PREFERENCE))).toBe('true');
+    // Gone with the arcs: nothing is left listening.
+    unmount();
+    startArcsTour();
+    expect(card()).toBeNull();
   });
 });
 

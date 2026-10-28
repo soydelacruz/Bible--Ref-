@@ -350,6 +350,15 @@ export const pt: LocaleMessages = {
   'tour.finale.line':
     'Uma só cadeia de referências cruzadas, da primeira promessa a “Eu sou o Alfa e o Ômega”.',
 
+  'start.label': 'Comece aqui',
+  'start.caption':
+    'Cada arco liga duas passagens que se referem uma à outra, com a cor do gênero dos seus livros.',
+  'start.inArcs': 'nos Arcos',
+  'start.inThreads': 'nos Fios',
+  'start.tour': 'O passeio',
+  'start.tourLength': 'em 45 segundos',
+  'start.close': 'Não mostrar de novo',
+
   // Feminine plural, as "reindexadas" below agrees with it.
   'credits.links': 'Referências cruzadas:',
   'credits.fromTsk': ', do Treasury of Scripture Knowledge',
