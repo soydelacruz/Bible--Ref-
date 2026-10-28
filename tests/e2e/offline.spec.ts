@@ -304,6 +304,39 @@ test.describe('the offline cache', () => {
     }
   });
 
+  test("a Bible an earlier release's page is given in place of its own file is kept", async ({
+    page,
+    context,
+  }) => {
+    // A page loaded before this release took over asks for its release's name for a dataset,
+    // which the server no longer has, and is given this release's file instead. Its own request
+    // to store what it read names a file this release does not serve, so the worker has to keep
+    // the file itself, or the Bible just downloaded is not there offline.
+    await installWorker(page);
+    expect((await storedDatasets(page)).some((path) => path.includes('/translations/web.'))).toBe(
+      false,
+    );
+    // The host has no such file. (The preview server would answer with the app's page instead.)
+    await context.route('**/translations/web.000000000000.json', (route) =>
+      route.fulfill({ status: 404, body: 'Not found' }),
+    );
+    const status = await page.evaluate(async () => {
+      const old = new URL('data/translations/web.000000000000.json', document.baseURI);
+      return (await fetch(old)).status;
+    });
+    expect(status).toBe(200);
+    await expect
+      .poll(async () =>
+        (await storedDatasets(page)).some((path) =>
+          /\/translations\/web\.[0-9a-f]{12}\.json$/.test(path),
+        ),
+      )
+      .toBe(true);
+    expect((await storedDatasets(page)).some((path) => path.includes('web.000000000000'))).toBe(
+      false,
+    );
+  });
+
   test('a worker that withdraws itself clears everything, in one visit', async ({ page }) => {
     await installWorker(page);
     const original = await readFile(WORKER, 'utf8');

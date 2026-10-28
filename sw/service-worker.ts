@@ -330,6 +330,9 @@ async function adoptedCopy(current: Cache, request: Request): Promise<Response |
  * or any other stored. A page of an earlier release, still open after this one took over, asks
  * for files the server no longer has; a reader offline may have only an earlier release's copy.
  * The app checks whatever it is given, and fetches again what it cannot read.
+ *
+ * This release's file, fetched in its place, is stored here: the page's own request to store
+ * what it read names its release's file, which this one does not keep.
  */
 async function sameDataset(data: Cache, url: string): Promise<Response | undefined> {
   const name = datasetName(url);
@@ -346,7 +349,14 @@ async function sameDataset(data: Cache, url: string): Promise<Response | undefin
       }
     }
   }
-  return current === undefined || current === url ? undefined : fetch(current);
+  if (current === undefined || current === url) {
+    return undefined;
+  }
+  const response = await fetch(current);
+  if (response.ok) {
+    await data.put(current, response.clone());
+  }
+  return response;
 }
 
 /**
