@@ -192,6 +192,9 @@ export function Minimap({
     const along = alongOf(event);
     const reach = event.pointerType === 'mouse' ? MOUSE_REACH : TOUCH_REACH;
     const grab = grabAt(track, total, view, along, reach);
+    if (grab === 'brush') {
+      controllerRef.current?.prepareBrush();
+    }
     press.current = {
       grab,
       // Taking hold of the window stops a flight or a glide where it is, as a finger does.

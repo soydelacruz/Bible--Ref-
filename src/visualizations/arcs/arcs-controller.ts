@@ -411,6 +411,14 @@ export class ArcsController {
   }
 
   /**
+   * Books are being brushed on the minimap: gets ready to light them up, so that letting go does
+   * not also wait for the ribbons' shader to compile, the first time any are drawn.
+   */
+  prepareBrush(): void {
+    this.#scene.prepareRibbons();
+  }
+
+  /**
    * Lights up `links`, those of books brushed on the minimap, as a focused passage's are: grown
    * out of the books over the dimmed glow, though the camera stays where it is. They stand in for
    * the focused passage's links until cleared (`null`), and then those show again at once.

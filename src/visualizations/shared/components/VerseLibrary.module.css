@@ -64,17 +64,17 @@
   outline-offset: 4px;
 }
 
-/* A finger needs more than the disc: the target grows to 44px without the discs moving apart
-   more than their own targets need. */
+/* A finger needs more than the disc: the target grows past 44px, and the discs move apart just
+   as far as their targets need to meet without overlapping. */
 @media (pointer: coarse) {
   .swatches {
-    gap: var(--space-3);
+    gap: var(--space-4);
   }
 
-  /* From inside the disc's 1px rim, out to a fingertip's size. */
+  /* From inside the disc's 1px rim, out past a fingertip's size. */
   .swatch::after {
     position: absolute;
-    inset: calc((2rem - var(--touch-target)) / 2 - 1px);
+    inset: calc((2rem - var(--touch-target)) / 2 - 2px);
     border-radius: 50%;
     content: '';
   }

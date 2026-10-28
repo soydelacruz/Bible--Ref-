@@ -91,13 +91,14 @@
   outline-offset: 2px;
 }
 
-/* Small type on a phone: the target reaches up and down to a finger's size, and a little to
-   each side, so that "1 note" is as wide as a fingertip too; the gap and the dot between two of
-   them take the overlap. */
+/* Small type on a phone: the target reaches up and down past a finger's size (with a pixel or
+   two to spare, as the line's own height falls either side of 20px), and a little to each side, so
+   that "1 note" is as wide as a fingertip too; the gap and the dot between two of them take the
+   overlap. */
 @media (pointer: coarse) {
   .summaryLink::after {
     position: absolute;
-    inset: -0.75rem -0.25rem;
+    inset: -0.8125rem -0.25rem;
     content: '';
   }
 }
@@ -369,7 +370,7 @@
 @media (pointer: coarse) {
   .copy::after {
     position: absolute;
-    inset: -3px -11px -19px;
+    inset: -3px -12px -20px;
     content: '';
   }
 }

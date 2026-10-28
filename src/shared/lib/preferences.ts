@@ -70,6 +70,26 @@ export function readPreference(key: string): string | null {
   return read(key);
 }
 
+/**
+ * Whether anything at all is stored for this reader — a language, a translation, a saved verse, a
+ * folded section: they have been here before. Only the app's own keys count; the origin is shared.
+ */
+export function hasStoredPreferences(): boolean {
+  if (memory.size > 0) {
+    return true;
+  }
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      if (localStorage.key(index)?.startsWith(preferenceKey('')) === true) {
+        return true;
+      }
+    }
+  } catch {
+    // Unavailable: nothing is stored, beyond what this visit keeps in memory.
+  }
+  return false;
+}
+
 /** Writes one outside React, e.g. to settle the language before the first paint. */
 export function writePreference(key: string, value: string): void {
   write(key, value);
