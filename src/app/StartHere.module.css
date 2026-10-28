@@ -1,0 +1,193 @@
+/* A row of its own under the header (VizPage's `PageNotice`): the stage starts below it, so it
+   covers none of the arcs. On a desktop one line, what the picture is and then the ways in; on a
+   phone, the line over the ways. */
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface);
+  animation: strip-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes strip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+.caption {
+  flex: 1 1 22rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.ways {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.label {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.list {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list > li {
+  display: flex;
+}
+
+/* What it opens, then where: "John 3:16 in Arcs". The icon is the view's, as in the switch. */
+.way {
+  font-size: 0.8125rem;
+}
+
+.way > svg {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) {
+  .way:hover {
+    border-color: var(--color-text-muted);
+  }
+
+  .way:hover > svg {
+    color: var(--color-accent);
+  }
+}
+
+/* Quiet until pointed at, like the tour card's own controls; at the row's end, even when the
+   strip wraps onto two lines. */
+.close {
+  justify-content: center;
+  margin-inline-start: auto;
+  padding: var(--space-1);
+  border-color: transparent;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) {
+  .close:hover {
+    border-color: var(--color-border);
+    color: var(--color-text);
+  }
+}
+
+@media (pointer: coarse) {
+  .way,
+  .close {
+    min-block-size: 2.75rem;
+  }
+
+  .close {
+    min-inline-size: 2.75rem;
+  }
+}
+
+/* A phone: the line, with the close button beside it, over a row of three ways in, each with its
+   place under its name so all three fit across the narrowest screen, in every language. The
+   label is left to screen readers: the ways speak for themselves. */
+@media (max-width: 47.99rem) {
+  .strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-1) var(--space-3) var(--space-2);
+  }
+
+  .caption {
+    align-self: center;
+    font-size: 0.75rem;
+  }
+
+  .ways {
+    grid-column: 1 / -1;
+  }
+
+  .close {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .list {
+    flex: 1;
+    gap: 0.375rem;
+  }
+
+  .list > li {
+    flex: 1 1 auto;
+  }
+
+  .way {
+    flex: 1;
+    gap: 0.375rem;
+    padding-inline: var(--space-2);
+  }
+
+  .words {
+    display: grid;
+    line-height: 1.25;
+    text-align: start;
+  }
+
+  .detail {
+    font-size: 0.6875rem;
+  }
+}
+
+/* The narrowest phones: the names alone, which still say where each way goes. */
+@media (max-width: 22.49rem) {
+  .way > svg {
+    display: none;
+  }
+}
+
+/* With less motion it only fades in. */
+@media (prefers-reduced-motion: reduce) {
+  .strip {
+    animation: strip-fade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes strip-fade {
+  from {
+    opacity: 0;
+  }
+}

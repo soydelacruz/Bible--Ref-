@@ -5,6 +5,18 @@ list is that it is the complete set: if a flow is not here, nothing is watching 
 
 Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chromium`).
 
+## A first visit
+
+| Flow                                                                     | Covered by           |
+| ------------------------------------------------------------------------ | -------------------- |
+| A first visit is welcomed under the header, clear of the arcs            | `start-here.spec.ts` |
+| …with one line on what the picture is, in the reader's language          | `start-here.spec.ts` |
+| …and three ways in: John 3:16 in Arcs, Psalm 23 in Threads, the tour     | `start-here.spec.ts` |
+| …in place of the tour's own invitation, which never shows beside it      | `start-here.spec.ts` |
+| It stays while the filters are tried, so nothing moves under the pointer | `start-here.spec.ts` |
+| It stays across a reload until closed, then never comes back             | `start-here.spec.ts` |
+| A link to a passage, a view or a filter is not welcomed, nor a returner  | `start-here.spec.ts` |
+
 ## Reading
 
 | Flow                                                    | Covered by        |

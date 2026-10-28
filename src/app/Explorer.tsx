@@ -17,7 +17,11 @@ import { DEFAULT_LINK_FILTER, type LinkFilter } from '../visualizations/shared/l
 import { Credits } from '../visualizations/shared/components/Credits.tsx';
 import { TextPending } from '../visualizations/shared/components/TextPending.tsx';
 import { TranslationMenu } from '../visualizations/shared/components/TranslationMenu.tsx';
-import { HeaderActions, VizPage } from '../visualizations/shared/components/VizPage.tsx';
+import {
+  HeaderActions,
+  PageNotice,
+  VizPage,
+} from '../visualizations/shared/components/VizPage.tsx';
 import { useAnnouncer } from '../visualizations/shared/use-announcer.ts';
 import { useCompleteData, useTextStatus } from '../visualizations/shared/use-text-status.ts';
 import {
@@ -34,8 +38,10 @@ import {
   type ExplorerLocation,
 } from './explorer-location.ts';
 import { InAppLink } from './InAppLink.tsx';
+import { StartHere } from './StartHere.tsx';
 import { readPreferredTranslation, useTranslationPreference } from './translation-choice.ts';
 import { useExplorerLocation, type ShowHistoryStep } from './use-explorer-location.ts';
+import { useStartHere } from './use-start-here.ts';
 import { useViewSwitch } from './use-view-switch.ts';
 import { useWander } from './use-wander.ts';
 import { ViewSwitch } from './ViewSwitch.tsx';
@@ -161,6 +167,8 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // Says where Wander went. The views' panels describe a passage once it is open, but not every
   // view has its panel up at once (Clusters waits for the words), and this region outlives them.
   const [wanderStatus, announceWander] = useAnnouncer<HTMLParagraphElement>();
+  // A first visit's welcome, for as long as the reader stays on the front page.
+  const startHere = useStartHere(location, HOME.id);
 
   const title = [
     passage && formatPassage(passage, versification, books),
@@ -425,10 +433,32 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     );
   });
 
+  // Under every view's header, as Wander is in it: a way in opens like any passage link.
+  const startHereStrip = startHere.shown && (
+    <StartHere
+      versification={versification}
+      hrefOf={hrefOf}
+      onOpen={(view, target) => {
+        const next = { ...location, view: view.id, passage: target };
+        goToView(location, next, () => {
+          // Into another view, the keys follow as from the switch; in this one, the panel takes
+          // them (see `StartHere`).
+          if (view.id !== location.view) {
+            focusTarget.current = '[aria-current="page"]';
+          }
+          navigate(next);
+        });
+      }}
+      onClose={startHere.close}
+    />
+  );
+
   return (
-    <HeaderActions value={wanderButton}>
-      {views}
-      <p ref={wanderStatus} className={styles.visuallyHidden} role="status" />
-    </HeaderActions>
+    <PageNotice value={startHereStrip}>
+      <HeaderActions value={wanderButton}>
+        {views}
+        <p ref={wanderStatus} className={styles.visuallyHidden} role="status" />
+      </HeaderActions>
+    </PageNotice>
   );
 }

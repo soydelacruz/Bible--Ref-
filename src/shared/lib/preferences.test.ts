@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { readPreference, useBooleanPreference, useStringPreference } from './preferences.ts';
+import {
+  hasStoredPreferences,
+  readPreference,
+  useBooleanPreference,
+  useStringPreference,
+  writePreference,
+} from './preferences.ts';
 
 const KEY = 'bible-cross-references:example';
 
@@ -112,5 +118,44 @@ describe('useBooleanPreference', () => {
     const get = vi.spyOn(Storage.prototype, 'getItem');
     expect(renderHook(() => useBooleanPreference('example', true)).result.current[0]).toBe(false);
     expect(get).not.toHaveBeenCalled();
+  });
+});
+
+describe('hasStoredPreferences', () => {
+  /**
+   * Forgets what the module keeps in memory, as a change in another tab does. It hears other tabs
+   * only while something reads a preference, so something does, for the moment.
+   */
+  const forget = () => {
+    const { unmount } = renderHook(() => useStringPreference('example', 'fallback'));
+    window.dispatchEvent(new StorageEvent('storage'));
+    unmount();
+  };
+
+  it('is false for a reader with nothing stored, whatever other sites keep here', () => {
+    forget();
+    localStorage.setItem('another-site:theme', 'dark');
+    expect(hasStoredPreferences()).toBe(false);
+  });
+
+  it('is true once anything of the app is stored, from an earlier visit or this one', () => {
+    forget();
+    localStorage.setItem(KEY, 'stored');
+    expect(hasStoredPreferences()).toBe(true);
+    localStorage.clear();
+    writePreference('example', 'this visit');
+    expect(hasStoredPreferences()).toBe(true);
+  });
+
+  it('is false when storage cannot be read at all and nothing was kept this visit', () => {
+    localStorage.setItem(KEY, 'stored');
+    forget();
+    vi.stubGlobal('localStorage', {
+      get length(): number {
+        throw new Error('blocked');
+      },
+    });
+    expect(hasStoredPreferences()).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

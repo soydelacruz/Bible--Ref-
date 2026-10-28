@@ -15,6 +15,13 @@ import styles from './VizPage.module.css';
  */
 export const HeaderActions = createContext<ReactNode>(null);
 
+/**
+ * What the host shows under every view's header, in a row of its own so that it covers none of
+ * the stage (the first visit's Start here strip). Provided once, around all the views, like
+ * `HeaderActions`.
+ */
+export const PageNotice = createContext<ReactNode>(null);
+
 interface VizPageProps {
   /** The header's leading part, provided by the host app: the site's name and navigation. */
   readonly masthead?: ReactNode;
@@ -71,6 +78,7 @@ export function VizPage({
     onPanelClose,
   );
   const actions = use(HeaderActions);
+  const notice = use(PageNotice);
   const hasMore = Boolean(actions) || Boolean(tools) || Boolean(viewTools);
   return (
     <div className={styles.page}>
@@ -111,6 +119,7 @@ export function VizPage({
           )}
         </div>
       </header>
+      {Boolean(notice) && <div className={styles.notice}>{notice}</div>}
       <div
         ref={containerRef}
         className={styles.body}
