@@ -125,13 +125,14 @@ export function Explorer({ core }: { readonly core: VizCore }) {
   // Back and Forward cross between views as the switch does — unless the browser has shown the
   // step its own way (a swipe back, on a phone), which a second animation would only repeat.
   const showHistoryStep: ShowHistoryStep<ViewId> = (previous, next, show, event) => {
-    if (event.hasUAVisualTransition) {
+    if (event.hasUAVisualTransition || previous.view === next.view) {
+      opening.cancel();
       show();
       return;
     }
-    // A view not opened yet is opened first (see `goTo`). The address has already moved, so a
-    // step that is still waiting when it moves again — a link followed, a passage opened — is
-    // out of date, and the newer one owns the screen.
+    // Into another view, which is opened first if it has not been yet (see `goTo`). The address
+    // has already moved, so a step still waiting when it moves again — a link followed, a
+    // passage opened — is out of date, and the newer one owns the screen.
     const address = window.location.href;
     opening.whenOpen(next.view, () => {
       if (window.location.href === address) {
@@ -192,7 +193,13 @@ export function Explorer({ core }: { readonly core: VizCore }) {
     toward: (current: ExplorerLocation<ViewId>) => ExplorerLocation<ViewId>,
     show: (next: ExplorerLocation<ViewId>) => void,
   ) => {
-    opening.whenOpen(toward(location).view, () => {
+    const view = toward(location).view;
+    if (view === location.view) {
+      opening.cancel();
+      show(toward(location));
+      return;
+    }
+    opening.whenOpen(view, () => {
       const previous = locationRef.current;
       const next = toward(previous);
       switchViews(previous, next, () => {

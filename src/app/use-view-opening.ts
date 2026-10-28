@@ -47,6 +47,11 @@ export interface ViewOpening<Id extends string> {
    */
   readonly whenOpen: (id: Id, show: () => void) => void;
   /**
+   * Drops the switch still waiting, if there is one: something shown since — in the view on
+   * screen, which has nothing to wait for — takes its place.
+   */
+  readonly cancel: () => void;
+  /**
    * Says that what view `id` shows first is on the page — the view itself, the frame it waits
    * for its words in, or the error it failed with — or, with `false`, that it has gone again.
    */
@@ -152,10 +157,14 @@ export function useViewOpening<Id extends string>(
     [open],
   );
 
+  const cancel = useCallback(() => {
+    waiting.current?.cancel();
+    waiting.current = null;
+  }, []);
+
   const whenOpen = useCallback(
     (id: Id, show: () => void) => {
-      waiting.current?.cancel();
-      waiting.current = null;
+      cancel();
       if (ready.current.has(id)) {
         show();
         return;
@@ -185,8 +194,8 @@ export function useViewOpening<Id extends string>(
       }, request.show);
       open(id);
     },
-    [load, open],
+    [cancel, load, open],
   );
 
-  return { opened, whenOpen, onMounted };
+  return { opened, whenOpen, cancel, onMounted };
 }

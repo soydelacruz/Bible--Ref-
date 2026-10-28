@@ -169,6 +169,25 @@ describe('useViewOpening', () => {
     expect(second).toHaveBeenCalledOnce();
   });
 
+  it('drops a switch still waiting when something is shown in its place', async () => {
+    const { result } = setup();
+    const show = vi.fn();
+    act(() => {
+      result.current.whenOpen('clusters', show);
+    });
+    await settlePromises();
+    result.current.cancel();
+    act(() => {
+      result.current.onMounted('clusters', true);
+    });
+    settle(SETTLE_ROUNDS);
+    expect(show).not.toHaveBeenCalled();
+    // Opened all the same, and ready next time.
+    const again = vi.fn();
+    result.current.whenOpen('clusters', again);
+    expect(again).toHaveBeenCalledOnce();
+  });
+
   it('waits again for a view that has been mounted afresh', () => {
     const { result } = setup();
     act(() => {
