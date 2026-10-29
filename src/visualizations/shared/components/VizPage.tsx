@@ -72,11 +72,9 @@ export function VizPage({
   children,
 }: VizPageProps) {
   const { t } = useLocalization();
-  const hasPanel = panel !== undefined && panel !== null && panel !== false;
-  const { expanded, setExpanded, containerRef, sheetRef, spaceRef, scrimRef } = useBottomSheet(
-    hasPanel,
-    onPanelClose,
-  );
+  // The panel that is shown, kept a moment after it closes while it slides away.
+  const sheet = useBottomSheet(panel, onPanelClose);
+  const { expanded, setExpanded, containerRef, sheetRef, spaceRef, scrimRef } = sheet;
   const actions = use(HeaderActions);
   const notice = use(PageNotice);
   const hasMore = Boolean(actions) || Boolean(tools) || Boolean(viewTools);
@@ -123,10 +121,12 @@ export function VizPage({
       <div
         ref={containerRef}
         className={styles.body}
-        data-sheet={hasPanel ? (expanded ? 'expanded' : 'collapsed') : undefined}
+        data-sheet={sheet.present ? (expanded ? 'expanded' : 'collapsed') : undefined}
+        data-sheet-closing={sheet.closing ? '' : undefined}
+        data-sheet-instant={sheet.instant ? '' : undefined}
       >
         <main className={styles.stage}>{children}</main>
-        {hasPanel && (
+        {sheet.present && (
           <>
             {/* Phones: the collapsed sheet's room, so the visualization lays out above it. */}
             <div ref={spaceRef} className={styles.sheetSpace} aria-hidden="true" />
@@ -138,7 +138,13 @@ export function VizPage({
                 setExpanded(false);
               }}
             />
-            <aside ref={sheetRef} className={styles.panel} aria-label={t('panel.details')}>
+            {/* On its way out it is no longer the panel: nothing in it can be used or read. */}
+            <aside
+              ref={sheetRef}
+              className={styles.panel}
+              aria-label={t('panel.details')}
+              inert={sheet.closing}
+            >
               <button
                 type="button"
                 className={styles.sheetHandle}
@@ -148,7 +154,7 @@ export function VizPage({
                   setExpanded(!expanded);
                 }}
               />
-              {panel}
+              {sheet.panel}
             </aside>
           </>
         )}

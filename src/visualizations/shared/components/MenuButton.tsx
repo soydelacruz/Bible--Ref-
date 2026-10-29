@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ExpandIcon, type IconComponent } from '../../../shared/ui/icons.tsx';
+import { usingKeyboard } from '../../../shared/ui/input-modality.ts';
 import styles from './controls.module.css';
 
 /**
@@ -67,17 +68,32 @@ const VIEWPORT_MARGIN_PX = 12;
 /** Marks a popover, so an action can tell which menu it belongs to. */
 const POPOVER = 'data-popover';
 
+/** The longest a closing popover's fade may take before it is removed anyway (it takes 120ms). */
+const LEAVE_TIMEOUT_MS = 400;
+
+/** Whether the element has a transition to run (a row's unfolding has none, nor has a test's DOM). */
+function transitions(element: HTMLElement): boolean {
+  return getComputedStyle(element)
+    .transitionDuration.split(',')
+    .some((duration) => parseFloat(duration) > 0);
+}
+
 /**
  * The popover hangs from the button's end edge, which can push it past the viewport on narrow
- * screens; this slides it back just enough to fit.
+ * screens; this slides it back just enough to fit, and grows it out of the button wherever it
+ * ends up. Measured from the layout rather than the screen: while it grows in, its box on screen
+ * is still a little smaller than it will be.
  */
-function keepInViewport(popover: HTMLElement): void {
-  popover.style.translate = '';
-  const { left, right } = popover.getBoundingClientRect();
+function place(popover: HTMLElement, button: HTMLElement): void {
+  const left = (popover.offsetParent?.getBoundingClientRect().left ?? 0) + popover.offsetLeft;
+  const right = left + popover.offsetWidth;
   const maxRight = document.documentElement.clientWidth - VIEWPORT_MARGIN_PX;
   const shift =
     left < VIEWPORT_MARGIN_PX ? VIEWPORT_MARGIN_PX - left : Math.min(maxRight - right, 0);
   popover.style.translate = shift === 0 ? '' : `${shift}px 0`;
+  const originX = button.offsetLeft + button.offsetWidth / 2 - popover.offsetLeft - shift;
+  const originY = button.offsetTop + button.offsetHeight / 2 - popover.offsetTop;
+  popover.style.transformOrigin = `${originX}px ${originY}px`;
 }
 
 /** A header button that opens a small popover; closes on outside click or Escape. */
@@ -98,15 +114,28 @@ export function MenuButton({
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const setOpen = onOpenChange ?? setOwnOpen;
-  const close = useEffectEvent(() => {
-    setOpen(false);
-  });
+  // Closed by a pointer, the popover stays a moment longer, fading (`.popover[data-leaving]`).
+  const [leaving, setLeaving] = useState(false);
+  if (open && leaving) {
+    setLeaving(false); // Opened again mid-fade: it comes back from where it is.
+  }
   const name = value === undefined ? label : `${label}: ${value}`;
   const accessibleName = indicator && changedLabel !== undefined ? changedLabel : name;
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
+
+  /** Closes it: from the keyboard at once, after a pointer with a short fade. */
+  const dismiss = () => {
+    const popover = popoverRef.current;
+    const fade = popover !== null && !usingKeyboard();
+    // Opened from the keyboard and closed by a pointer, it fades as any other would.
+    popover?.removeAttribute('data-instant');
+    setLeaving(fade && transitions(popover));
+    setOpen(false);
+  };
+  const close = useEffectEvent(dismiss);
 
   useEffect(() => {
     if (!open) {
@@ -141,20 +170,40 @@ export function MenuButton({
     }
   }, [open, focusOnOpen]);
 
+  useEffect(() => {
+    if (!leaving) {
+      return undefined;
+    }
+    // Its fade's end is the usual way out; this is for one that never runs (a hidden view's).
+    const timer = setTimeout(() => {
+      setLeaving(false);
+    }, LEAVE_TIMEOUT_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [leaving]);
+
   // Before paint, so the popover never flashes at its clipped position. A row's content unfolds
   // in the flow, inside a popover that is already placed.
   useLayoutEffect(() => {
     const popover = popoverRef.current;
-    if (!open || !popover || isRow) {
+    const button = buttonRef.current;
+    if (!open || !popover || !button) {
       return undefined;
     }
-    const place = () => {
-      keepInViewport(popover);
+    // From the keyboard it is simply there. Marked before anything reads its style, which is
+    // the moment its entrance would begin.
+    popover.toggleAttribute('data-instant', usingKeyboard());
+    if (isRow) {
+      return undefined;
+    }
+    const reposition = () => {
+      place(popover, button);
     };
-    place();
-    window.addEventListener('resize', place);
+    reposition();
+    window.addEventListener('resize', reposition);
     return () => {
-      window.removeEventListener('resize', place);
+      window.removeEventListener('resize', reposition);
     };
   }, [open, isRow]);
 
@@ -165,7 +214,7 @@ export function MenuButton({
       !target.hasAttribute('aria-expanded') &&
       target.closest(`[${POPOVER}]`) === event.currentTarget
     ) {
-      setOpen(false);
+      dismiss();
       // The control that did it goes with the popover, so focus would fall back to the top of the
       // page; it goes back to the button the menu opened from, as after Escape.
       buttonRef.current?.focus();
@@ -188,7 +237,11 @@ export function MenuButton({
         aria-controls={popoverId}
         aria-busy={busy || undefined}
         onClick={() => {
-          setOpen(!open);
+          if (open) {
+            dismiss();
+          } else {
+            setOpen(true);
+          }
         }}
       >
         {Icon && <Icon />}
@@ -214,13 +267,21 @@ export function MenuButton({
           </>
         )}
       </button>
-      {open && (
+      {(open || leaving) && (
         <div
           ref={popoverRef}
           id={popoverId}
           className={isRow ? styles.rowPopover : styles.popover}
           {...{ [POPOVER]: '' }}
+          // On its way out it is no longer the menu: nothing in it can be used or read.
+          data-leaving={open ? undefined : ''}
+          inert={!open}
           onClick={closeOnAction ? closeAfterAction : undefined}
+          onTransitionEnd={(event) => {
+            if (!open && event.target === event.currentTarget) {
+              setLeaving(false);
+            }
+          }}
         >
           {/* The rows inside belong to this popover, not to the one it may itself sit in. */}
           <MenuRows value={false}>{children}</MenuRows>

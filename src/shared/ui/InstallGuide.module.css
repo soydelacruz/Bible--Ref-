@@ -65,8 +65,8 @@
   opacity: 0;
   translate: 0 0.75rem;
   transition:
-    opacity 0.2s ease,
-    translate 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    opacity var(--duration-normal) var(--ease-out),
+    translate var(--duration-slow) var(--ease-drawer);
 }
 
 .dialog[open] {
@@ -83,7 +83,7 @@
 
 .dialog::backdrop {
   background: rgb(0 0 0 / 0);
-  transition: background-color 0.2s ease;
+  transition: background-color var(--duration-normal) var(--ease-out);
 }
 
 .dialog[open]::backdrop {
@@ -249,8 +249,11 @@
     }
   }
 
+  /* Clear of the home indicator, and of a notch on either side of a turned phone. */
   .card {
-    padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    padding: var(--space-4) calc(var(--space-4) + env(safe-area-inset-right, 0px))
+      calc(var(--space-4) + env(safe-area-inset-bottom, 0px))
+      calc(var(--space-4) + env(safe-area-inset-left, 0px));
   }
 }
 
@@ -274,13 +277,24 @@
 
 @media (pointer: coarse) {
   .tab {
-    min-block-size: 2.5rem;
+    min-block-size: var(--touch-target);
+  }
+
+  /* A finger's size, with its mark where it was: the extra width hangs past the card's edge. */
+  .close {
+    inline-size: var(--touch-target);
+    block-size: var(--touch-target);
+    margin-inline-end: calc(var(--space-2) * -1 - (var(--touch-target) - 2rem) / 2);
   }
 }
 
+/* With less motion the card does not rise: it fades in where it stands, the backdrop with it. */
 @media (prefers-reduced-motion: reduce) {
-  .dialog,
+  .dialog {
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
   .dialog::backdrop {
-    transition: none;
+    transition: background-color var(--duration-fast) var(--ease-out);
   }
 }

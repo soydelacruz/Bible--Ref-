@@ -155,8 +155,14 @@
 }
 
 .result:hover,
+.result:active,
 .result:focus-visible {
   background: var(--color-surface-muted);
+}
+
+/* A result is a row the list's width: it answers a press with its background. */
+.result {
+  transform: none;
 }
 
 .match {
@@ -182,6 +188,26 @@
 .button[aria-pressed='true'] {
   border-color: var(--color-text-muted);
   background: var(--color-surface-muted);
+}
+
+/* The view switch's links are buttons in all but name, and press like one (see global.css). */
+a.button {
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+a.button:active:not(:focus-visible) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.button {
+    transition: none;
+  }
+
+  a.button:active:not(:focus-visible) {
+    transform: none;
+    opacity: 0.7;
+  }
 }
 
 .segmented {
@@ -302,6 +328,44 @@
   background: var(--color-surface);
   box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.5);
   font-size: 0.875rem;
+  /* Opened by a pointer, it grows out of its button (MenuButton puts the origin there) and goes a
+     little faster than it came: by the time it is closed the reader is already looking elsewhere.
+     Opened or closed from the keyboard it is simply there, or gone (`data-instant`). Its opacity
+     and transform alone, so nothing under it is laid out again. */
+  transform-origin: top right;
+  transition:
+    opacity var(--duration-menu) var(--ease-out),
+    transform var(--duration-menu) var(--ease-out);
+}
+
+@starting-style {
+  .popover {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.popover[data-leaving] {
+  opacity: 0;
+  transform: scale(0.97);
+  transition-duration: var(--duration-quick);
+}
+
+.popover[data-instant] {
+  transition: none;
+}
+
+/* With less motion it does not grow: it fades in and out where it stands. */
+@media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .popover {
+      transform: none;
+    }
+  }
+
+  .popover[data-leaving] {
+    transform: none;
+  }
 }
 
 .field {
@@ -382,7 +446,7 @@
     flex-direction: column;
     justify-content: center;
     gap: 2px;
-    min-inline-size: 2.75rem;
+    min-inline-size: var(--touch-target);
     font-size: 0.6875rem;
     line-height: 1.1;
   }
@@ -420,7 +484,8 @@
 }
 
 /* Only the rows themselves: a button inside an unfolded menu (Saved's export, say) keeps its own
-   look. */
+   look. A row is the menu's width, and answers a press with its background rather than by giving
+   under the finger. */
 .rows > .button,
 .rows > .menu > .button,
 .rowsSection > .button,
@@ -431,6 +496,14 @@
   padding-inline: var(--space-3);
   border-color: transparent;
   background: none;
+  transform: none;
+}
+
+.rows > .button:active,
+.rows > .menu > .button:active,
+.rowsSection > .button:active,
+.rowsSection > .segmented > .button:active {
+  background: var(--color-surface-muted);
 }
 
 .rowsSection > .select {
@@ -489,7 +562,7 @@
 .menuRow > .menuButton .menuChevron {
   display: inline-block;
   margin-inline-start: 0;
-  transition: rotate 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: rotate var(--duration-fast) var(--ease-out);
 }
 
 .menuRow > .menuButton[aria-expanded='true'] .menuChevron {
@@ -507,25 +580,42 @@
   font-size: 0.875rem;
 }
 
-/* Touch devices: comfortable targets, and 16px inputs so iOS Safari does not zoom on focus.
-   44px is the smallest a fingertip finds without looking twice. */
+/* Touch devices: comfortable targets (`--touch-target`, global.css), and 16px inputs so iOS
+   Safari does not zoom on focus. */
 @media (pointer: coarse) {
-  /* A radio row is a tap target like any other, and at its natural 21px it was the one control
-     in the app below the 24px minimum. */
+  /* A radio row is a tap target like any other: the whole row, not the 13px circle. */
   .choice {
-    min-block-size: 2.25rem;
+    min-block-size: var(--touch-target);
   }
 
   .input,
   .select {
-    min-block-size: 2.75rem;
+    min-block-size: var(--touch-target);
     font-size: max(1rem, 16px);
   }
 
   .button {
     justify-content: center;
-    min-block-size: 2.75rem;
-    min-inline-size: 2.75rem;
+    min-block-size: var(--touch-target);
+    min-inline-size: var(--touch-target);
+  }
+
+  .resultsClose {
+    justify-content: center;
+    align-items: center;
+    min-inline-size: var(--touch-target);
+    min-block-size: var(--touch-target);
+  }
+
+  .result {
+    min-block-size: var(--touch-target);
+  }
+
+  /* Whatever a menu holds is a finger's target too, whichever component drew it (the genres'
+     toggles, say, whose rows are a legend's height elsewhere). */
+  .popover button,
+  .rowPopover button {
+    min-block-size: var(--touch-target);
   }
 
   /* The frame's line is drawn inside it rather than added around it, so each option is a whole
@@ -537,7 +627,7 @@
   }
 
   .segmented .button {
-    min-block-size: 2.75rem;
+    min-block-size: var(--touch-target);
   }
 }
 

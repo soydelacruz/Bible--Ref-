@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FiltersIcon } from '../../../shared/ui/icons.tsx';
@@ -229,6 +229,76 @@ describe('MenuButton', () => {
     await userEvent.keyboard('{Escape}');
     expect(more.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(more);
+  });
+
+  /**
+   * The popover's motion is CSS, which a test's DOM does not run: given a duration of its own, the
+   * popover has a fade to wait for, as it would in a browser.
+   */
+  async function openWithFade(): Promise<HTMLElement> {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button'));
+    const popover = screen.getByText('menu contents').parentElement;
+    if (!popover) {
+      throw new Error('The menu has no popover.');
+    }
+    popover.style.transitionDuration = '120ms';
+    return popover;
+  }
+
+  it('grows out of a finger’s press, and is simply there when a key opens it', async () => {
+    renderMenu();
+    const button = screen.getByRole('button');
+    await userEvent.click(button);
+    const popover = screen.getByText('menu contents').parentElement;
+    expect(popover?.hasAttribute('data-instant')).toBe(false);
+    // From its button, wherever the popover was slid to fit the screen.
+    expect(popover?.style.transformOrigin).not.toBe('');
+    await userEvent.click(button);
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByText('menu contents').parentElement?.hasAttribute('data-instant')).toBe(
+      true,
+    );
+  });
+
+  it('fades out once a pointer has closed it, no longer usable, and then is gone', async () => {
+    const popover = await openWithFade();
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.getByRole('button').getAttribute('aria-expanded')).toBe('false');
+    expect(popover.hasAttribute('data-leaving')).toBe(true);
+    expect(popover.inert).toBe(true);
+    // A transition inside it ending is not its own fade's end.
+    fireEvent.transitionEnd(screen.getByText('menu contents'));
+    expect(popover.isConnected).toBe(true);
+    fireEvent.transitionEnd(popover);
+    expect(screen.queryByText('menu contents')).toBeNull();
+  });
+
+  it('goes anyway when its fade never ends', async () => {
+    await openWithFade();
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.getByText('menu contents')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.queryByText('menu contents')).toBeNull();
+    });
+  });
+
+  it('comes back from where it is when opened again mid-fade', async () => {
+    const popover = await openWithFade();
+    const button = screen.getByRole('button', { name: 'Filters' });
+    await userEvent.click(button);
+    await userEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('menu contents').parentElement).toBe(popover);
+    expect(popover.hasAttribute('data-leaving')).toBe(false);
+    expect(popover.inert).toBe(false);
+  });
+
+  it('is simply gone when a key closes it, fade or no fade', async () => {
+    await openWithFade();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('menu contents')).toBeNull();
   });
 
   it('stops listening once it is gone', async () => {

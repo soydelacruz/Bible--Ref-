@@ -3,7 +3,13 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1) var(--space-4);
-  padding: var(--space-2) var(--space-4) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  /* Clear of the home indicator below, and of a notch on either side when a phone is turned (the
+     screen's own insets, hence left and right). */
+  --gutter: var(--space-4);
+
+  padding: var(--space-2) calc(var(--gutter) + env(safe-area-inset-right, 0px))
+    calc(var(--space-2) + env(safe-area-inset-bottom, 0px))
+    calc(var(--gutter) + env(safe-area-inset-left, 0px));
   color: var(--color-text-muted);
   font-size: 0.75rem;
   line-height: 1.4;
@@ -52,7 +58,8 @@
     /* The two halves nearly fill a 360px phone between them, and the credit cannot be shortened
        (it is the licence), so they are set as close as two separate sentences can be. */
     column-gap: var(--space-1);
-    padding-inline: var(--space-3);
+    --gutter: var(--space-3);
+
     font-size: 0.6875rem;
   }
 
@@ -93,7 +100,7 @@
 @media (max-width: 22.49rem) {
   .footer {
     column-gap: var(--space-1);
-    padding-inline: var(--space-2);
+    --gutter: var(--space-2);
   }
 
   .sourceItem {

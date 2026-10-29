@@ -29,6 +29,28 @@
 
   --radius: 0.5rem;
   --content-width: 72rem;
+
+  /* The smallest target a fingertip finds without looking twice. */
+  --touch-target: 2.75rem;
+
+  /* Motion. Two curves: `--ease-out` for whatever answers the reader (a press, a menu, a fade),
+     `--ease-drawer` for what slides in from an edge (the details panel, a sheet, a dialog on a
+     phone), iOS's sheet spring approximated. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* What gets out of the way: a menu closing, a swatch giving under the finger. */
+  --duration-quick: 120ms;
+  /* A colour, an underline or a chevron changing; and the fade that stands in for movement when
+     the reader asks for less of it. */
+  --duration-fast: 150ms;
+  --duration-press: 160ms;
+  --duration-menu: 180ms;
+  /* A backdrop dimming, a dialog fading in, the sheet's grabber brightening. */
+  --duration-normal: 200ms;
+  /* A short way across: the details panel beside the picture, a dialog rising. */
+  --duration-slow: 300ms;
+  /* The phone's sheet, which travels most of the screen. */
+  --duration-sheet: 500ms;
 }
 
 :root[data-theme='dark'] {
@@ -45,8 +67,20 @@
   box-sizing: border-box;
 }
 
+/* The page is an app's screen, not a document: a pull at its top is a gesture on the picture,
+   not a reload, and nothing behind a scrolled list rubber-bands with it. The grey flash a phone
+   paints over whatever is tapped goes too, since every control here answers the press itself
+   (below). And the text keeps its size when a phone turns sideways. */
+html {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
+  overscroll-behavior: none;
   background: var(--color-background);
   color: var(--color-text);
   font-family: var(--font-sans);
@@ -68,4 +102,41 @@ button,
 input,
 select {
   font: inherit;
+}
+
+/* No control here zooms on a double tap, so a tap need not wait to see whether a second follows:
+   it answers at once. */
+a,
+button,
+input,
+label,
+select,
+summary,
+textarea {
+  touch-action: manipulation;
+}
+
+/* A press answers the moment the finger lands: the button gives a little, and springs back as it
+   is let go, as a native one does. Its transform alone, so nothing around it is laid out again.
+   From the keyboard it does not move: the focus ring already says where the key went, and a key
+   is answered at once. Of no specificity, so a component that moves its button some other way,
+   or not at all (a row the width of the panel), says so and wins. */
+:where(button) {
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+:where(button:not(:disabled):active:not(:focus-visible)) {
+  transform: scale(0.97);
+}
+
+/* Without motion the press still shows: the button dims while it is held, at once. */
+@media (prefers-reduced-motion: reduce) {
+  :where(button) {
+    transition: none;
+  }
+
+  :where(button:not(:disabled):active:not(:focus-visible)) {
+    transform: none;
+    opacity: 0.7;
+  }
 }

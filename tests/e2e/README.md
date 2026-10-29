@@ -170,6 +170,21 @@ Layout is checked by measuring, not by comparing images: "the footer is 30px tal
 edge is inside the viewport" means the same thing on every machine, while a pixel baseline does
 not. Pictures are a separate suite — below.
 
+## On a phone
+
+| Flow                                                                    | Covered by      |
+| ----------------------------------------------------------------------- | --------------- |
+| Every control in the header, the menus and the details is 44px or more  | `phone.spec.ts` |
+| The sheet peeks with the passage's name and its count of links, no more | `phone.spec.ts` |
+| …however tall its header grows, in a longer language                    | `phone.spec.ts` |
+| …and opens up when one of those counts jumps to its section             | `phone.spec.ts` |
+| The footer is never behind the sheet, collapsed or opened up            | `phone.spec.ts` |
+| Closed, the details slide away; with less motion they fade              | `phone.spec.ts` |
+| …and closed from the keyboard, they are gone at once                    | `phone.spec.ts` |
+| A tapped menu grows out of its button; with less motion it only fades   | `phone.spec.ts` |
+| …and opened or closed from the keyboard, it is simply there, or gone    | `phone.spec.ts` |
+| Turned sideways with a notch, nothing to read or use sits under it      | `phone.spec.ts` |
+
 ## The gallery
 
 `npm run test:visual` photographs every major screen at a desktop size (1440×900) and on a phone
