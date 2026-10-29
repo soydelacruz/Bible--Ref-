@@ -107,6 +107,9 @@ test.describe('Start here', () => {
   test('starts the arcs’ tour, after which neither it nor the tour’s invitation comes back', async ({
     page,
   }) => {
+    // The arcs drawn twice and the tour's first flight. On CI's software renderer, sharing a
+    // machine with the other WebGL tests, that ran past a minute with nothing wrong.
+    test.slow();
     await firstVisit(page);
     await strip(page).getByRole('button', { name: 'The tour in 45 seconds' }).click();
     await expect(tourCard(page).locator('p').first()).toHaveText(/^Tour · 1 of 6$/);
@@ -126,6 +129,8 @@ test.describe('Start here', () => {
   });
 
   test('stays across a reload until it is closed, and never comes back', async ({ page }) => {
+    // The arcs drawn three times, which CI's software renderer can take more than a minute over.
+    test.slow();
     await firstVisit(page);
     await page.reload();
     await waitForDrawing(page);

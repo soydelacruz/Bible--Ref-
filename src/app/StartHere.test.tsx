@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { toPassageOsisId, type Passage } from '../core/bible/passage.ts';
 import { KJV_VERSIFICATION } from '../core/bible/versification.ts';
 import { setActiveLocale } from '../i18n/locale-choice.ts';
@@ -10,6 +10,17 @@ import { StartHere } from './StartHere.tsx';
 import { VIEWS, type View } from './views.ts';
 
 const [ARCS, THREADS] = VIEWS;
+
+// Listing the views starts loading each one's code (see visualizations/*/index.ts), and nothing
+// here renders them to wait for it. Wait for it once, so the file cannot finish, and its
+// environment be torn down, while those imports are still loading.
+beforeAll(async () => {
+  await Promise.all([
+    import('../visualizations/arcs/ArcsExplorer.tsx'),
+    import('../visualizations/threads/ThreadsExplorer.tsx'),
+    import('../visualizations/clusters/ClustersExplorer.tsx'),
+  ]);
+});
 
 /** The strip as the app lays it out: under the header, over the arcs it leaves the keys to. */
 function renderStrip() {
