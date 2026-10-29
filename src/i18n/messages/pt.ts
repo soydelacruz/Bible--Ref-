@@ -94,8 +94,6 @@ export const pt: LocaleMessages = {
   'genres.label': 'Gêneros',
   // Plural and masculine, agreeing with "Gêneros".
   'genres.labelChanged': 'Gêneros (alterados)',
-  'genres.show': 'Exibir gêneros',
-  'genres.hide': 'Ocultar gêneros',
   'genres.hideOne': (name) => `Ocultar ${name}`,
   'genres.showOne': (name) => `Exibir ${name}`,
   'testament.OT': 'Antigo Testamento',

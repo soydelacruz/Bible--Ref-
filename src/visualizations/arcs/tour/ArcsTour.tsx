@@ -6,7 +6,7 @@ import { useLocalization } from '../../../i18n/use-locale.tsx';
 import { CloseIcon, PauseIcon, PlayIcon } from '../../../shared/ui/icons.tsx';
 import controls from '../../shared/components/controls.module.css';
 import { useAnnouncer } from '../../shared/use-announcer.ts';
-import { useElementSize } from '../../shared/use-element-size.ts';
+import { useSteadySize } from '../../shared/use-element-size.ts';
 import { computeArcLayout } from '../arc-layout.ts';
 import type { TourPlan } from './tour-plan.ts';
 import type { TourRun } from './use-arcs-tour.ts';
@@ -90,7 +90,8 @@ export function TourLayer({
   fadeRef,
   ...controlsProps
 }: TourLayerProps) {
-  const size = useElementSize(layerRef);
+  // As the arcs lay themselves out: as if a phone's details sheet were not up (see ArcsStage).
+  const size = useSteadySize(layerRef);
   const { orientation } = computeArcLayout(size.width, size.height);
   const [regionRef, announce] = useAnnouncer<HTMLParagraphElement>();
   return (

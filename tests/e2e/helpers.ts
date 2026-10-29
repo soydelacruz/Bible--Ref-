@@ -27,6 +27,17 @@ export async function openHeaderMenu(page: Page, name: RegExp): Promise<void> {
 }
 
 /**
+ * Puts away a phone's More menu, if it is open: Escape in one of its rows folds that row, and the
+ * menu itself stays over the stage.
+ */
+export async function closeMoreMenu(page: Page): Promise<void> {
+  const more = page.locator(ACTIVE).getByRole('button', { name: MORE });
+  if ((await more.isVisible()) && (await more.getAttribute('aria-expanded')) === 'true') {
+    await more.click();
+  }
+}
+
+/**
  * Waits for the app to have drawn: the data is loaded, the canvas is up, and the words are in.
  * The views draw from the links before the text has arrived, and a test that reads words waits
  * for them as a reader would.

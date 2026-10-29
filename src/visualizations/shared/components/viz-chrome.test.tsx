@@ -7,7 +7,6 @@ import { getTranslationManifest } from '../../../translations/registry.ts';
 import { createLinkFilter, DEFAULT_LINK_FILTER } from '../link-filter.ts';
 import { Credits } from './Credits.tsx';
 import { FiltersMenu } from './FiltersMenu.tsx';
-import { GenreLegend } from './GenreLegend.tsx';
 import { GenreMenu } from './GenreMenu.tsx';
 import { GenreToggles, toggleGenre } from './GenreToggles.tsx';
 import { LinkStats } from './LinkStats.tsx';
@@ -193,24 +192,17 @@ describe('GenreToggles', () => {
   });
 });
 
-describe('GenreLegend and GenreMenu', () => {
-  it('shows the legend as a strip of genres, with its own collapse button', () => {
-    render(<GenreLegend hiddenGenres={new Set()} onToggle={vi.fn()} />);
-    expect(screen.getAllByRole('button').length).toBe(GENRES.length + 1);
-  });
-
-  it('folds the legend away on a phone, and brings it back', async () => {
-    render(<GenreLegend hiddenGenres={new Set()} onToggle={vi.fn()} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Show genres' }));
-    expect(screen.getByRole('button', { name: 'Hide genres' })).toBeDefined();
-    expect(screen.getByLabelText('Genres').getAttribute('data-open')).toBe('true');
-  });
-
-  it('puts the same genres behind a button on a narrow screen', async () => {
+describe('GenreMenu', () => {
+  it('puts the genres behind a button in the header', async () => {
     render(<GenreMenu hiddenGenres={new Set()} onToggle={vi.fn()} />);
     await openMenu(/Genres/);
     // The genres, plus the button that opened them.
     expect(screen.getAllByRole('button').length).toBe(GENRES.length + 1);
+  });
+
+  it('is marked while a genre is hidden', () => {
+    render(<GenreMenu hiddenGenres={new Set(['law'])} onToggle={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Genres (changed)' })).toBeDefined();
   });
 });
 

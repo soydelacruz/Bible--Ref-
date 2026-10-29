@@ -1,5 +1,5 @@
-/* The clip's status: over the stage's lower corner, clear of the legend and the summary line at
-   the top, and above the arcs' tooltip. */
+/* The clip's status: over the stage's lower corner, clear of the summary line at the top, and
+   above the arcs' tooltip. */
 .status {
   position: absolute;
   inset-block-end: var(--space-3);

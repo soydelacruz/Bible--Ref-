@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { versePassage } from '../../core/bible/passage.ts';
 import {
+  clipBox,
   isInSight,
   locatePassage,
   nearestInSight,
@@ -56,6 +57,19 @@ describe('locatePassage', () => {
     expect(locatePassage(root, VERSE)).toEqual(spotAt(2, 2));
     replacement();
     expect(locatePassage(root, VERSE)).toBeNull();
+  });
+});
+
+describe('clipBox', () => {
+  it('keeps the part of a box that is seen', () => {
+    // A picture slid up under a sheet: its top is above the stage, its bottom behind the sheet.
+    const picture = { left: 0, top: -200, right: 400, bottom: 700 };
+    const stage = { left: 0, top: 100, right: 400, bottom: 450 };
+    expect(clipBox(picture, stage)).toEqual(stage);
+  });
+
+  it('leaves a box that is all in sight as it is', () => {
+    expect(clipBox(BOUNDS, { left: 0, top: 0, right: 1000, bottom: 1000 })).toEqual(BOUNDS);
   });
 });
 

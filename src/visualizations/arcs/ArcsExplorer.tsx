@@ -13,7 +13,7 @@ import {
 import { Credits } from '../shared/components/Credits.tsx';
 import { FiltersMenu } from '../shared/components/FiltersMenu.tsx';
 import { useLocalization } from '../../i18n/use-locale.tsx';
-import { GenreLegend } from '../shared/components/GenreLegend.tsx';
+import { GenreMenu } from '../shared/components/GenreMenu.tsx';
 import { toggleGenre } from '../shared/components/GenreToggles.tsx';
 import { LinkStats } from '../shared/components/LinkStats.tsx';
 import { PassagePanel } from '../shared/components/PassagePanel.tsx';
@@ -199,6 +199,12 @@ export function ArcsExplorer({
         <>
           {translationMenu}
           <SavedMenu versification={data.versification} translation={text} onSelect={onNavigate} />
+          <GenreMenu
+            hiddenGenres={filter.hiddenGenres}
+            onToggle={(genre) => {
+              onFilterChange({ ...filter, hiddenGenres: toggleGenre(filter.hiddenGenres, genre) });
+            }}
+          />
           <button
             type="button"
             className={controls.button}
@@ -236,6 +242,7 @@ export function ArcsExplorer({
           onOpenChange={setFiltersOpen}
         />
       }
+      moreChanged={filter.hiddenGenres.size > 0}
       // The arcs have no toolbar of their own: their one control, the tour, is offered at the end
       // of the hint line, and here, as a row of the More menu on narrower screens.
       viewTools={
@@ -317,12 +324,6 @@ export function ArcsExplorer({
                 {tourEntry}
               </>
             ),
-          }}
-        />
-        <GenreLegend
-          hiddenGenres={filter.hiddenGenres}
-          onToggle={(genre) => {
-            onFilterChange({ ...filter, hiddenGenres: toggleGenre(filter.hiddenGenres, genre) });
           }}
         />
       </div>

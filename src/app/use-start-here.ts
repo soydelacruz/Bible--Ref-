@@ -48,7 +48,7 @@ export interface StartHere {
  * view, by one of its ways in or by one of theirs. Then it is gone for good.
  *
  * Trying the filters is not going in. The reader is still on the front page, and the strip going
- * then would move the whole stage up under the pointer, legend and all, between two clicks on it.
+ * then would move the whole stage up under the pointer, between two clicks on it.
  *
  * It offers the tour, so while it shows, the tour's own invitation stands down — for good too:
  * a reader is asked about the tour once, by whichever comes first.
