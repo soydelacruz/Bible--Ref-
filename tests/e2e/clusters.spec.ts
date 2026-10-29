@@ -60,10 +60,15 @@ async function glideChanges(page: Page): Promise<GlideChange[]> {
   return page.evaluate(() => (window as WatchedWindow).glideChanges ?? []);
 }
 
-/** Waits for a glide that has started to land. */
+/**
+ * Waits for a glide that has started to land. The time allowed covers CI's software renderer,
+ * which takes seconds a frame: a glide that sets off right after another has landed waits for
+ * the picture that one left to be drawn, since the next layout comes from a worker and the page
+ * shows the last picture meanwhile. Measured with two tests at a time, up to 20 s.
+ */
 async function waitForLanding(page: Page): Promise<GlideChange[]> {
   await expect
-    .poll(async () => (await glideChanges(page)).at(-1)?.gliding, { timeout: 15_000 })
+    .poll(async () => (await glideChanges(page)).at(-1)?.gliding, { timeout: 30_000 })
     .toBe(false);
   return glideChanges(page);
 }
@@ -89,6 +94,8 @@ async function pictureDigest(page: Page): Promise<string> {
 
 test.describe('the clusters glide between pictures', () => {
   test('opening a book glides the dots there, rather than jumping', async ({ page }) => {
+    // Two glides, one straight after the other: see waitForLanding.
+    test.slow();
     await openClusters(page);
     await watchGlides(page);
     await chooseBook(page, 'Psalms');
@@ -158,6 +165,8 @@ test.describe('the clusters glide between pictures', () => {
   });
 
   test('the tour still plays, closing an open book with a glide', async ({ page }) => {
+    // Two glides, one straight after the other: see waitForLanding.
+    test.slow();
     await openClusters(page);
     await watchGlides(page);
     await chooseBook(page, 'Psalms');
