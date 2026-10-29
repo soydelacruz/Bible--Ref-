@@ -1,6 +1,13 @@
 import type { VerseIndex } from '../core/bible/verse-ref.ts';
+import {
+  buildCrossReferenceTables,
+  CrossReferenceIntegrityError,
+  type CrossReferenceTables,
+} from '../core/datasets/cross-reference-tables.ts';
 import type { CrossReferenceColumns } from '../core/datasets/formats.ts';
 import { elementAt } from '../core/lib/array.ts';
+
+export { CrossReferenceIntegrityError };
 
 /** One cross-reference: from a verse to a verse or an inclusive range of verses. */
 export interface CrossReferenceLink {
@@ -12,11 +19,10 @@ export interface CrossReferenceLink {
   readonly votes: number;
 }
 
-export class CrossReferenceIntegrityError extends Error {
-  constructor(message: string) {
-    super(`Invalid cross-reference data: ${message}`);
-    this.name = 'CrossReferenceIntegrityError';
-  }
+function isTables(
+  value: CrossReferenceColumns | CrossReferenceTables,
+): value is CrossReferenceTables {
+  return 'incomingLinkIds' in value;
 }
 
 /**
@@ -39,45 +45,26 @@ export class CrossReferenceIndex {
   readonly #incomingOffsets: Int32Array;
   readonly #incomingLinkIds: Int32Array;
 
-  constructor(columns: CrossReferenceColumns, verseCount: number) {
-    const linkCount = columns.targetStart.length;
-    validateColumns(columns, verseCount, linkCount);
-
+  /**
+   * From the dataset's columns, building the lookups here, or from tables already built (see
+   * `buildCrossReferenceTables`), which costs nothing.
+   */
+  constructor(columns: CrossReferenceColumns | CrossReferenceTables, verseCount: number) {
+    const tables = isTables(columns) ? columns : buildCrossReferenceTables(columns, verseCount);
+    if (tables.verseCount !== verseCount) {
+      throw new CrossReferenceIntegrityError(
+        `the tables are for ${tables.verseCount} verses, not ${verseCount}.`,
+      );
+    }
     this.verseCount = verseCount;
-    this.linkCount = linkCount;
-    this.#outgoingOffsets = Int32Array.from(columns.offsets);
-    this.targetStarts = Int32Array.from(columns.targetStart);
-    this.targetEnds = Int32Array.from(columns.targetEnd);
-    this.votes = Int32Array.from(columns.votes);
-
-    const sources = new Int32Array(linkCount);
-    for (let verse = 0; verse < verseCount; verse += 1) {
-      sources.fill(verse, this.#outgoingStart(verse), this.#outgoingEnd(verse));
-    }
-    this.sources = sources;
-
-    // Incoming index: counting sort of (target verse, link ID) pairs over the expanded ranges.
-    const incomingOffsets = new Int32Array(verseCount + 1);
-    for (let id = 0; id < linkCount; id += 1) {
-      for (let verse = this.#targetStart(id); verse <= this.#targetEnd(id); verse += 1) {
-        incomingOffsets[verse + 1] = elementAt(incomingOffsets, verse + 1) + 1;
-      }
-    }
-    for (let verse = 0; verse < verseCount; verse += 1) {
-      incomingOffsets[verse + 1] =
-        elementAt(incomingOffsets, verse + 1) + elementAt(incomingOffsets, verse);
-    }
-    const cursors = incomingOffsets.slice(0, verseCount);
-    const incomingLinkIds = new Int32Array(elementAt(incomingOffsets, verseCount));
-    for (let id = 0; id < linkCount; id += 1) {
-      for (let verse = this.#targetStart(id); verse <= this.#targetEnd(id); verse += 1) {
-        const cursor = elementAt(cursors, verse);
-        incomingLinkIds[cursor] = id;
-        cursors[verse] = cursor + 1;
-      }
-    }
-    this.#incomingOffsets = incomingOffsets;
-    this.#incomingLinkIds = incomingLinkIds;
+    this.linkCount = tables.targetStarts.length;
+    this.sources = tables.sources;
+    this.targetStarts = tables.targetStarts;
+    this.targetEnds = tables.targetEnds;
+    this.votes = tables.votes;
+    this.#outgoingOffsets = tables.outgoingOffsets;
+    this.#incomingOffsets = tables.incomingOffsets;
+    this.#incomingLinkIds = tables.incomingLinkIds;
   }
 
   link(id: number): CrossReferenceLink {
@@ -128,32 +115,5 @@ export class CrossReferenceIndex {
 
   #targetEnd(id: number): VerseIndex {
     return elementAt(this.targetEnds, id);
-  }
-}
-
-function validateColumns(columns: CrossReferenceColumns, verseCount: number, linkCount: number) {
-  const { offsets, targetStart, targetEnd, votes } = columns;
-  if (offsets.length !== verseCount + 1) {
-    throw new CrossReferenceIntegrityError(
-      `expected ${verseCount + 1} offsets, got ${offsets.length}.`,
-    );
-  }
-  if (targetEnd.length !== linkCount || votes.length !== linkCount) {
-    throw new CrossReferenceIntegrityError('link columns have different lengths.');
-  }
-  if (offsets[0] !== 0 || offsets[verseCount] !== linkCount) {
-    throw new CrossReferenceIntegrityError(`offsets must span links 0 to ${linkCount}.`);
-  }
-  for (let verse = 0; verse < verseCount; verse += 1) {
-    if (elementAt(offsets, verse) > elementAt(offsets, verse + 1)) {
-      throw new CrossReferenceIntegrityError(`offsets decrease at verse ${verse}.`);
-    }
-  }
-  for (let id = 0; id < linkCount; id += 1) {
-    const start = elementAt(targetStart, id);
-    const end = elementAt(targetEnd, id);
-    if (start < 0 || end >= verseCount || start > end) {
-      throw new CrossReferenceIntegrityError(`link ${id} has an invalid target range.`);
-    }
   }
 }

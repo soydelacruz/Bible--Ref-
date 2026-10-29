@@ -31,6 +31,21 @@ async function cacheState(page: Page) {
   });
 }
 
+/** The paths of every dataset the worker has stored. */
+async function storedDatasets(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const paths: string[] = [];
+    for (const name of await caches.keys()) {
+      if (name.includes('-data')) {
+        for (const request of await (await caches.open(name)).keys()) {
+          paths.push(new URL(request.url).pathname);
+        }
+      }
+    }
+    return paths.toSorted();
+  });
+}
+
 async function installWorker(page: Page): Promise<void> {
   await page.goto('./?ref=John.3.16');
   await waitForApp(page);
@@ -47,7 +62,7 @@ async function installWorker(page: Page): Promise<void> {
  *
  * `context.setOffline(true)` does not reach fetches the service worker makes. Measured against
  * this build: with it set and the page reloaded, the server was still asked for — and still
- * served — `bsb.json`, `openbible.json` and `stepbible.json`. Every test below would therefore
+ * served — the BSB, the links and the words. Every test below would therefore
  * have passed with an empty cache, which is the opposite of what they are for.
  *
  * Aborting the context's routes does reach them, so these tests are about the cache rather than
@@ -220,6 +235,123 @@ test.describe('the offline cache', () => {
     } finally {
       await writeFile(WORKER, original);
     }
+  });
+
+  test("an upgrade from before datasets were named by content keeps the reader's Bible", async ({
+    page,
+    context,
+  }) => {
+    // The release before this one stored every dataset under a plain name (`kjv.json`) and the
+    // links as JSON. A reader who had chosen the KJV must still have it the moment this release
+    // takes over, without downloading it again: its bytes did not change, only its name.
+    //
+    // Two installs, a change of Bible and an offline reload: more than one test's usual time.
+    test.slow();
+    await installWorker(page);
+    await openHeaderMenu(page, /Translation/);
+    await page
+      .locator(ACTIVE)
+      .getByRole('radio', { name: /King James/ })
+      .check();
+    await expect(page.locator(PANEL)).toContainText(/only begotten Son/);
+    await expect
+      .poll(
+        async () => (await storedDatasets(page)).some((path) => /\/kjv\.\w{12}\.json$/.test(path)),
+        {
+          timeout: 30_000,
+        },
+      )
+      .toBe(true);
+
+    // Put the cache back the way that release left it.
+    const kjv = await page.evaluate(async () => {
+      const name = (await caches.keys()).find((key) => key.includes('-data'));
+      const data = await caches.open(name ?? '');
+      let named = '';
+      for (const request of await data.keys()) {
+        const path = new URL(request.url).pathname;
+        const text = /^(.*\/translations\/kjv)\.[0-9a-f]{12}\.json$/.exec(path);
+        const links = /^(.*\/cross-references\/openbible)\.[0-9a-f]{12}\.bin$/.exec(path);
+        if (text) {
+          const response = await data.match(request);
+          if (response) await data.put(`${text[1] ?? ''}.json`, response);
+          await data.delete(request);
+          named = path;
+        } else if (links) {
+          await data.put(`${links[1] ?? ''}.json`, new Response('{"format":"cross-references"}'));
+          await data.delete(request);
+        }
+      }
+      return named;
+    });
+    expect(kjv).not.toBe('');
+
+    const original = await readFile(WORKER, 'utf8');
+    try {
+      // The KJV cannot be downloaded from here on: if it reaches the new release, it was moved.
+      await context.route('**/translations/kjv.*', (route) => route.abort());
+      await writeFile(
+        WORKER,
+        original.replace(/const VERSION = "(\w+)"/, 'const VERSION = "next"'),
+      );
+      await page.reload();
+      await waitForApp(page);
+      await expect
+        .poll(
+          async () =>
+            Object.keys((await cacheState(page)).caches).find((name) => name.includes('-shell-')),
+          { timeout: 30_000 },
+        )
+        .toBe('bible-cross-references-shell-next');
+
+      const stored = await storedDatasets(page);
+      expect(stored).toContain(kjv);
+      // The old names are gone once their replacements are in, the links' included.
+      expect(stored.filter((path) => /\/(kjv|openbible)\.json$/.test(path))).toEqual([]);
+      expect(stored.some((path) => /\/openbible\.\w{12}\.bin$/.test(path))).toBe(true);
+
+      await context.unroute('**/translations/kjv.*');
+      await cutTheNetwork(context);
+      await page.reload();
+      await waitForApp(page);
+      await expect(page.locator(PANEL)).toContainText(/only begotten Son/);
+      await restoreTheNetwork(context);
+    } finally {
+      await writeFile(WORKER, original);
+    }
+  });
+
+  test("a Bible an earlier release's page is given in place of its own file is kept", async ({
+    page,
+    context,
+  }) => {
+    // A page loaded before this release took over asks for its release's name for a dataset,
+    // which the server no longer has, and is given this release's file instead. Its own request
+    // to store what it read names a file this release does not serve, so the worker has to keep
+    // the file itself, or the Bible just downloaded is not there offline.
+    await installWorker(page);
+    expect((await storedDatasets(page)).some((path) => path.includes('/translations/web.'))).toBe(
+      false,
+    );
+    // The host has no such file. (The preview server would answer with the app's page instead.)
+    await context.route('**/translations/web.000000000000.json', (route) =>
+      route.fulfill({ status: 404, body: 'Not found' }),
+    );
+    const status = await page.evaluate(async () => {
+      const old = new URL('data/translations/web.000000000000.json', document.baseURI);
+      return (await fetch(old)).status;
+    });
+    expect(status).toBe(200);
+    await expect
+      .poll(async () =>
+        (await storedDatasets(page)).some((path) =>
+          /\/translations\/web\.[0-9a-f]{12}\.json$/.test(path),
+        ),
+      )
+      .toBe(true);
+    expect((await storedDatasets(page)).some((path) => path.includes('web.000000000000'))).toBe(
+      false,
+    );
   });
 
   test('a worker that withdraws itself clears everything, in one visit', async ({ page }) => {

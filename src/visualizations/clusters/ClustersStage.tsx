@@ -42,7 +42,6 @@ import {
 } from './cluster-highlight.ts';
 import { labelAt, type ClusterLabel } from './cluster-labels.ts';
 import {
-  computeClusterLayout,
   selectClusterGraph,
   targetAt,
   type ClusterGroup,
@@ -66,6 +65,7 @@ import {
 } from './clusters-drawing.ts';
 import styles from './ClustersStage.module.css';
 import { passageCenter } from './passage-center.ts';
+import { useClusterLayout } from './use-cluster-layout.ts';
 
 interface ClustersStageProps {
   readonly data: VizCore;
@@ -171,18 +171,17 @@ export function ClustersStage({
 
   // The host keeps every view mounted, and a hidden one keeps its size: nothing is worked out
   // until the view is on screen, so the other views pay nothing for it.
-  const graph = useMemo(
+  const selected = useMemo(
     () => (active ? selectClusterGraph(index, verseGenres, filter, versification, openBook) : null),
     [active, index, verseGenres, filter, versification, openBook],
   );
+  // The graph drawn, and the book named over it, are the ones its layout was made for, so they
+  // stay together while the next layout is on its way. Nothing while the view is hidden.
+  const placed = useClusterLayout(selected, versification, openBook, size, active);
+  const graph = placed?.graph ?? null;
+  const layout = placed?.layout ?? null;
+  const shownBook = placed?.openBook ?? null;
   const drawn = useMemo(() => graph && drawnLinks(index.linkCount, graph.linkIds), [index, graph]);
-  const layout = useMemo(
-    () =>
-      graph && size.width > 0 && size.height > 0
-        ? computeClusterLayout(graph, versification, openBook, size)
-        : null,
-    [graph, versification, openBook, size],
-  );
 
   const focusStart = focus ? passageRange(focus, versification).start : null;
   const focusEnd = focus ? passageRange(focus, versification).end : null;
@@ -246,7 +245,7 @@ export function ClustersStage({
       headings: {
         start: t('testament.OT'),
         end: t('testament.NT'),
-        ...(openBook && { center: books[openBook].name }),
+        ...(shownBook && { center: books[shownBook].name }),
       },
       fontFamily: getComputedStyle(document.body).fontFamily,
     };
@@ -327,7 +326,7 @@ export function ClustersStage({
       glideCanvas.removeAttribute('data-gliding');
       glidingRef.current = false;
     };
-  }, [active, layout, index, graph, verseGenres, books, t, openBook]);
+  }, [active, layout, index, graph, verseGenres, books, t, shownBook]);
 
   // What stands out: a passage's links grow out from it; a book's appear at once. Either swells
   // in quickly under the pointer, and follows the dots while they glide.
@@ -546,6 +545,8 @@ export function ClustersStage({
           data-dimmed={emphasis !== null}
           role="img"
           aria-label={t('clusters.stage')}
+          // Laid out in a worker: the picture catches up a moment after a book is opened.
+          aria-busy={placed?.pending === true}
         />
         <canvas
           ref={overlayRef}

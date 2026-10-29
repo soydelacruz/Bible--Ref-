@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { BOOKS } from '../../src/core/bible/books.ts';
 import { parseOsisId } from '../../src/core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../../src/core/bible/versification.ts';
+import { DATASET_FILES } from '../../src/core/datasets/dataset-files.ts';
 import { DATASET_BUILDERS, type RawSourceContent } from './datasets.ts';
 import { BOOK_CODES as KJV_CODES } from './importers/ebible-vpl.ts';
 import { expectMember, readSources, type RawSource } from './lib/sources.ts';
@@ -152,29 +153,28 @@ const readSource = (id: string): Promise<RawSourceContent> => {
 
 describe('DATASET_BUILDERS', () => {
   it('has one builder per dataset the app loads', () => {
-    expect(DATASET_BUILDERS.map((builder) => builder.outputPath)).toEqual([
-      'data/translations/bsb.json',
-      'data/translations/kjv.json',
-      'data/translations/web.json',
-      'data/translations/asv.json',
-      'data/translations/ylt.json',
-      'data/translations/net.json',
-      'data/translations/blivre.json',
-      'data/translations/rv1909.json',
-      'data/cross-references/openbible.json',
-      'data/words/stepbible.json',
-      ...BOOKS.map(({ id }) => `data/notes/net/${id}.json`),
+    expect(DATASET_BUILDERS.map((builder) => builder.name)).toEqual([
+      'translations/bsb',
+      'translations/kjv',
+      'translations/web',
+      'translations/asv',
+      'translations/ylt',
+      'translations/net',
+      'translations/blivre',
+      'translations/rv1909',
+      'cross-references/openbible',
+      'words/stepbible',
+      ...BOOKS.map(({ id }) => `notes/net/${id}`),
     ]);
   });
 
-  it('writes every dataset under public/data', () => {
-    for (const builder of DATASET_BUILDERS) {
-      expect(builder.outputPath.startsWith('data/')).toBe(true);
-      expect(builder.outputPath.endsWith('.json')).toBe(true);
-    }
+  it('has a file in the committed table for every dataset it builds', () => {
+    expect(Object.keys(DATASET_FILES).toSorted()).toEqual(
+      DATASET_BUILDERS.map((builder) => builder.name).toSorted(),
+    );
   });
 
-  it.each(DATASET_BUILDERS.map((b) => [b.outputPath, b] as const))(
+  it.each(DATASET_BUILDERS.map((b) => [b.name, b] as const))(
     'builds %s from its pinned sources',
     async (_path, builder) => {
       const dataset = await builder.build(readSource);
@@ -187,7 +187,7 @@ describe('DATASET_BUILDERS', () => {
   );
 
   it('reads the World English Bible from its text, or from an archive should it be zipped again', async () => {
-    const web = DATASET_BUILDERS.find((b) => b.outputPath.endsWith('/web.json'));
+    const web = DATASET_BUILDERS.find((b) => b.name === 'translations/web');
     const zipped: RawSourceContent = {
       source: { ...source('web'), unpacked: false },
       content: Buffer.from(zipSync({ 'engwebp_vpl.txt': strToU8(WEB) })),
@@ -196,7 +196,7 @@ describe('DATASET_BUILDERS', () => {
   });
 
   it('reads the World English Bible into the KJV numbering', async () => {
-    const web = DATASET_BUILDERS.find((b) => b.outputPath.endsWith('/web.json'));
+    const web = DATASET_BUILDERS.find((b) => b.name === 'translations/web');
     const dataset = await web?.build(readSource);
     if (dataset?.format !== 'translation-text') {
       throw new Error('Expected the WEB dataset.');
@@ -212,7 +212,7 @@ describe('DATASET_BUILDERS', () => {
   });
 
   it('passes the words builder its licence and credit, from one place', async () => {
-    const words = DATASET_BUILDERS.find((b) => b.outputPath.includes('words'));
+    const words = DATASET_BUILDERS.find((b) => b.name.startsWith('words/'));
     const dataset = await words?.build(readSource);
     if (dataset?.format !== 'original-words') {
       throw new Error('Expected the words dataset.');
@@ -227,8 +227,7 @@ describe('DATASET_BUILDERS', () => {
 
 describe('the NET notes builders', () => {
   it('build every book from one reading of the extract, each note at its place', async () => {
-    const notesFor = (book: string) =>
-      DATASET_BUILDERS.find((b) => b.outputPath === `data/notes/net/${book}.json`);
+    const notesFor = (book: string) => DATASET_BUILDERS.find((b) => b.name === `notes/net/${book}`);
     const genesis = await notesFor('Gen')?.build(readSource);
     if (genesis?.format !== 'study-notes') {
       throw new Error('Expected the Genesis notes.');

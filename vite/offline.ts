@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { transformWithOxc, type Plugin } from 'vite';
+import { DATASET_FILES } from '../src/core/datasets/dataset-files.ts';
 import { DATASET_SCHEMA_VERSION } from '../src/core/datasets/formats.ts';
-import { DATASETS_DIRECTORY } from '../src/core/datasets/paths.ts';
+import { DATASET_HASH_LENGTH, DATASETS_DIRECTORY } from '../src/core/datasets/paths.ts';
 import { vizDatasetPaths } from '../src/visualizations/shared/viz-datasets.ts';
 import { atEndOfHead, PAGES, pageOf, ROOT_DIR, SITE_NAME } from './site.ts';
 
@@ -120,6 +121,12 @@ export function offline(): Plugin {
         `const FILES = ${JSON.stringify([...files, ...OFFLINE_PUBLIC_FILES])};`,
         `const DATASETS = ${JSON.stringify(vizDatasetPaths())};`,
         `const DATA_DIRECTORY = ${JSON.stringify(DATASETS_DIRECTORY)};`,
+        `const DATASET_FILES = ${JSON.stringify(
+          Object.values(DATASET_FILES)
+            .map((file) => `${DATASETS_DIRECTORY}/${file}`)
+            .toSorted(),
+        )};`,
+        `const HASH_LENGTH = ${JSON.stringify(DATASET_HASH_LENGTH)};`,
         `const VERSION = ${JSON.stringify(version.digest('hex').slice(0, 16))};`,
         `const SCHEMA_VERSION = ${JSON.stringify(DATASET_SCHEMA_VERSION)};`,
       ].join('\n');

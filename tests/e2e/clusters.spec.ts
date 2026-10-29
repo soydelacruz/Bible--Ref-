@@ -60,12 +60,25 @@ async function glideChanges(page: Page): Promise<GlideChange[]> {
   return page.evaluate(() => (window as WatchedWindow).glideChanges ?? []);
 }
 
-/** Waits for a glide that has started to land. */
+/**
+ * Waits for a glide that has started to land. The time allowed covers CI's software renderer,
+ * which takes seconds a frame: a glide that sets off right after another has landed waits for
+ * the picture that one left to be drawn, since the next layout comes from a worker and the page
+ * shows the last picture meanwhile. Measured with two tests at a time, up to 20 s.
+ */
 async function waitForLanding(page: Page): Promise<GlideChange[]> {
   await expect
-    .poll(async () => (await glideChanges(page)).at(-1)?.gliding, { timeout: 15_000 })
+    .poll(async () => (await glideChanges(page)).at(-1)?.gliding, { timeout: 30_000 })
     .toBe(false);
   return glideChanges(page);
+}
+
+/**
+ * Waits for the picture to show what was last asked for. The clusters are laid out in a worker, so
+ * the picture catches up a moment after a book is opened, and says so meanwhile (`aria-busy`).
+ */
+async function waitForPicture(page: Page): Promise<void> {
+  await expect(page.locator(PICTURE)).not.toHaveAttribute('aria-busy', 'true');
 }
 
 /** A fingerprint of the picture at rest, pixel for pixel. */
@@ -81,6 +94,8 @@ async function pictureDigest(page: Page): Promise<string> {
 
 test.describe('the clusters glide between pictures', () => {
   test('opening a book glides the dots there, rather than jumping', async ({ page }) => {
+    // Two glides, one straight after the other: see waitForLanding.
+    test.slow();
     await openClusters(page);
     await watchGlides(page);
     await chooseBook(page, 'Psalms');
@@ -113,9 +128,11 @@ test.describe('the clusters glide between pictures', () => {
     await openClusters(page);
     await chooseBook(page, 'Isaiah');
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeVisible();
+    await waitForPicture(page);
     const still = await pictureDigest(page);
     await page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' }).click();
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
+    await waitForPicture(page);
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await watchGlides(page);
@@ -131,9 +148,11 @@ test.describe('the clusters glide between pictures', () => {
     await openClusters(page);
     await chooseBook(page, 'Isaiah');
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeVisible();
+    await waitForPicture(page);
     const still = await pictureDigest(page);
     await page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' }).click();
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
+    await waitForPicture(page);
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await watchGlides(page);
@@ -146,6 +165,8 @@ test.describe('the clusters glide between pictures', () => {
   });
 
   test('the tour still plays, closing an open book with a glide', async ({ page }) => {
+    // Two glides, one straight after the other: see waitForLanding.
+    test.slow();
     await openClusters(page);
     await watchGlides(page);
     await chooseBook(page, 'Psalms');
@@ -158,6 +179,14 @@ test.describe('the clusters glide between pictures', () => {
     await expect(page).toHaveURL(/ref=(Gen\.1\.1|Gen\.3\.15|Ps\.23\.1)\b/);
     // The book is closed: the way back to the whole Bible has nowhere left to go.
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
-    expect((await waitForLanding(page)).some((change) => change.gliding)).toBe(true);
+    // With a glide that lands. The details panel opening narrows the stage meanwhile, and a glide
+    // to fit it may set off straight after; under the software renderer each takes seconds a
+    // frame, so this waits for the first landing, the one closing the book.
+    await expect
+      .poll(async () => (await glideChanges(page)).some((change) => !change.gliding), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+    expect((await glideChanges(page)).some((change) => change.gliding)).toBe(true);
   });
 });

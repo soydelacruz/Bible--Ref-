@@ -10,7 +10,7 @@ import { resetTranslation, resetTranslations, type EarlyVizData } from './viz-da
 /** Serves each translation's file, or answers with something that is not one when `broken`. */
 function serveTexts(broken = false) {
   const fetch = vi.fn((input: string | URL) => {
-    const id = /translations\/(\w+)\.json/.exec(String(input))?.[1] ?? 'bsb';
+    const id = /translations\/(\w+)\./.exec(String(input))?.[1] ?? 'bsb';
     const file = broken
       ? { not: 'a translation' }
       : { ...createTranslationFile(), translationId: id };

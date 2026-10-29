@@ -28,8 +28,11 @@ function matching(paths: readonly string[], pattern: RegExp): string[] {
 const THREADS_CODE = /\/ThreadsExplorer-[\w-]+\.js$/;
 const CLUSTERS_CODE = /\/ClustersExplorer-[\w-]+\.js$/;
 const ARCS_CODE = /\/(ArcsExplorer|three)-[\w-]+\.js$/;
-/** What Threads reads beside the text when it is the NET: the notes on the chapter's book. */
-const THREADS_NOTES = /\/data\/notes\/net\/John\.json$/;
+/**
+ * What Threads reads beside the text when it is the NET: the notes on the chapter's book, in a
+ * file named by a hash of its contents.
+ */
+const THREADS_NOTES = /\/data\/notes\/net\/John\.[0-9a-f]{12}\.json$/;
 
 /**
  * Long enough for a view the page had mounted out of sight to have asked for its code and its

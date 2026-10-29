@@ -13,10 +13,10 @@ import type {
   WordSourceId,
 } from '../../src/core/datasets/ids.ts';
 import {
-  crossReferencesDatasetPath,
-  originalWordsDatasetPath,
-  studyNotesDatasetPath,
-  translationDatasetPath,
+  crossReferencesDataset,
+  originalWordsDataset,
+  studyNotesDataset,
+  translationDataset,
 } from '../../src/core/datasets/paths.ts';
 import { getNoteSourceManifest } from '../../src/notes/registry.ts';
 import { importBsbText } from './importers/bsb.ts';
@@ -38,8 +38,8 @@ export interface RawSourceContent {
 export type RawSourceReader = (sourceId: string) => Promise<RawSourceContent>;
 
 export interface DatasetBuilder {
-  /** Output path relative to the site root (written under `public/`). */
-  readonly outputPath: string;
+  /** The dataset's name; it is written under `public/data/` with a hash and an extension. */
+  readonly name: string;
   readonly build: (
     readSource: RawSourceReader,
   ) => Promise<TranslationTextFile | CrossReferencesFile | OriginalWordsFile | StudyNotesFile>;
@@ -52,7 +52,7 @@ function provenanceOf({ url, sha256, retrievedAt }: RawSource) {
 /** One builder per translation: the compiler enforces that every translation ID has one. */
 const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
   bsb: {
-    outputPath: translationDatasetPath('bsb'),
+    name: translationDataset('bsb'),
     build: async (readSource) => {
       const { source, content } = await readSource('bsb');
       return importBsbText(content.toString('utf8'), {
@@ -62,7 +62,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     },
   },
   kjv: {
-    outputPath: translationDatasetPath('kjv'),
+    name: translationDataset('kjv'),
     build: async (readSource) => {
       const { source, content } = await readSource('kjv');
       // The entry the pin covers, read from the pin rather than repeated here: naming a
@@ -76,7 +76,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     },
   },
   web: {
-    outputPath: translationDatasetPath('web'),
+    name: translationDataset('web'),
     build: async (readSource) => {
       const { source, content } = await readSource('web');
       // Committed unpacked (eBible.org keeps revising it), so what the pin covers is the file
@@ -89,7 +89,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     },
   },
   asv: {
-    outputPath: translationDatasetPath('asv'),
+    name: translationDataset('asv'),
     build: async (readSource) => {
       const { source, content } = await readSource('asv');
       const text = extractZipTextEntry(content, expectMember(source));
@@ -100,7 +100,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     },
   },
   ylt: {
-    outputPath: translationDatasetPath('ylt'),
+    name: translationDataset('ylt'),
     build: async (readSource) => {
       const { source, content } = await readSource('ylt');
       const text = extractZipTextEntry(content, expectMember(source));
@@ -113,7 +113,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
   // Extracted from the NET Bible study archive into eBible's verse-per-line form by
   // scripts/data/extract-netbible.ts, and committed as data/raw/net2_vpl.txt.
   net: {
-    outputPath: translationDatasetPath('net'),
+    name: translationDataset('net'),
     build: async (readSource) => {
       const { source, content } = await readSource('net');
       return importEbibleVerseLines(content.toString('utf8'), 'net', {
@@ -123,7 +123,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     },
   },
   blivre: {
-    outputPath: translationDatasetPath('blivre'),
+    name: translationDataset('blivre'),
     build: async (readSource) => {
       const { source, content } = await readSource('blivre');
       const text = extractZipTextEntry(content, 'bliv-tr_vpl.txt');
@@ -136,7 +136,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
     },
   },
   rv1909: {
-    outputPath: translationDatasetPath('rv1909'),
+    name: translationDataset('rv1909'),
     build: async (readSource) => {
       const { source, content } = await readSource('rv1909');
       const text = extractZipTextEntry(content, expectMember(source));
@@ -151,7 +151,7 @@ const TRANSLATION_BUILDERS: Readonly<Record<TranslationId, DatasetBuilder>> = {
 /** One builder per cross-reference source. */
 const CROSS_REFERENCE_BUILDERS: Readonly<Record<CrossReferenceSourceId, DatasetBuilder>> = {
   openbible: {
-    outputPath: crossReferencesDatasetPath('openbible'),
+    name: crossReferencesDataset('openbible'),
     build: async (readSource) => {
       const { source, content } = await readSource('openbible');
       const text = extractZipTextEntry(content, 'cross_references.txt');
@@ -187,7 +187,7 @@ const MAX_VERSES_PER_WORD = 100;
 
 const WORD_BUILDERS: Readonly<Record<WordSourceId, DatasetBuilder>> = {
   stepbible: {
-    outputPath: originalWordsDatasetPath('stepbible'),
+    name: originalWordsDataset('stepbible'),
     build: async (readSource) => {
       const read = async ({ id, language }: { id: string; language: TaggedLanguage }) => {
         const { source, content } = await readSource(id);
@@ -247,7 +247,7 @@ function readNetNotes(readSource: RawSourceReader): Promise<Map<BookId, StudyNot
 /** One builder per book, per source of notes: a reader downloads only the books they open. */
 const NOTE_BUILDERS: Readonly<Record<NoteSourceId, readonly DatasetBuilder[]>> = {
   net: BOOKS.map(({ id }) => ({
-    outputPath: studyNotesDatasetPath('net', id),
+    name: studyNotesDataset('net', id),
     build: async (readSource) => {
       const file = (await readNetNotes(readSource)).get(id);
       if (!file) {

@@ -349,7 +349,7 @@ test.describe('installing', () => {
 test.describe('the loading and error screens', () => {
   test('the loading screen, before the data arrives', async ({ page }) => {
     // Hold the links back so the screen that waits for them stays on display.
-    await page.route('**/cross-references/*.json', async () => {
+    await page.route('**/data/cross-references/**', async () => {
       await new Promise(() => undefined);
     });
     await page.goto('./');
@@ -359,7 +359,7 @@ test.describe('the loading and error screens', () => {
   });
 
   test('the error screen, when the data cannot be fetched', async ({ page }) => {
-    await page.route('**/cross-references/*.json', (route) => route.abort());
+    await page.route('**/data/cross-references/**', (route) => route.abort());
     await page.goto('./');
     await page.getByRole('alert').waitFor();
     await settle(page);

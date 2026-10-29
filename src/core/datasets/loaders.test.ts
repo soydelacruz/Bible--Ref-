@@ -6,21 +6,23 @@ import { getTranslationManifest } from '../../translations/registry.ts';
 import { loadOriginalWords } from '../../words/load-original-words.ts';
 import { getWordSourceManifest } from '../../words/registry.ts';
 import {
-  createCrossReferenceColumns,
+  createCrossReferencesFile,
   createTranslationFile,
   PROVENANCE,
   verseIndex,
 } from '../../test-utils/fixtures.ts';
 import { CANONICAL_VERSIFICATION } from '../bible/versification.ts';
+import { encodeCrossReferences } from './cross-references-binary.ts';
+import { translationDatasetPath } from './paths.ts';
 
 const GEN_1_1 = verseIndex('Gen', 1, 1);
 const GEN_1_2 = verseIndex('Gen', 1, 2);
 
-/** Answers the next fetch with this file, and reports what was asked for. */
-function serve(file: unknown) {
+/** Answers every fetch with this body, and reports what was asked for. */
+function serveBody(body: string | Uint8Array<ArrayBuffer>) {
   const fetch = vi.fn<(input: string | URL) => Promise<Response>>(() =>
     Promise.resolve(
-      new Response(JSON.stringify(file), {
+      new Response(body, {
         status: 200,
         headers: { 'content-type': 'text/plain' },
       }),
@@ -28,6 +30,11 @@ function serve(file: unknown) {
   );
   vi.stubGlobal('fetch', fetch);
   return fetch;
+}
+
+/** Answers every fetch with this file, as JSON. */
+function serve(file: unknown) {
+  return serveBody(JSON.stringify(file));
 }
 
 afterEach(() => {
@@ -39,7 +46,7 @@ describe('loadTranslation', () => {
     const fetch = serve(createTranslationFile(new Map([[GEN_1_1, 'In the beginning']])));
     const { translation, report } = await loadTranslation(getTranslationManifest('bsb'));
     expect(translation.verseText(GEN_1_1)).toBe('In the beginning');
-    expect(String(fetch.mock.calls[0]?.[0])).toContain('data/translations/bsb.json');
+    expect(String(fetch.mock.calls[0]?.[0])).toContain(translationDatasetPath('bsb'));
     expect(report.processMs).toBeGreaterThanOrEqual(0);
     expect(report.bytes).toBeGreaterThan(0);
   });
@@ -52,38 +59,29 @@ describe('loadTranslation', () => {
 
 describe('loadCrossReferences', () => {
   const [manifest] = CROSS_REFERENCE_SOURCE_MANIFESTS;
-
-  function file() {
-    return {
-      format: 'cross-references',
-      schemaVersion: 1,
-      versification: 'kjv',
-      provenance: PROVENANCE,
-      notices: [],
-      sourceId: manifest?.id,
-      sourceRowCount: 1,
-      links: createCrossReferenceColumns([{ from: GEN_1_1, to: GEN_1_2, votes: 5 }]),
-    };
-  }
+  const file = createCrossReferencesFile([{ from: GEN_1_1, to: GEN_1_2, votes: 5 }]);
 
   it('indexes the links it downloads', async () => {
     if (!manifest) {
       throw new Error('Expected a cross-reference source.');
     }
-    serve(file());
+    serveBody(encodeCrossReferences(file));
     const { dataset, report } = await loadCrossReferences(manifest);
     expect(dataset.index.outgoing(GEN_1_1)).toHaveLength(1);
     expect(dataset.sourceRowCount).toBe(1);
+    expect(dataset.provenance).toEqual(PROVENANCE);
     expect(dataset.index.verseCount).toBe(CANONICAL_VERSIFICATION.verseCount);
     expect(report.path).toContain(manifest.id);
   });
 
-  it('refuses a file of the wrong versification', async () => {
+  it('refuses the JSON an earlier release served', async () => {
     if (!manifest) {
       throw new Error('Expected a cross-reference source.');
     }
-    serve({ ...file(), versification: 'lxx' });
-    await expect(loadCrossReferences(manifest)).rejects.toThrow();
+    serve(file);
+    await expect(loadCrossReferences(manifest)).rejects.toThrow(
+      'expected the binary cross-reference format, got JSON',
+    );
   });
 });
 

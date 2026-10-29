@@ -66,6 +66,8 @@ test.describe('Start here', () => {
     // The legend is the Genres menu, in the header (in More on a phone).
     await openHeaderMenu(page, /^Genres/);
     const law = page.locator(ACTIVE).getByRole('button', { name: /^Law/ }).first();
+    // The menu grows out of its button as it opens: measured once it has, where a pointer meets it.
+    await law.click({ trial: true });
     const before = await law.boundingBox();
     await law.click();
     await expect(law).toHaveAttribute('aria-pressed', 'false');

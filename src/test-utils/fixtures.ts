@@ -1,12 +1,15 @@
 import type { BookId } from '../core/bible/books.ts';
 import type { VerseIndex } from '../core/bible/verse-ref.ts';
 import { CANONICAL_VERSIFICATION } from '../core/bible/versification.ts';
-import type {
-  CrossReferenceColumns,
-  DatasetProvenance,
-  StudyNote,
-  StudyNotesFile,
-  TranslationTextFile,
+import { encodeCrossReferences } from '../core/datasets/cross-references-binary.ts';
+import {
+  compareLinksInVerse,
+  type CrossReferenceColumns,
+  type CrossReferencesFile,
+  type DatasetProvenance,
+  type StudyNote,
+  type StudyNotesFile,
+  type TranslationTextFile,
 } from '../core/datasets/formats.ts';
 
 export const PROVENANCE: DatasetProvenance = {
@@ -95,4 +98,39 @@ export function createCrossReferenceColumns(
     targetEnd: sorted.map((link) => link.toEnd ?? link.to),
     votes: sorted.map((link) => link.votes ?? 0),
   };
+}
+
+/** A whole cross-reference dataset of these links, in the order the data pipeline writes them. */
+export function createCrossReferencesFile(
+  links: readonly LinkSpec[],
+  verseCount: number = CANONICAL_VERSIFICATION.verseCount,
+): CrossReferencesFile {
+  const linkInVerse = (link: LinkSpec) => ({
+    targetStart: link.to,
+    targetEnd: link.toEnd ?? link.to,
+    votes: link.votes ?? 0,
+  });
+  return {
+    format: 'cross-references',
+    schemaVersion: 1,
+    versification: 'kjv',
+    provenance: PROVENANCE,
+    notices: [],
+    sourceId: 'openbible',
+    sourceRowCount: links.length,
+    links: createCrossReferenceColumns(
+      links.toSorted(
+        (a, b) => a.from - b.from || compareLinksInVerse(linkInVerse(a), linkInVerse(b)),
+      ),
+      verseCount,
+    ),
+  };
+}
+
+/** The bytes of a cross-reference file as the site serves it (see `cross-references-binary.ts`). */
+export function crossReferencesFileBytes(
+  links: readonly LinkSpec[],
+  verseCount: number = CANONICAL_VERSIFICATION.verseCount,
+): Uint8Array<ArrayBuffer> {
+  return encodeCrossReferences(createCrossReferencesFile(links, verseCount));
 }

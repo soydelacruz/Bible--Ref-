@@ -9,8 +9,8 @@
  *
  * Strategies: the app's code and pages are cached per version and served from the cache
  * (pages network-first, so a new version shows up at once, but not for longer than 1.5 s, so a
- * weak signal doesn't hold the app back); the datasets are served from the cache and refreshed in
- * the background (stale-while-revalidate).
+ * weak signal doesn't hold the app back); the datasets are named by their content, so a stored copy
+ * is served as it is and never refreshed, and a release that changes one moves it to a new name.
  */
 
 declare const self: ServiceWorkerGlobalScope;
@@ -24,6 +24,10 @@ declare const FILES: readonly string[];
 declare const DATASETS: readonly string[];
 /** Where all datasets live, so the ones loaded later (another translation) are cached too. */
 declare const DATA_DIRECTORY: string;
+/** Every dataset file this release serves, each named by its content (see `datasetFileName`). */
+declare const DATASET_FILES: readonly string[];
+/** How many hex digits of its SHA-256 a dataset file's name carries. */
+declare const HASH_LENGTH: number;
 /** A hash of this version's files; a new version gets new caches. */
 declare const VERSION: string;
 /** The dataset format's version, which the data cache is keyed on. */
@@ -31,12 +35,10 @@ declare const SCHEMA_VERSION: number;
 
 const PREFIX = 'bible-cross-references';
 const SHELL_CACHE = `${PREFIX}-shell-${VERSION}`;
-// Keyed on the dataset format, not on the build: datasets are large and their URLs carry no
-// content hash, so keeping them across releases is the point. But a release that changes
-// what a dataset file looks like cannot read the one already stored, and the reader has no
-// way to clear it — so a format change retires the old cache instead of inheriting it.
-// A rename is not destructive: `activate` carries the previous cache's contents across and
-// `dataset` looks in older ones on a miss, so the only thing a bump costs is the name.
+// Keyed on the dataset format, not on the build: datasets are large, and a release that leaves one
+// unchanged leaves its name unchanged too, so keeping them across releases is the point. A rename
+// is not destructive: `activate` carries the previous cache's contents across and `dataset` looks
+// in older ones on a miss, so the only thing a bump costs is the name.
 const DATA_CACHE = `${PREFIX}-data-v${String(SCHEMA_VERSION)}`;
 
 const scope = new URL(self.registration.scope);
@@ -47,6 +49,17 @@ const LOOKUP: CacheQueryOptions = { ignoreVary: true };
 const toUrl = (path: string) => new URL(path, scope).href;
 const datasetUrls = new Set(DATASETS.map(toUrl));
 const dataPath = new URL(`${DATA_DIRECTORY}/`, scope).pathname;
+const isDataCache = (name: string) => name.startsWith(`${PREFIX}-data`);
+
+const currentUrls = new Set(DATASET_FILES.map(toUrl));
+const hashed = new RegExp(`(?:\\.([0-9a-f]{${String(HASH_LENGTH)}}))?\\.\\w+$`);
+/**
+ * Which dataset a URL holds, under any release's name for it: its path without the hash or the
+ * extension. `translations/kjv.json` (from before datasets were named by content) and
+ * `translations/kjv.1a2b3c4d5e6f.json` are the same Bible.
+ */
+const datasetName = (url: string) => new URL(url).pathname.replace(hashed, '');
+const currentByName = new Map([...currentUrls].map((url) => [datasetName(url), url]));
 
 /** Stores what it can, and says what it could not: one missing file is not worth an app that
  * never works offline. */
@@ -64,6 +77,62 @@ async function store(cache: Cache, urls: readonly string[]): Promise<void> {
   }
 }
 
+/** The first digits of the SHA-256 of a response's bytes, as a dataset's name carries them. */
+async function hashOf(response: Response): Promise<string> {
+  const digest = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', await response.clone().arrayBuffer()),
+  );
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, HASH_LENGTH);
+}
+
+/**
+ * This release's version of every dataset the reader kept from an earlier one, stored before this
+ * release takes over: the Bible they chose has to be on the device when they next go offline,
+ * and this is the last moment the network is known to be there.
+ *
+ * A file whose bytes have not changed is moved rather than downloaded again; its new name says
+ * what its bytes must hash to. That is every Bible the first time datasets are named by their
+ * content, and since a release that leaves a dataset alone leaves its name alone too, that is the
+ * only time it matters.
+ */
+async function bringUpToDate(data: Cache): Promise<void> {
+  const older = new Map<string, { readonly from: string; readonly response: Response }>();
+  for (const name of (await caches.keys()).filter(isDataCache)) {
+    const cache = await caches.open(name);
+    for (const request of await cache.keys()) {
+      const url = currentByName.get(datasetName(request.url));
+      if (
+        url === undefined ||
+        url === request.url ||
+        older.has(url) ||
+        (await data.match(url, LOOKUP)) !== undefined
+      ) {
+        continue;
+      }
+      const response = await cache.match(request, LOOKUP);
+      if (response !== undefined) {
+        older.set(url, { from: request.url, response });
+      }
+    }
+  }
+  const extension = (url: string) => url.slice(url.lastIndexOf('.'));
+  await Promise.allSettled(
+    [...older].map(async ([url, { from, response }]) => {
+      // A file of another format (the links were JSON once) cannot be the same bytes.
+      if (
+        extension(from) === extension(url) &&
+        (await hashOf(response)) === hashed.exec(url)?.[1]
+      ) {
+        await data.put(url, response);
+      } else {
+        await data.add(url);
+      }
+    }),
+  );
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -72,7 +141,9 @@ self.addEventListener('install', (event) => {
       await shell.addAll(PAGES.map(toUrl));
       await store(shell, FILES.map(toUrl));
       // The page has just downloaded the datasets, so these usually come from the HTTP cache.
-      await store(await caches.open(DATA_CACHE), [...datasetUrls]);
+      const data = await caches.open(DATA_CACHE);
+      await store(data, [...datasetUrls]);
+      await bringUpToDate(data);
       await self.skipWaiting();
     })(),
   );
@@ -98,20 +169,38 @@ self.addEventListener('message', (event) => {
   // `Array.isArray` narrows only to `any[]`, so the elements arrive untyped even here. This
   // is a message from the page, which is the one input the worker does not control.
   const paths: readonly unknown[] = message.paths;
-  const dataDirectory = new URL(`${DATA_DIRECTORY}/`, scope).href;
   const urls = paths
     .filter((path): path is string => typeof path === 'string')
     .map(toUrl)
-    // Under the data directory, and with no query. `store` keys on the whole URL, so
-    // `bsb.json?1`, `?2`, … would each be a separate four-megabyte entry: anything that can
-    // reach this worker could fill the reader's storage and push their offline copy out of it.
-    .filter((url) => url.startsWith(dataDirectory) && !url.includes('?') && !url.includes('#'));
+    // Only this release's own files. `store` keys on the whole URL, so `bsb.json?1`, `?2`, …
+    // would each be a separate four-megabyte entry: anything that can reach this worker could
+    // fill the reader's storage and push their offline copy out of it.
+    .filter((url) => currentUrls.has(url));
   event.waitUntil(
     (async () => {
       await store(await caches.open(DATA_CACHE), urls);
     })(),
   );
 });
+
+/**
+ * Deletes the files of earlier releases that this one has replaced, once the replacement is
+ * stored (see `bringUpToDate`), and those of datasets this release no longer has. A file whose
+ * replacement could not be fetched stays: it is the only copy of that dataset on the device, and
+ * `sameDataset` will still offer it to a reader who is offline.
+ */
+async function dropReplaced(): Promise<void> {
+  const data = await caches.open(DATA_CACHE);
+  for (const request of await data.keys()) {
+    if (currentUrls.has(request.url)) {
+      continue;
+    }
+    const url = currentByName.get(datasetName(request.url));
+    if (url === undefined || (await data.match(url, LOOKUP)) !== undefined) {
+      await data.delete(request, LOOKUP);
+    }
+  }
+}
 
 /** Moves everything a previous release cached under another name into this release's cache. */
 async function adoptDatasets(from: string): Promise<void> {
@@ -146,12 +235,13 @@ self.addEventListener('activate', (event) => {
       // offline right after upgrading.
       await Promise.all(
         names
-          .filter((name) => name.startsWith(`${PREFIX}-data`) && name !== DATA_CACHE)
+          .filter((name) => isDataCache(name) && name !== DATA_CACHE)
           .map(async (name) => {
             await adoptDatasets(name);
             await caches.delete(name);
           }),
       );
+      await dropReplaced();
       await self.clients.claim();
     })(),
   );
@@ -170,7 +260,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(page(event, request));
   } else if (url.pathname.startsWith(dataPath)) {
-    event.respondWith(dataset(event, request));
+    event.respondWith(dataset(request));
   } else {
     event.respondWith(file(request));
   }
@@ -224,9 +314,7 @@ async function page(event: FetchEvent, request: Request): Promise<Response> {
  * copy is found rather than re-downloaded, whenever it was written.
  */
 async function adoptedCopy(current: Cache, request: Request): Promise<Response | undefined> {
-  const names = (await caches.keys()).filter(
-    (name) => name.startsWith(`${PREFIX}-data`) && name !== DATA_CACHE,
-  );
+  const names = (await caches.keys()).filter((name) => isDataCache(name) && name !== DATA_CACHE);
   for (const name of names) {
     const response = await (await caches.open(name)).match(request, LOOKUP);
     if (response !== undefined) {
@@ -237,21 +325,67 @@ async function adoptedCopy(current: Cache, request: Request): Promise<Response |
   return undefined;
 }
 
-/** Datasets: the cached copy at once, refreshed in the background for the next visit. */
-async function dataset(event: FetchEvent, request: Request): Promise<Response> {
-  const cache = await caches.open(DATA_CACHE);
-  const cached = (await cache.match(request, LOOKUP)) ?? (await adoptedCopy(cache, request));
-  const refresh = fetch(request).then(async (response) => {
-    if (response.ok) {
-      await cache.put(request, response.clone());
+/**
+ * Another version of the dataset a URL names, for when that file cannot be had: this release's,
+ * or any other stored. A page of an earlier release, still open after this one took over, asks
+ * for files the server no longer has; a reader offline may have only an earlier release's copy.
+ * The app checks whatever it is given, and fetches again what it cannot read.
+ *
+ * This release's file, fetched in its place, is stored here: the page's own request to store
+ * what it read names its release's file, which this one does not keep.
+ */
+async function sameDataset(data: Cache, url: string): Promise<Response | undefined> {
+  const name = datasetName(url);
+  const current = currentByName.get(name);
+  const stored = current === undefined ? undefined : await data.match(current, LOOKUP);
+  if (stored !== undefined) {
+    return stored;
+  }
+  for (const request of await data.keys()) {
+    if (datasetName(request.url) === name) {
+      const response = await data.match(request, LOOKUP);
+      if (response !== undefined) {
+        return response;
+      }
     }
-    return response;
-  });
+  }
+  if (current === undefined || current === url) {
+    return undefined;
+  }
+  const response = await fetch(current);
+  if (response.ok) {
+    await data.put(current, response.clone());
+  }
+  return response;
+}
+
+/**
+ * Datasets: a stored copy at once, with nothing to refresh, since a file's name changes whenever
+ * its bytes do. This release's files are stored as they arrive.
+ */
+async function dataset(request: Request): Promise<Response> {
+  const data = await caches.open(DATA_CACHE);
+  const cached = (await data.match(request, LOOKUP)) ?? (await adoptedCopy(data, request));
   if (cached) {
-    event.waitUntil(refresh.catch(() => undefined));
     return cached;
   }
-  return refresh;
+  let response: Response;
+  try {
+    response = await fetch(request);
+  } catch (error) {
+    const other = await sameDataset(data, request.url);
+    if (other === undefined) {
+      throw error;
+    }
+    return other;
+  }
+  if (response.ok && currentUrls.has(request.url)) {
+    await data.put(request, response.clone());
+  }
+  if (!response.ok && !currentUrls.has(request.url)) {
+    return (await sameDataset(data, request.url)) ?? response;
+  }
+  return response;
 }
 
 /**

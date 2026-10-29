@@ -247,7 +247,7 @@ function packBand(radii: readonly number[], band: Band, gap: number): SimNode[] 
  * the same graph and size always give the same picture.
  */
 export function computeClusterLayout(
-  graph: ClusterGraph,
+  graph: Pick<ClusterGraph, 'nodes'>,
   versification: Versification,
   openBook: BookId | null,
   size: { readonly width: number; readonly height: number },

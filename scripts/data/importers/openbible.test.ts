@@ -35,10 +35,10 @@ describe('importOpenBibleCrossReferences', () => {
     ]);
     expect(file.links.votes).toEqual([47, 10, 5]);
     expect(file.links.offsets).toHaveLength(31103);
-    expect(file.links.offsets.slice(0, 2)).toEqual([0, 2]);
+    expect(Array.from(file.links.offsets).slice(0, 2)).toEqual([0, 2]);
     expect(file.links.offsets[john11]).toBe(2);
     expect(file.links.offsets[john11 + 1]).toBe(3);
-    expect(file.links.offsets.at(-1)).toBe(3);
+    expect(Array.from(file.links.offsets).at(-1)).toBe(3);
   });
 
   it('remaps verses missing from the KJV versification', () => {

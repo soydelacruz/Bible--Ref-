@@ -5,9 +5,8 @@ import { DebugPage } from '../features/debug/DebugPage.tsx';
 import { debugDataLoader } from '../features/debug/debug-data.ts';
 import { mount } from '../shared/lib/mount.tsx';
 import {
-  createCrossReferenceColumns,
   createTranslationFile,
-  PROVENANCE,
+  crossReferencesFileBytes,
   verseIndex,
 } from '../test-utils/fixtures.ts';
 import { VizDataBoundary } from '../visualizations/shared/components/VizDataBoundary.tsx';
@@ -22,16 +21,7 @@ import { VIEWS } from './views.ts';
 
 const GEN_1_1 = verseIndex('Gen', 1, 1);
 
-const CROSS_REFERENCES = {
-  format: 'cross-references',
-  schemaVersion: 1,
-  versification: 'kjv',
-  provenance: PROVENANCE,
-  notices: [],
-  sourceId: 'openbible',
-  sourceRowCount: 1,
-  links: createCrossReferenceColumns([{ from: GEN_1_1, to: GEN_1_1 + 1, votes: 5 }]),
-};
+const CROSS_REFERENCES = crossReferencesFileBytes([{ from: GEN_1_1, to: GEN_1_1 + 1, votes: 5 }]);
 
 /**
  * Renders something that suspends, waiting for it to settle before asserting. The render has to
@@ -51,10 +41,13 @@ function serve({ failing = false } = {}) {
     if (failing) {
       return Promise.reject(new Error('offline'));
     }
-    const body = String(input).includes('cross-references')
-      ? CROSS_REFERENCES
-      : createTranslationFile();
-    return Promise.resolve(new Response(JSON.stringify(body)));
+    return Promise.resolve(
+      new Response(
+        String(input).includes('cross-references')
+          ? CROSS_REFERENCES
+          : JSON.stringify(createTranslationFile()),
+      ),
+    );
   });
   vi.stubGlobal('fetch', fetch);
   return fetch;
