@@ -179,6 +179,14 @@ test.describe('the clusters glide between pictures', () => {
     await expect(page).toHaveURL(/ref=(Gen\.1\.1|Gen\.3\.15|Ps\.23\.1)\b/);
     // The book is closed: the way back to the whole Bible has nowhere left to go.
     await expect(page.locator(ACTIVE).getByRole('button', { name: 'Whole Bible' })).toBeHidden();
-    expect((await waitForLanding(page)).some((change) => change.gliding)).toBe(true);
+    // With a glide that lands. The details panel opening narrows the stage meanwhile, and a glide
+    // to fit it may set off straight after; under the software renderer each takes seconds a
+    // frame, so this waits for the first landing, the one closing the book.
+    await expect
+      .poll(async () => (await glideChanges(page)).some((change) => !change.gliding), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+    expect((await glideChanges(page)).some((change) => change.gliding)).toBe(true);
   });
 });
