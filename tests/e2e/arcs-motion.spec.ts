@@ -21,45 +21,39 @@ function readWindow(stage: Element | null): CanonWindow | null {
   return { start, end };
 }
 
-/** The page, with `readWindow` put in it so a flight can be watched frame by frame. */
-interface WatchedPage {
-  readonly readArcsWindow?: typeof readWindow;
-}
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(`window.readArcsWindow = ${readWindow.toString()};`);
-});
-
 const shownWindow = (page: Page) => page.locator(STAGE).evaluate(readWindow);
 // A frame where the strip can't be read (the stage was just resized, say) matches nothing.
 const shownStart = async (page: Page) => (await shownWindow(page))?.start ?? Number.NaN;
 const widthOf = (window: CanonWindow | null) => (window ? window.end - window.start : Number.NaN);
 
+/** A frame of the page's clock, in ms. */
+const FRAME_MS = 16;
+
 /**
- * Watches every frame, in the page, until the camera has landed at the end of the canon as zoomed
- * in as `width`; resolves with the widest window it showed on the way.
+ * Does `go` with the page's clock held, then steps the clock a frame at a time until the camera
+ * has landed at the end of the canon as zoomed in as `width`; resolves with the widest window it
+ * showed on the way. A flight lasts well under a second, and its widest stretch a sixth of one,
+ * while the software renderer CI draws with can take longer than that over one frame of a phone's
+ * stage: watched in real time, the widest frames can all go undrawn. Stepped, every one is drawn,
+ * and read. The page needs `page.clock.install()` before it loads.
  */
-const widestOnTheWayToTheEnd = (page: Page, width: number) =>
-  page.locator(STAGE).evaluate(
-    (stage, landed) =>
-      new Promise<number>((resolve, reject) => {
-        let widest = 0;
-        const startedAt = performance.now();
-        const watch = () => {
-          const shown = (window as unknown as WatchedPage).readArcsWindow?.(stage) ?? null;
-          if (shown) widest = Math.max(widest, shown.end - shown.start);
-          if (shown && shown.end > 0.99 && shown.end - shown.start < landed * 1.05) {
-            resolve(widest);
-          } else if (performance.now() - startedAt > 8000) {
-            reject(new Error('The camera never landed.'));
-          } else {
-            requestAnimationFrame(watch);
-          }
-        };
-        requestAnimationFrame(watch);
-      }),
-    width,
-  );
+async function widestOnTheWayToTheEnd(
+  page: Page,
+  width: number,
+  go: () => Promise<void>,
+): Promise<number> {
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+  await go();
+  let widest = 0;
+  // Eight seconds of flight at most.
+  for (let frame = 0; frame < 500; frame += 1) {
+    await page.clock.runFor(FRAME_MS);
+    const shown = await shownWindow(page);
+    if (shown) widest = Math.max(widest, widthOf(shown));
+    if (shown && shown.end > 0.99 && widthOf(shown) < width * 1.05) return widest;
+  }
+  throw new Error('The camera never landed.');
+}
 
 /** Zooms in around the middle with the stage's own keys, and waits for the view to settle. */
 async function zoomIn(page: Page, steps: number): Promise<void> {
@@ -120,16 +114,16 @@ test.describe('the arcs in motion', () => {
     page,
   }) => {
     const errors = collectErrors(page);
+    await page.clock.install();
     await page.goto(`./?ref=Gen.2.4&${FEW_LINKS}`);
     await waitForApp(page);
     await zoomIn(page, 6);
     const width = widthOf(await shownWindow(page));
     expect(width).toBeLessThan(0.1);
 
-    const widest = widestOnTheWayToTheEnd(page, width);
-    await search(page, 'Rev 22:21');
+    const widest = await widestOnTheWayToTheEnd(page, width, () => search(page, 'Rev 22:21'));
     // It pulls back to see both ends, rather than sliding across at one zoom...
-    expect(await widest).toBeGreaterThan(width * 3);
+    expect(widest).toBeGreaterThan(width * 3);
     // ...and lands as zoomed in as it set off.
     await expect.poll(async () => widthOf(await shownWindow(page))).toBeCloseTo(width, 2);
     expect(errors).toEqual([]);
@@ -169,15 +163,15 @@ test.describe('the arcs in motion, with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 
   test('the camera cuts straight to a far passage, without flying', async ({ page }) => {
+    await page.clock.install();
     await page.goto(`./?ref=Gen.2.4&${FEW_LINKS}`);
     await waitForApp(page);
     await zoomIn(page, 6);
     const width = widthOf(await shownWindow(page));
 
-    const widest = widestOnTheWayToTheEnd(page, width);
-    await search(page, 'Rev 22:21');
+    const widest = await widestOnTheWayToTheEnd(page, width, () => search(page, 'Rev 22:21'));
     // Never the wide view of a flight: only where it was, then where it lands.
-    expect(await widest).toBeCloseTo(width, 2);
+    expect(widest).toBeCloseTo(width, 2);
   });
 
   test('a drag stops at Genesis, without pulling past it', async ({ page }) => {

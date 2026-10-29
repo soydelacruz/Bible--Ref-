@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ACTIVE, PANEL, openPassage, waitForApp } from './helpers.ts';
+import { ACTIVE, PANEL, openHeaderMenu, openPassage, waitForApp } from './helpers.ts';
 
 test.describe('cross-references', () => {
   test('a verse lists where it points and what points at it', async ({ page }) => {
@@ -98,11 +98,8 @@ test.describe('cross-references', () => {
   test('a genre can be hidden and shown again', async ({ page }) => {
     await page.goto('./');
     await waitForApp(page);
-    // On a phone the legend is folded into an icon button; the genres are behind it.
-    const legend = page.locator(ACTIVE).getByRole('button', { name: 'Show genres' });
-    if (await legend.isVisible()) {
-      await legend.click();
-    }
+    // The legend is the Genres menu, in the header (in More on a phone).
+    await openHeaderMenu(page, /^Genres/);
     const law = page.locator(ACTIVE).getByRole('button', { name: /^Law/ }).first();
     await law.click();
     await expect(law).toHaveAttribute('aria-pressed', 'false');

@@ -19,7 +19,12 @@ import {
   simulate,
 } from '../shared/frames.ts';
 import { isAtRest, rubberBand, stepGlide } from '../shared/momentum.ts';
-import { provideLocator, type PassageSpot } from '../shared/passage-spot.ts';
+import {
+  clipBox,
+  provideLocator,
+  type PassageSpot,
+  type ScreenBox,
+} from '../shared/passage-spot.ts';
 import { PathLayer } from '../shared/path-layer.ts';
 import { pathMode, type PathPlayOptions } from '../shared/path-light.ts';
 import { morphChanges, settleArcMorph, type ArcInstances, type ArcMorph } from './arc-instances.ts';
@@ -74,6 +79,11 @@ export interface ArcsControllerOptions {
   readonly onHover: (hover: ArcHover | null) => void;
   readonly onSelect: (passage: Passage) => void;
   readonly onClear: () => void;
+  /**
+   * The part of the screen the stage is seen through, where the stage is larger than that (slid
+   * up under a phone's details sheet): passages are in sight only inside it.
+   */
+  readonly visibleBox?: () => ScreenBox;
 }
 
 /** Below this many pixels per verse, pointing picks whole chapters instead of single verses. */
@@ -577,25 +587,45 @@ export class ArcsController {
     const range = this.#rangeOf(passage);
     const along = verseToAlong(layout, this.#shownView(), (range.start + range.end + 1) / 2);
     const stage = this.#options.container.getBoundingClientRect();
+    const seen = this.#options.visibleBox?.();
+    const inSight = (box: ScreenBox) => (seen ? clipBox(box, seen) : box);
     return layout.orientation === 'horizontal'
       ? {
           point: { x: stage.left + along, y: stage.top + layout.baseline },
-          bounds: {
+          bounds: inSight({
             left: stage.left + layout.axisStart,
             top: stage.top,
             right: stage.left + layout.axisEnd,
             bottom: stage.bottom,
-          },
+          }),
         }
       : {
           point: { x: stage.left + layout.baseline, y: stage.top + along },
-          bounds: {
+          bounds: inSight({
             left: stage.left,
             top: stage.top + layout.axisStart,
             right: stage.right,
             bottom: stage.top + layout.axisEnd,
-          },
+          }),
         };
+  }
+
+  /**
+   * Where a passage's middle will be on the stage once the camera is at rest, in the stage's own
+   * pixels: where it lands from a flight under way, or where it is now. For a host that slides
+   * the stage to keep the passage in sight (see `slideToShow`).
+   */
+  restingPoint(passage: Passage): { readonly x: number; readonly y: number } | null {
+    const layout = this.#layout;
+    if (layout.width === 0 || layout.height === 0) {
+      return null;
+    }
+    const range = this.#rangeOf(passage);
+    const view = this.#motion?.target ?? this.#view;
+    const along = verseToAlong(layout, view, (range.start + range.end + 1) / 2);
+    return layout.orientation === 'horizontal'
+      ? { x: along, y: layout.baseline }
+      : { x: layout.baseline, y: along };
   }
 
   get #total(): number {

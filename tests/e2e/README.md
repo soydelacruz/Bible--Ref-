@@ -38,6 +38,16 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Only a crossfade: from the keyboard, with less motion, or with no passage | `passage-beacon.spec.ts` |
 | …and where the browser has no view transitions, the next view fades in    | `passage-beacon.spec.ts` |
 
+## Opening views
+
+| Flow                                                                   | Covered by              |
+| ---------------------------------------------------------------------- | ----------------------- |
+| A view's code and data are downloaded the first time it is opened      | `opening-views.spec.ts` |
+| …and it stays: going back to it is the same view, with nothing fetched | `opening-views.spec.ts` |
+| A page that opens on Threads downloads nothing of the arcs (Three.js)  | `opening-views.spec.ts` |
+| The loading arcs stand in for a view while its code is on its way      | `opening-views.spec.ts` |
+| The first switch into a view still carries the passage to it           | `opening-views.spec.ts` |
+
 ## The arcs' tour
 
 | Flow                                                               | Covered by          |
@@ -141,6 +151,7 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | --------------------------------------------------------------- | ----------------- |
 | The app and its data are stored on the first visit              | `offline.spec.ts` |
 | The app still works with the network gone                       | `offline.spec.ts` |
+| A view never opened online opens offline too                    | `offline.spec.ts` |
 | A translation chosen while online is there offline too          | `offline.spec.ts` |
 | **A new release replaces the old cache instead of being stuck** | `offline.spec.ts` |
 | **A withdrawn worker clears everything, in one visit**          | `offline.spec.ts` |
@@ -169,6 +180,21 @@ Walking the font up locally turns that into a failure here instead.
 Layout is checked by measuring, not by comparing images: "the footer is 30px tall and its right
 edge is inside the viewport" means the same thing on every machine, while a pixel baseline does
 not. Pictures are a separate suite — below.
+
+## On a phone
+
+| Flow                                                                    | Covered by      |
+| ----------------------------------------------------------------------- | --------------- |
+| Every control in the header, the menus and the details is 44px or more  | `phone.spec.ts` |
+| The sheet peeks with the passage's name and its count of links, no more | `phone.spec.ts` |
+| …however tall its header grows, in a longer language                    | `phone.spec.ts` |
+| …and opens up when one of those counts jumps to its section             | `phone.spec.ts` |
+| The footer is never behind the sheet, collapsed or opened up            | `phone.spec.ts` |
+| Closed, the details slide away; with less motion they fade              | `phone.spec.ts` |
+| …and closed from the keyboard, they are gone at once                    | `phone.spec.ts` |
+| A tapped menu grows out of its button; with less motion it only fades   | `phone.spec.ts` |
+| …and opened or closed from the keyboard, it is simply there, or gone    | `phone.spec.ts` |
+| Turned sideways with a notch, nothing to read or use sits under it      | `phone.spec.ts` |
 
 ## The gallery
 

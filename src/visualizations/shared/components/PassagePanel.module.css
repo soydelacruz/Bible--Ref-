@@ -75,8 +75,9 @@
   text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
   text-underline-offset: 0.2em;
   transition:
-    color 150ms ease-out,
-    text-decoration-color 150ms ease-out;
+    color var(--duration-fast) var(--ease-out),
+    text-decoration-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
 }
 
 .summaryLink:hover {
@@ -90,12 +91,14 @@
   outline-offset: 2px;
 }
 
-/* Small type on a phone: the target reaches up and down to a finger's size, not sideways into
-   its neighbour. */
+/* Small type on a phone: the target reaches up and down past a finger's size (with a pixel or
+   two to spare, as the line's own height falls either side of 20px), and a little to each side, so
+   that "1 note" is as wide as a fingertip too; the gap and the dot between two of them take the
+   overlap. */
 @media (pointer: coarse) {
   .summaryLink::after {
     position: absolute;
-    inset: -0.75rem 0;
+    inset: -0.8125rem -0.25rem;
     content: '';
   }
 }
@@ -127,8 +130,16 @@
 
 @media (pointer: coarse) {
   .iconButton {
-    min-inline-size: 2.5rem;
-    block-size: 2.5rem;
+    min-inline-size: var(--touch-target);
+    block-size: var(--touch-target);
+  }
+}
+
+/* On a phone the sheet's handle above the header is a whole touch target tall
+   (VizPage.module.css), and has taken the room this padding gave the header's top. */
+@media (max-width: 47.99rem) {
+  .header {
+    padding-block-start: var(--space-1);
   }
 }
 
@@ -220,7 +231,7 @@
 .chevron {
   flex: none;
   color: var(--color-text-muted);
-  transition: rotate 150ms ease;
+  transition: rotate var(--duration-fast) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -286,8 +297,17 @@
 }
 
 .item:hover,
+.item:active,
 .item:focus-visible {
   background: var(--color-surface-muted);
+}
+
+/* Rows and bands are the panel's width: one that gave under the finger would read as the panel
+   moving, so they answer a press with their background instead. */
+.item,
+.verseRow,
+.sectionToggle {
+  transform: none;
 }
 
 /* A verse or passage that can be copied: its copy button shows on hover, top right. */
@@ -318,8 +338,9 @@
   cursor: pointer;
   opacity: 0;
   transition:
-    opacity 0.15s,
-    color 0.15s;
+    opacity var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
 }
 
 .quotable:hover .copy,
@@ -339,6 +360,18 @@
     border-color: transparent;
     background: none;
     opacity: 0.7;
+  }
+}
+
+/* A finger's target, drawn round the small mark rather than moving it (from inside its 1px
+   rim). It reaches down and to the sides but not up, so it never takes a tap meant for the row
+   above; at most it has the end of the first line under the mark, beside the room the reference
+   keeps for it. */
+@media (pointer: coarse) {
+  .copy::after {
+    position: absolute;
+    inset: -3px -12px -20px;
+    content: '';
   }
 }
 
@@ -406,6 +439,7 @@
 }
 
 .verseRow:hover,
+.verseRow:active,
 .verseRow:focus-visible {
   background: var(--color-surface-muted);
 }
@@ -441,7 +475,7 @@
 .word .chevron {
   flex: none;
   color: var(--color-text-muted);
-  transition: rotate 0.15s;
+  transition: rotate var(--duration-fast) var(--ease-out);
 }
 
 .word[aria-expanded='true'] .chevron {
@@ -550,7 +584,8 @@
   text-align: start;
 }
 
-.sectionToggle:hover {
+.sectionToggle:hover,
+.sectionToggle:active {
   background: var(--color-border);
 }
 
@@ -599,10 +634,20 @@
   font-size: 0.75rem;
 }
 
-/* Touch: a band is a target like any other. */
+/* Touch: a band, a row, a study link and "show all" are targets like any other. */
 @media (pointer: coarse) {
   .scroll {
-    --band-height: 2.75rem;
+    --band-height: var(--touch-target);
+  }
+
+  .item,
+  .verseRow,
+  .more {
+    min-block-size: var(--touch-target);
+  }
+
+  .item {
+    align-content: center;
   }
 }
 
@@ -664,7 +709,9 @@
   text-decoration: underline;
   text-decoration-color: transparent;
   text-underline-offset: 0.2em;
-  transition: text-decoration-color 150ms ease-out;
+  transition:
+    text-decoration-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
 }
 
 .noteMore:hover {
@@ -683,6 +730,12 @@
   margin: 0 var(--space-2) var(--space-3);
   overflow-x: auto;
   scrollbar-width: thin;
+}
+
+@media (pointer: coarse) {
+  .noteMore {
+    min-block-size: var(--touch-target);
+  }
 }
 
 .notesCaveat {

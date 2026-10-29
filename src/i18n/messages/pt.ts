@@ -94,8 +94,6 @@ export const pt: LocaleMessages = {
   'genres.label': 'Gêneros',
   // Plural and masculine, agreeing with "Gêneros".
   'genres.labelChanged': 'Gêneros (alterados)',
-  'genres.show': 'Exibir gêneros',
-  'genres.hide': 'Ocultar gêneros',
   'genres.hideOne': (name) => `Ocultar ${name}`,
   'genres.showOne': (name) => `Exibir ${name}`,
   'testament.OT': 'Antigo Testamento',
@@ -268,6 +266,7 @@ export const pt: LocaleMessages = {
   'loading.data': (verses, links) =>
     `Carregando ${verses} versículos e ${links} referências cruzadas…`,
   'loading.text': 'Carregando o texto…',
+  'loading.view': (view) => `Carregando ${view}…`,
   'error.datasetUnavailable':
     'Não foi possível carregar esta parte dos dados da Bíblia. Verifique sua conexão e tente novamente.',
   'error.retry': 'Tentar novamente',

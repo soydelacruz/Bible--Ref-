@@ -1,22 +1,5 @@
-.legend {
-  position: absolute;
-  inset-block-start: var(--space-3);
-  inset-inline-start: var(--space-3);
-  z-index: 1;
-  display: grid;
-  gap: var(--space-2);
-  max-inline-size: min(22rem, calc(100% - 2 * var(--space-3)));
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: rgb(13 13 13 / 0.82);
-  backdrop-filter: blur(6px);
-  font-size: 0.75rem;
-}
-
-.toggle {
-  display: none;
-}
+/* The genre legend: the key to the pictures' colours, grouped by testament, in the Genres menu of
+   every view (GenreMenu.tsx). Each key also hides or shows its genre's links. */
 
 .columns {
   display: grid;
@@ -71,38 +54,5 @@
 @media (pointer: coarse) {
   .item {
     min-block-size: 2rem;
-  }
-}
-
-/* Phones: the legend collapses to an icon button in the corner. */
-@media (max-width: 47.99rem) {
-  .legend {
-    inset-block-start: var(--space-2);
-    inset-inline-start: var(--space-2);
-    justify-items: start;
-    max-inline-size: calc(100% - 2 * var(--space-2));
-    padding: var(--space-1) var(--space-2);
-  }
-
-  .legend[data-open='false'] {
-    padding: 0;
-  }
-
-  .toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-inline-size: 2.5rem;
-    min-block-size: 2.5rem;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--color-text);
-    cursor: pointer;
-    font-size: 0.9375rem;
-  }
-
-  .legend[data-open='false'] .columns {
-    display: none;
   }
 }

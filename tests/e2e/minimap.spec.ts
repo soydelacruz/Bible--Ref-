@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACTIVE, PANEL, openHeaderMenu, waitForApp, waitForDrawing } from './helpers.ts';
+import {
+  ACTIVE,
+  PANEL,
+  closeMoreMenu,
+  openHeaderMenu,
+  waitForApp,
+  waitForDrawing,
+} from './helpers.ts';
 
 const STAGE = `${ACTIVE} [role="application"]`;
 /** The strip of the whole Bible beside the axis. */
@@ -233,6 +240,8 @@ test.describe('the minimap', () => {
     await expect(page).toHaveURL(/t=kjv/);
     await page.keyboard.press('Escape');
     await expect(kjv).toBeHidden();
+    // Off the arcs the bright pixels are counted on.
+    await closeMoreMenu(page);
     await expect(page.locator(STRIP)).toHaveAttribute('data-lit', /^\d+-\d+$/);
     await expect.poll(() => brightPixels(page)).toBeGreaterThan(quiet * 3);
   });

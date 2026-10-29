@@ -111,8 +111,6 @@ export const en = {
 
   'genres.label': 'Genres',
   'genres.labelChanged': 'Genres (changed)',
-  'genres.show': 'Show genres',
-  'genres.hide': 'Hide genres',
   'genres.hideOne': (name: string) => `Hide ${name}`,
   'genres.showOne': (name: string) => `Show ${name}`,
   'testament.OT': 'Old Testament',
@@ -299,6 +297,8 @@ export const en = {
   // In place of a verse's words while the text downloads: the links, and every drawing, are
   // already there.
   'loading.text': 'Loading the text…',
+  // A view opened for the first time, while its code downloads, e.g. "Loading Threads…".
+  'loading.view': (view: string) => `Loading ${view}…`,
   // What a reader meets when a dataset will not load: almost always the network, and almost
   // always on a device that is offline rather than a machine missing a build step.
   'error.datasetUnavailable':

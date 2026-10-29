@@ -8,7 +8,7 @@
   padding: var(--space-6);
   background: var(--color-background);
   /* It takes over from the page's static first frame (see vite/first-frame.ts), with a short fade. */
-  animation: appear 300ms ease-out both;
+  animation: appear var(--duration-slow) var(--ease-out) both;
 }
 
 .stage {

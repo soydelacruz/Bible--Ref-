@@ -31,7 +31,10 @@
   background: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: scale 120ms ease-out;
+  /* Its own press and hover, by `scale`: the transform every other button gives under the finger
+     would come on top of it. */
+  transform: none;
+  transition: scale var(--duration-quick) var(--ease-out);
 }
 
 .swatch[data-color] {
@@ -61,16 +64,17 @@
   outline-offset: 4px;
 }
 
-/* A finger needs more than the disc: the target grows to 44px without the discs moving apart
-   more than their own targets need. */
+/* A finger needs more than the disc: the target grows past 44px, and the discs move apart just
+   as far as their targets need to meet without overlapping. */
 @media (pointer: coarse) {
   .swatches {
-    gap: var(--space-3);
+    gap: var(--space-4);
   }
 
+  /* From inside the disc's 1px rim, out past a fingertip's size. */
   .swatch::after {
     position: absolute;
-    inset: -0.375rem;
+    inset: calc((2rem - var(--touch-target)) / 2 - 2px);
     border-radius: 50%;
     content: '';
   }
@@ -129,6 +133,15 @@
 .note:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 1px;
+}
+
+/* A finger's height, and 16px, or iOS zooms the page in to the note being typed and leaves it
+   there. */
+@media (pointer: coarse) {
+  .note {
+    min-block-size: var(--touch-target);
+    font-size: max(1rem, 16px);
+  }
 }
 
 /* A highlighted verse, wherever its text is shown. */

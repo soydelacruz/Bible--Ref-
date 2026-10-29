@@ -15,7 +15,8 @@ import type { LinkFilter } from '../shared/link-filter.ts';
 import { provideLocator, screenBox } from '../shared/passage-spot.ts';
 import { PathLayer } from '../shared/path-layer.ts';
 import { pathMode, type PathLight } from '../shared/path-light.ts';
-import { useElementSize } from '../shared/use-element-size.ts';
+import { slidePicture, slideToShow, steadyBox, stretchAround } from '../shared/steady-stage.ts';
+import { useSteadySize } from '../shared/use-element-size.ts';
 import type { VizCore } from '../shared/viz-data.ts';
 import {
   blendLabels,
@@ -39,7 +40,14 @@ import {
   passageHighlight,
   type Highlight,
 } from './cluster-highlight.ts';
-import { selectClusterGraph, targetAt, type ClusterGroup } from './cluster-layout.ts';
+import { labelAt, type ClusterLabel } from './cluster-labels.ts';
+import {
+  selectClusterGraph,
+  targetAt,
+  type ClusterGroup,
+  type ClusterLayout,
+  type ClusterTarget,
+} from './cluster-layout.ts';
 import {
   CLUSTER_PATH_TRACE,
   clusterPathCurve,
@@ -124,11 +132,17 @@ export function ClustersStage({
   const { versification, crossReferences, verseGenres } = data;
   const { index } = crossReferences;
   const hostRef = useRef<HTMLDivElement>(null);
+  // The canvases, as tall as the stage would be without a phone's details sheet, so the sheet
+  // coming up neither turns the picture nor scales it: it slides up instead, as far as it must.
+  const pictureRef = useRef<HTMLDivElement>(null);
+  const slideRef = useRef(0);
   const glideRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const pathCanvasRef = useRef<HTMLCanvasElement>(null);
-  const size = useElementSize(hostRef);
+  const steady = useSteadySize(hostRef);
+  const { width, height } = steady;
+  const size = useMemo(() => ({ width, height }), [width, height]);
   const [hover, setHover] = useState<Hover | null>(null);
   // What the base canvas shows now, at rest or mid-glide: where the next glide sets off from, and
   // where what stands out is drawn.
@@ -144,6 +158,8 @@ export function ClustersStage({
   // While the dots glide they are nowhere a pointer can rely on: what is under it is worked out
   // from where they land, so pointing waits until they have.
   const glidingRef = useRef(false);
+  // The names of the picture, where they were placed: pointing at one points at its cluster.
+  const labelsRef = useRef<{ layout: ClusterLayout; labels: readonly ClusterLabel[] } | null>(null);
 
   useEffect(
     () => () => {
@@ -233,11 +249,9 @@ export function ClustersStage({
       },
       fontFamily: getComputedStyle(document.body).fontFamily,
     };
-    const target: ShownScene = {
-      layout,
-      linkIds: graph.linkIds,
-      labels: placeLabels(context, scene),
-    };
+    const labels = placeLabels(context, scene);
+    labelsRef.current = { layout, labels };
+    const target: ShownScene = { layout, linkIds: graph.linkIds, labels };
     // The picture at rest, drawn on this canvas alone once the glide (if any) has landed.
     const glideCanvas = glideRef.current;
     const rest = () => {
@@ -360,19 +374,41 @@ export function ClustersStage({
     };
   }, [active, layout, emphasis, verseGenres]);
 
-  // Where a passage's dots are, for the passage beacon: as they are drawn, mid-glide included.
-  // A hidden view draws nothing (`shownRef` is empty), and says so.
+  // Where a passage's dots are, for the passage beacon: as they are drawn, mid-glide included,
+  // and wherever the picture has slid to. A hidden view draws nothing (`shownRef` is empty), and
+  // says so.
   useEffect(() => {
     const host = hostRef.current;
-    if (!host) return undefined;
+    const picture = pictureRef.current;
+    if (!host || !picture) return undefined;
     return provideLocator(host, (passage) => {
       const shown = shownRef.current?.layout;
       const center = shown && passageCenter(shown, passageRange(passage, versification));
       if (!center) return null;
-      const stage = screenBox(host.getBoundingClientRect());
-      return { point: { x: stage.left + center.x, y: stage.top + center.y }, bounds: stage };
+      const origin = picture.getBoundingClientRect();
+      return {
+        point: { x: origin.left + center.x, y: origin.top + center.y },
+        bounds: screenBox(host.getBoundingClientRect()),
+      };
     });
   }, [versification]);
+
+  // On a phone, the focused passage stays in sight above the details sheet: the picture slides
+  // up as far as that takes, and no further, and back down when the sheet goes.
+  useEffect(() => {
+    const picture = pictureRef.current;
+    if (!picture) return;
+    const center =
+      layout && focusStart !== null && focusEnd !== null
+        ? passageCenter(layout, { start: focusStart, end: focusEnd })
+        : null;
+    slideRef.current = slideToShow(
+      center && stretchAround(center.y, steady),
+      slideRef.current,
+      steady,
+    );
+    slidePicture(picture, slideRef.current);
+  }, [layout, focusStart, focusEnd, steady]);
 
   // A chain shown in the details panel: its light travels from dot to dot on a canvas of its own,
   // drawn where the dots are, mid-glide too. Out of sight it lands at once.
@@ -416,9 +452,22 @@ export function ClustersStage({
     );
   }, [pathLight, index]);
 
+  /** Where an event is on the picture, which may have slid up under a sheet. */
   const point = (event: MouseEvent<HTMLElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = (pictureRef.current ?? event.currentTarget).getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
+
+  /**
+   * What is under a point: a verse or a cluster, or a cluster's name. A name may stand beside or
+   * below its cluster where above had no room; one that crosses another cluster's dots leaves
+   * them to the dots.
+   */
+  const pointAt = (layout: ClusterLayout, x: number, y: number): ClusterTarget | null => {
+    const placed = labelsRef.current;
+    const inDisc = layout.groups.some((group) => Math.hypot(x - group.x, y - group.y) <= group.r);
+    const named = !inDisc && placed?.layout === layout ? labelAt(placed.labels, x, y) : null;
+    return named === null ? targetAt(layout, x, y) : { kind: 'group', group: named };
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -428,7 +477,7 @@ export function ClustersStage({
       return;
     }
     const { x, y } = point(event);
-    const target = targetAt(layout, x, y);
+    const target = pointAt(layout, x, y);
     setHover(
       target && {
         verse: target.kind === 'verse' ? target.verse : null,
@@ -442,7 +491,7 @@ export function ClustersStage({
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!layout || glidingRef.current) return;
     const { x, y } = point(event);
-    const target = targetAt(layout, x, y);
+    const target = pointAt(layout, x, y);
     const group = target && layout.groups[target.group];
     setHover(null);
     if (target?.kind === 'verse') {
@@ -483,36 +532,38 @@ export function ClustersStage({
       }}
       onClick={onClick}
     >
-      <canvas
-        ref={glideRef}
-        className={`${styles.canvas} ${styles.base} ${styles.glide}`}
-        data-dimmed={emphasis !== null}
-        aria-hidden="true"
-      />
-      <canvas
-        ref={baseRef}
-        className={`${styles.canvas} ${styles.base}`}
-        data-dimmed={emphasis !== null}
-        role="img"
-        aria-label={t('clusters.stage')}
-        // Laid out in a worker: the picture catches up a moment after a book is opened.
-        aria-busy={placed?.pending === true}
-      />
-      <canvas
-        ref={overlayRef}
-        className={`${styles.canvas} ${styles.overlay}`}
-        aria-hidden="true"
-      />
-      <canvas
-        ref={pathCanvasRef}
-        className={`${styles.canvas} ${styles.overlay}`}
-        aria-hidden="true"
-      />
-      {tooltip && hover && (
-        <div className={styles.tooltip} style={{ left: hover.x, top: hover.y }}>
-          {tooltip.title} <span>· {tooltip.connections}</span>
-        </div>
-      )}
+      <div ref={pictureRef} style={{ position: 'absolute', inset: 0, ...steadyBox(steady) }}>
+        <canvas
+          ref={glideRef}
+          className={`${styles.canvas} ${styles.base} ${styles.glide}`}
+          data-dimmed={emphasis !== null}
+          aria-hidden="true"
+        />
+        <canvas
+          ref={baseRef}
+          className={`${styles.canvas} ${styles.base}`}
+          data-dimmed={emphasis !== null}
+          role="img"
+          aria-label={t('clusters.stage')}
+          // Laid out in a worker: the picture catches up a moment after a book is opened.
+          aria-busy={placed?.pending === true}
+        />
+        <canvas
+          ref={overlayRef}
+          className={`${styles.canvas} ${styles.overlay}`}
+          aria-hidden="true"
+        />
+        <canvas
+          ref={pathCanvasRef}
+          className={`${styles.canvas} ${styles.overlay}`}
+          aria-hidden="true"
+        />
+        {tooltip && hover && (
+          <div className={styles.tooltip} style={{ left: hover.x, top: hover.y }}>
+            {tooltip.title} <span>· {tooltip.connections}</span>
+          </div>
+        )}
+      </div>
       {openBook && (
         <button
           type="button"

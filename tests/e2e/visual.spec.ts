@@ -39,15 +39,6 @@ test.describe('the whole Bible', () => {
     await expect(page).toHaveScreenshot('arcs-home.png', FULL);
   });
 
-  test('arcs, with the genre legend unfolded', async ({ page }) => {
-    // Only a phone folds the legend away; on a desktop it is already open in the shot above.
-    test.skip(test.info().project.name !== 'visual-phone', 'The legend is always open here.');
-    await show(page);
-    await page.locator(ACTIVE).getByRole('button', { name: 'Show genres' }).click();
-    await settle(page);
-    await expect(page).toHaveScreenshot('arcs-genres.png', FULL);
-  });
-
   test('threads, as the view opens', async ({ page }) => {
     await show(page, './threads/');
     await expect(page).toHaveScreenshot('threads-home.png', FULL);
@@ -269,22 +260,18 @@ test.describe('the Hebrew and Greek, opened up', () => {
 });
 
 test.describe('the controls, in use', () => {
-  test('the genres menu, where a view labels them itself', async ({ page }) => {
-    // Threads puts the genres behind a menu button; the arcs show the legend outright.
+  test('the genres menu, the legend of every view', async ({ page }) => {
     await show(page, './threads/');
     await openHeaderMenu(page, /Genres/);
     await settle(page);
     await expect(page).toHaveScreenshot('menu-genres.png', FULL);
   });
 
-  test('the genre legend, unfolded', async ({ page }) => {
+  test('the genres menu over the arcs, the same as over the other views', async ({ page }) => {
     await show(page);
-    const toggle = page.locator(ACTIVE).getByRole('button', { name: 'Show genres' });
-    if ((await toggle.count()) > 0) {
-      await toggle.click();
-    }
+    await openHeaderMenu(page, /Genres/);
     await settle(page);
-    await expect(page).toHaveScreenshot('arcs-legend.png', FULL);
+    await expect(page).toHaveScreenshot('arcs-genres.png', FULL);
   });
 
   test('the filters, set to something other than their defaults', async ({ page }) => {

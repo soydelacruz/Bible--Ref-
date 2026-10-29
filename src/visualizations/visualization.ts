@@ -23,8 +23,9 @@ export interface VisualizationProps<Data extends VizCore = VizData> {
   readonly filter: LinkFilter;
   readonly onFilterChange: (filter: LinkFilter) => void;
   /**
-   * Whether the visualization is on screen. The host keeps every visualization mounted, so a
-   * hidden one should stop drawing (and start its intro once shown).
+   * Whether the visualization is on screen. The host mounts a visualization out of sight the
+   * first time it is opened, then shows it, and keeps it mounted from then on; so a hidden one
+   * should stop drawing (and start its intro once shown).
    */
   readonly active: boolean;
   /** The header's leading part from the host: the site's name (a link home) and the switch
@@ -47,6 +48,12 @@ interface VisualizationInfo {
   readonly icon: IconComponent;
   /** Invites a reader into this visualization from another one, e.g. "Read in context". */
   readonly openLabelKey: MessageKey;
+  /**
+   * Starts downloading the visualization's code, unless that has started already; settles once it
+   * is here. The host asks for it as the page opens on this visualization, or as a reader first
+   * opens it, rather than having every reader download every visualization.
+   */
+  readonly load: () => Promise<unknown>;
 }
 
 /**
@@ -54,7 +61,8 @@ interface VisualizationInfo {
  * `index.ts`, and the app lists them in `src/app/views.ts`. Visualizations never import each other;
  * the host connects them.
  *
- * `Component` is usually lazy, so each visualization's code (e.g. Three.js) is a chunk of its own.
+ * `Component` is usually lazy, so each visualization's code (e.g. Three.js) is a chunk of its own,
+ * which `load` fetches.
  */
 export type Visualization = VisualizationInfo &
   (
