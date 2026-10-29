@@ -38,6 +38,16 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | Only a crossfade: from the keyboard, with less motion, or with no passage | `passage-beacon.spec.ts` |
 | …and where the browser has no view transitions, the next view fades in    | `passage-beacon.spec.ts` |
 
+## Opening views
+
+| Flow                                                                   | Covered by              |
+| ---------------------------------------------------------------------- | ----------------------- |
+| A view's code and data are downloaded the first time it is opened      | `opening-views.spec.ts` |
+| …and it stays: going back to it is the same view, with nothing fetched | `opening-views.spec.ts` |
+| A page that opens on Threads downloads nothing of the arcs (Three.js)  | `opening-views.spec.ts` |
+| The loading arcs stand in for a view while its code is on its way      | `opening-views.spec.ts` |
+| The first switch into a view still carries the passage to it           | `opening-views.spec.ts` |
+
 ## The arcs' tour
 
 | Flow                                                               | Covered by          |
@@ -141,6 +151,7 @@ Run them with `npm run test:e2e` (once: `npx playwright install --with-deps chro
 | --------------------------------------------------------------- | ----------------- |
 | The app and its data are stored on the first visit              | `offline.spec.ts` |
 | The app still works with the network gone                       | `offline.spec.ts` |
+| A view never opened online opens offline too                    | `offline.spec.ts` |
 | A translation chosen while online is there offline too          | `offline.spec.ts` |
 | **A new release replaces the old cache instead of being stuck** | `offline.spec.ts` |
 | **A withdrawn worker clears everything, in one visit**          | `offline.spec.ts` |

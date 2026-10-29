@@ -1,3 +1,4 @@
+import { CANONICAL_VERSIFICATION } from '../core/bible/versification.ts';
 import { translationDatasetPath } from '../core/datasets/paths.ts';
 import { mount } from '../shared/lib/mount.tsx';
 import { VizDataBoundary } from '../visualizations/shared/components/VizDataBoundary.tsx';
@@ -7,6 +8,7 @@ import {
   vizCoreLoader,
 } from '../visualizations/shared/viz-data.ts';
 import { Explorer } from './Explorer.tsx';
+import { parseExplorerUrl } from './explorer-location.ts';
 import { registerOfflineCache } from './register-offline-cache.ts';
 import {
   initialPreferredLocale,
@@ -17,6 +19,7 @@ import { getLocale } from '../i18n/registry.ts';
 import { initialChoice } from './initial-choice.ts';
 import { LOCALE_PREFERENCE, TRANSLATION_PREFERENCE } from '../shared/lib/preference-keys.ts';
 import { readPreference } from '../shared/lib/preferences.ts';
+import { VIEWS } from './views.ts';
 
 // Which language to speak is settled before anything renders, so the first paint is already in
 // it: the address decides, then the reader's last choice, then what their browser asks for. It
@@ -50,6 +53,21 @@ const loadingTranslation = new Promise<unknown>((resolve) => {
   });
 });
 void loadingTranslation.catch(() => undefined);
+
+// The code of the view this page opens on downloads beside the data, so the first picture waits for
+// neither one after the other. The other views' code waits until a reader opens them (see
+// `Explorer`); a failure here is the view's to report, when it is drawn.
+const opening = parseExplorerUrl(
+  url,
+  import.meta.env.BASE_URL,
+  VIEWS,
+  CANONICAL_VERSIFICATION,
+  () => translation,
+  locale,
+).view;
+void VIEWS.find((view) => view.id === opening)
+  ?.load()
+  .catch(() => undefined);
 
 mount(<VizDataBoundary>{(core) => <Explorer core={core} />}</VizDataBoundary>);
 
